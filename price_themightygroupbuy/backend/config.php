@@ -1,8 +1,10 @@
 <?php
 declare(strict_types=1);
 
-// Load .env_price from app root (overrides Apache SetEnv)
-$_envFile = dirname(__DIR__, 1) . '/.env_price';
+// Load .env_pricetool — production: ~/  (matches ~/.env_peptools pattern), dev: app root
+$_envFile = is_file(dirname(__DIR__, 2) . '/.env_pricetool')
+    ? dirname(__DIR__, 2) . '/.env_pricetool'
+    : dirname(__DIR__, 1) . '/.env_pricetool';
 if (is_file($_envFile)) {
     foreach (file($_envFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $_line) {
         if (str_starts_with(trim($_line), '#') || !str_contains($_line, '=')) continue;

@@ -18,14 +18,14 @@ SSH_KEY="${SSH_KEY:-$(dirname "$(dirname "$SCRIPT_DIR")")/pepcal_key.pem}"
 
 echo "▶ Building frontend…"
 cd "$SCRIPT_DIR/frontend"
-npm ci --silent
+npm install
 npm run build
 cd "$SCRIPT_DIR"
 
 echo "▶ Syncing to $REMOTE_HOST…"
 rsync -avz --delete \
   -e "ssh -i $SSH_KEY" \
-  --exclude='.env_price' \
+  --exclude='.env_pricetool' \
   --exclude='.git/' \
   --exclude='frontend/node_modules/' \
   --exclude='frontend/.vite/' \

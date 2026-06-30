@@ -1,5 +1,5 @@
 # Environment — never commit
-.env_price
+.env_pricetool
 
 # Dependencies
 node_modules/

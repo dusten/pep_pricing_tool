@@ -7,20 +7,22 @@
 set -euo pipefail
 
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="$APP_DIR/.env_price"
 
-# Load .env_price
-if [[ -f "$ENV_FILE" ]]; then
-  set -a
-  # shellcheck disable=SC1090
-  source <(grep -v '^\s*#' "$ENV_FILE" | grep '=')
-  set +a
-fi
+# Env file: ~/.env_pricetool on server, .env_pricetool in app root for local dev
+for _f in "$HOME/.env_pricetool" "$APP_DIR/.env_pricetool"; do
+  if [[ -f "$_f" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source <(grep -v '^\s*#' "$_f" | grep '=')
+    set +a
+    break
+  fi
+done
 
 DB_HOST="${DB_HOST:-127.0.0.1}"
 DB_PORT="${DB_PORT:-3306}"
 DB_NAME="${DB_NAME:-tmgb_price}"
-DB_USER="${DB_USER:-pc_user}"
+DB_USER="${DB_USER:-tmgb_price}"
 DB_PASS="${DB_PASS:-}"
 
 MYSQL="mysql -h$DB_HOST -P$DB_PORT -u$DB_USER -p$DB_PASS $DB_NAME"

@@ -89,7 +89,8 @@ $handler = isset($ROUTES[$apiPath])
 
 // Dynamic match
 if (!$handler) {
-    foreach ($DYNAMIC as $pattern => [$file, ...$paramNames]) {
+    foreach ($DYNAMIC as $pattern => $route) {
+        [$file] = $route; $paramNames = array_slice($route, 1);
         if (preg_match("#^{$pattern}$#", $apiPath, $matches)) {
             array_shift($matches);
             foreach ($paramNames as $i => $name) $PARAMS[$name] = $matches[$i] ?? null;

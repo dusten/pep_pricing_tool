@@ -8,21 +8,24 @@
 #   1. DNS: A record for price.themightygroupbuy.com → this server's IP
 #   2. Code already deployed to /home/ec2-user/price_themightygroupbuy/
 #      via deploy.sh from your local machine
-#   3. Run as ec2-user with sudo access
+#   3. Run as root: sudo bash add-price-site.sh
 # ============================================================
 set -euo pipefail
 
+if [[ "$(id -u)" -ne 0 ]]; then
+  echo "Run as root: sudo bash $0" >&2; exit 1
+fi
+
 APP_DIR="/home/ec2-user/price_themightygroupbuy"
 DOMAIN="price.themightygroupbuy.com"
-ENV_FILE="${APP_DIR}/.env_price"
+ENV_FILE="/home/ec2-user/.env_pricetool"
+DB_NAME="tmgb_price"
+DB_USER="tmgb_price"
+DB_PASS=$(openssl rand -base64 18 | tr -d '/+=')
 
 # ── [1/5] Create database ─────────────────────────────────────
 echo "=== [1/5] Create database ==="
-read -rp  "DB name [tmgb_price]: "  DB_NAME; DB_NAME=${DB_NAME:-tmgb_price}
-read -rp  "DB user [pc_user]: "     DB_USER; DB_USER=${DB_USER:-pc_user}
-DB_PASS=$(openssl rand -base64 18 | tr -d '/+=')
-
-read -rsp "MySQL root password: " DB_ROOT_PASS; echo
+read -rsp "MariaDB root password: " DB_ROOT_PASS; echo
 
 mysql -uroot -p"${DB_ROOT_PASS}" <<SQL
 CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\`
@@ -35,12 +38,12 @@ FLUSH PRIVILEGES;
 SQL
 
 echo "Importing schema…"
-mysql -u"${DB_USER}" -p"${DB_PASS}" -h127.0.0.1 "${DB_NAME}" \
+mysql -uroot -p"${DB_ROOT_PASS}" -h127.0.0.1 "${DB_NAME}" \
   < "${APP_DIR}/database/schema.sql"
 echo "Database ready."
 
-# ── [2/5] Write .env_price ────────────────────────────────────
-echo "=== [2/5] Write .env_price ==="
+# ── [2/5] Write ~/.env_pricetool ─────────────────────────────
+echo "=== [2/5] Write ${ENV_FILE} ==="
 APP_SECRET=$(openssl rand -hex 32)
 
 read -rsp "BREVO_API_KEY (leave blank to set later): "     BREVO_KEY;     echo
@@ -73,10 +76,11 @@ STRIPE_PRICE_PRO_ANNUAL=
 STRIPE_PRICE_EXPERT_MONTHLY=
 STRIPE_PRICE_EXPERT_ANNUAL=
 ENV
-chmod 600 "${ENV_FILE}"
+chmod 640 "${ENV_FILE}"
+chown ec2-user:apache "${ENV_FILE}"
 echo "Written: ${ENV_FILE}"
 
-# MySQL options file so cron jobs never need passwords on the command line
+# MySQL options file for cron / migrate (no password on command line)
 cat > /home/ec2-user/.pc_my.cnf <<CNF
 [client]
 user=${DB_USER}
@@ -85,32 +89,32 @@ host=127.0.0.1
 database=${DB_NAME}
 CNF
 chmod 600 /home/ec2-user/.pc_my.cnf
+chown ec2-user:ec2-user /home/ec2-user/.pc_my.cnf
 echo "Written: /home/ec2-user/.pc_my.cnf"
 
 # ── [3/5] Storage directory ───────────────────────────────────
 echo "=== [3/5] Storage directory ==="
 mkdir -p "${APP_DIR}/backend/storage/vendor_files"
 mkdir -p "${APP_DIR}/public/dist"
-sudo chown -R ec2-user:apache "${APP_DIR}/backend/storage"
-sudo chmod -R 770              "${APP_DIR}/backend/storage"
-sudo chcon -Rt httpd_sys_rw_content_t "${APP_DIR}/backend/storage" 2>/dev/null || true
+chown -R ec2-user:apache "${APP_DIR}/backend/storage"
+chmod -R 770              "${APP_DIR}/backend/storage"
+chcon -Rt httpd_sys_rw_content_t "${APP_DIR}/backend/storage" 2>/dev/null || true
 
 # ── [4/5] Apache vhost + SELinux ──────────────────────────────
 echo "=== [4/5] Apache vhost + SELinux ==="
-sudo cp "${APP_DIR}/price.conf" /etc/httpd/conf.d/price.conf
-sudo chcon -Rt httpd_sys_content_t "${APP_DIR}/public"      2>/dev/null || true
-sudo chcon -Rt httpd_sys_content_t "${APP_DIR}/public/dist" 2>/dev/null || true
-sudo systemctl reload httpd
+cp "${APP_DIR}/price.conf" /etc/httpd/conf.d/price.conf
+chcon -Rt httpd_sys_content_t "${APP_DIR}/public"      2>/dev/null || true
+chcon -Rt httpd_sys_content_t "${APP_DIR}/public/dist" 2>/dev/null || true
+systemctl reload httpd
 echo "Apache reloaded."
 
-# Install cron
-sudo cp "${APP_DIR}/cron/price" /etc/cron.d/price
-sudo chmod 644 /etc/cron.d/price
+cp "${APP_DIR}/cron/price" /etc/cron.d/price
+chmod 644 /etc/cron.d/price
 echo "Cron installed."
 
 # ── [5/5] SSL certificate ─────────────────────────────────────
 echo "=== [5/5] SSL certificate ==="
-sudo certbot --apache -d "${DOMAIN}" \
+certbot --apache -d "${DOMAIN}" \
   --non-interactive --agree-tos -m "admin@themightygroupbuy.com"
 
 # ── Done ──────────────────────────────────────────────────────
@@ -120,5 +124,6 @@ echo ""
 echo "   DB name:    ${DB_NAME}"
 echo "   DB user:    ${DB_USER}"
 echo "   DB pass:    ${DB_PASS}   ← saved to ${ENV_FILE}"
+echo "   APP_SECRET: ${APP_SECRET}"
 echo ""
 echo "   Verify: curl -s https://${DOMAIN}/api/app-settings"
