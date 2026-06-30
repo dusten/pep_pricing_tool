@@ -43,6 +43,7 @@ Subscription SaaS with annual pricing tiers ($50 / $140 / $340).
 
 1. **Stripe billing** — annual tiers $50 / $140 / $340
 2. Claude extraction pipeline (deferred from Phase 1)
+3. **Post-deploy health check** — after `deploy.sh` finishes, hit a `/api/health` endpoint that exercises DB (query), Memcached (set/get), and email config (reachability only); print a pass/fail summary per component
 
 ## Key Constraints
 

@@ -13,6 +13,9 @@ REMOTE_USER="ec2-user"
 REMOTE_DIR="/home/ec2-user/price_themightygroupbuy"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# SSH key lives one directory above this script; override with SSH_KEY env var
+SSH_KEY="${SSH_KEY:-$(dirname "$(dirname "$SCRIPT_DIR")")/pepcal_key.pem}"
+
 echo "▶ Building frontend…"
 cd "$SCRIPT_DIR/frontend"
 npm ci --silent
@@ -21,6 +24,7 @@ cd "$SCRIPT_DIR"
 
 echo "▶ Syncing to $REMOTE_HOST…"
 rsync -avz --delete \
+  -e "ssh -i $SSH_KEY" \
   --exclude='.env_price' \
   --exclude='.git/' \
   --exclude='frontend/node_modules/' \
@@ -30,7 +34,7 @@ rsync -avz --delete \
   "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/"
 
 echo "▶ Running remote post-deploy steps…"
-ssh "$REMOTE_USER@$REMOTE_HOST" bash << 'REMOTE'
+ssh -i "$SSH_KEY" "$REMOTE_USER@$REMOTE_HOST" bash << 'REMOTE'
 set -euo pipefail
 cd /home/ec2-user/price_themightygroupbuy
 
@@ -41,7 +45,8 @@ bash migrate.sh
 sudo cp cron/price /etc/cron.d/price
 sudo chmod 644 /etc/cron.d/price
 
-# Reload Apache (graceful — no dropped connections)
+# Graceful reload only — picks up config changes without dropping connections
+# or affecting the grp. vhost sharing this server. Never restart here.
 sudo systemctl reload httpd
 
 echo "✓ Deploy complete"

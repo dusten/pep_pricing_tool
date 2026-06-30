@@ -1,10 +1,22 @@
 # Environment — never commit
 .env_price
 
-# Vue build output and deps
+# Dependencies
+node_modules/
 frontend/node_modules/
 frontend/.vite/
+
+# Build output
 public/dist/
+frontend/dist/assets/
+
+# Vendor lib blobs (placed manually)
+backend/lib/fpdi/
+backend/lib/font/
+backend/public/assets/
+
+# Frontend env
+frontend/.env
 
 # Uploaded vendor files — excluded from rsync too
 backend/storage/vendor_files/
