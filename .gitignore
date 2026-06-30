@@ -1,0 +1,7 @@
+Obsidian_pep_pricing_tool/
+node_modules/
+backend/lib/fpdi/
+backend/lib/font/
+backend/public/assets/
+frontend/dist/assets/
+frontend/.env
