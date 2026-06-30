@@ -14,6 +14,8 @@ export default defineConfig({
     emptyOutDir: true,
   },
 
+  base: '/dist/',
+
   server: {
     port: 5173,
     proxy: {
