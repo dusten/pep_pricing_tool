@@ -1,0 +1,20 @@
+# /etc/cron.d/price
+# TheMightyGroupBuy Price Comparison — scheduled tasks
+# Installed by setup.sh / add-price-site.sh
+# Uses ~/.pc_my.cnf for credentials (written by setup scripts)
+
+SHELL=/bin/bash
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+MAILTO=""
+
+# Clean expired sessions (daily 03:00)
+0 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "DELETE FROM pc_sessions WHERE expires_at < NOW();" 2>/dev/null
+
+# Clean expired password resets (daily 03:05)
+5 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "DELETE FROM pc_password_resets WHERE expires_at < NOW();" 2>/dev/null
+
+# Clean query log beyond 73h (daily 03:10)
+10 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "DELETE FROM pc_query_log WHERE created_at < DATE_SUB(NOW(), INTERVAL 73 HOUR);" 2>/dev/null
+
+# 90-day perf metric retention (daily 03:15)
+15 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "DELETE FROM pc_perf_metrics WHERE created_at < DATE_SUB(NOW(), INTERVAL 90 DAY);" 2>/dev/null

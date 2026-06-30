@@ -1,0 +1,17 @@
+# Environment — never commit
+.env_price
+
+# Vue build output and deps
+frontend/node_modules/
+frontend/.vite/
+public/dist/
+
+# Uploaded vendor files — excluded from rsync too
+backend/storage/vendor_files/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

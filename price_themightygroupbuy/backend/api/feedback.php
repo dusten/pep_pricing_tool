@@ -1,0 +1,22 @@
+<?php
+declare(strict_types=1);
+require_once dirname(__DIR__, 1) . '/config.php';
+require_once dirname(__DIR__, 1) . '/helpers.php';
+
+method('POST');
+$user = requireAuth();
+$d    = input();
+
+$type    = in_array($d['type'] ?? '', ['bug','feature','other'], true) ? $d['type'] : 'other';
+$message = trim($d['message'] ?? '');
+$url     = trim($d['url'] ?? '');
+
+if (strlen($message) < 5) jsonResponse(['error' => 'Message is too short.'], 422);
+
+rateLimit('feedback_' . $user['id'], 10, 3600);
+
+db()->prepare(
+    'INSERT INTO pc_feedback (user_id, type, message, url) VALUES (?,?,?,?)'
+)->execute([$user['id'], $type, $message, $url ?: null]);
+
+jsonResponse(['message' => 'Feedback submitted. Thank you!'], 201);
