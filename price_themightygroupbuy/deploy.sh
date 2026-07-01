@@ -100,6 +100,26 @@ sync_files() {
   ssh -i "$SSH_KEY" "$REMOTE_USER@$REMOTE_HOST" bash -s <<< "$REMOTE_SCRIPT"
 
   echo "✓ Done — https://$REMOTE_HOST"
+  smoke_check
+}
+
+# ── Post-deploy smoke check ────────────────────────────────────
+# Confirms the deploy actually landed, not just that rsync/ssh exited 0.
+# TODO(backlog): replace the app-settings check with a real /api/health
+# endpoint that also exercises DB writes, Memcached, and email config —
+# see CLAUDE.md backlog item 3.
+smoke_check() {
+  echo "▶ Smoke check…"
+  local home_code api_code
+  home_code=$(curl -s -o /dev/null -w '%{http_code}' "https://$REMOTE_HOST/")
+  api_code=$(curl -s -o /dev/null -w '%{http_code}' "https://$REMOTE_HOST/api/app-settings")
+
+  if [[ "$home_code" == "200" && "$api_code" == "200" ]]; then
+    echo "✓ Smoke check passed (homepage $home_code, api $api_code)"
+  else
+    echo "✗ Smoke check FAILED (homepage $home_code, api $api_code) — deploy may not have landed cleanly" >&2
+    exit 1
+  fi
 }
 
 # ── Build frontend, then sync files ────────────────────────────
