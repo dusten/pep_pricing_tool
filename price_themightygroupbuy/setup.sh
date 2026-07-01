@@ -38,20 +38,21 @@ sudo dnf install -y php8.2-memcached 2>/dev/null || \
   echo "  ⚠  php8.2-memcached unavailable — rate limiting will degrade gracefully."
 
 # ── ClamAV (malware scanning on vendor file uploads) ──────────
+# Plain `clamav`/`clamd` (0.103 track) conflicts with clamav1.4 on this
+# AL2023 image — clamav1.4/clamd1.4 is the track that actually installs.
 echo "=== ClamAV setup ==="
-sudo dnf install -y clamav clamav-update clamav-filesystem clamav-server clamav-server-systemd
+sudo dnf install -y clamav1.4 clamav1.4-freshclam clamd1.4
 
-# Freshclam needs to run once before clamd can start (fresh install ships no signatures)
 sudo sed -i 's/^Example/#Example/' /etc/freshclam.conf
-sudo freshclam
+# database.clamav.net 403s the EC2 IP range — freshclam won't succeed here.
+# Signatures are pushed in manually via deploy.sh from clamav-db/ instead
+# (see clamav-db/README.md). Don't let this abort setup on a fresh install.
+sudo freshclam || echo "  ⚠  freshclam blocked (expected on EC2) — signatures pushed via deploy.sh's clamav-db/ instead."
 
 # clamd@scan listens on a unix socket at /run/clamd.scan/clamd.sock by default
 sudo sed -i 's/^Example/#Example/' /etc/clamd.d/scan.conf
-sudo systemctl enable --now clamd@scan
-
-# Keep signatures current (freshclam.service ships disabled on AL2023)
-sudo systemctl enable --now clamav-freshclam 2>/dev/null || \
-  echo "  ⚠  clamav-freshclam.service not found — cron a daily 'freshclam' instead."
+sudo systemctl enable --now clamd@scan 2>/dev/null || \
+  echo "  ⚠  clamd@scan won't start without signatures yet — will come up once deploy.sh pushes clamav-db/ over."
 
 echo "  ✓ ClamAV installed, signatures loaded, clamd@scan running"
 echo "    PHP calls: clamdscan --no-summary --fdpass <file>  (via clamd, not the slower clamscan CLI)"

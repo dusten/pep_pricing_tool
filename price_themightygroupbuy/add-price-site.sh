@@ -98,15 +98,19 @@ echo "Written: /home/ec2-user/.pc_my.cnf"
 # ── ClamAV (malware scanning on vendor file uploads) ──────────
 # This server was originally provisioned by the sibling grp app's
 # setup-al2023.sh, which never installed ClamAV either — install it here too.
+# Plain `clamav`/`clamd` (0.103 track) conflicts with clamav1.4 on this
+# AL2023 image — clamav1.4/clamd1.4 is the track that actually installs.
 echo "=== ClamAV setup ==="
-dnf install -y clamav clamav-update clamav-filesystem clamav-server clamav-server-systemd
+dnf install -y clamav1.4 clamav1.4-freshclam clamd1.4
 sed -i 's/^Example/#Example/' /etc/freshclam.conf
-freshclam
+# database.clamav.net 403s the EC2 IP range — freshclam won't succeed here.
+# Signatures are pushed in manually via deploy.sh from clamav-db/ instead
+# (see clamav-db/README.md). Don't let this abort setup.
+freshclam || echo "  ⚠  freshclam blocked (expected on EC2) — signatures pushed via deploy.sh's clamav-db/ instead."
 sed -i 's/^Example/#Example/' /etc/clamd.d/scan.conf
-systemctl enable --now clamd@scan
-systemctl enable --now clamav-freshclam 2>/dev/null || \
-  echo "  ⚠  clamav-freshclam.service not found — cron a daily 'freshclam' instead."
-echo "  ✓ ClamAV installed, signatures loaded, clamd@scan running"
+systemctl enable --now clamd@scan 2>/dev/null || \
+  echo "  ⚠  clamd@scan won't start without signatures yet — will come up once deploy.sh pushes clamav-db/ over."
+echo "  ✓ ClamAV installed — signatures/clamd@scan pending clamav-db/ push via deploy.sh"
 
 # ── [3/5] Storage directory ───────────────────────────────────
 echo "=== [3/5] Storage directory ==="

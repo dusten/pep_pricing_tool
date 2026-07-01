@@ -21,6 +21,11 @@ frontend/.env
 # Uploaded vendor files — excluded from rsync too
 backend/storage/vendor_files/
 
+# ClamAV signature files — downloaded locally (clamav.net CDN blocks this EC2
+# range), synced by deploy.sh, never committed
+clamav-db/*.cvd
+clamav-db/*.cld
+
 # Email log files (directory tracked via .gitkeep)
 log/*.log
 

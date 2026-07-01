@@ -68,6 +68,8 @@ sync_schema() {
 # in a prior --build/--all run). Use this for backend-only or config-only
 # changes where rebuilding the frontend would just be wasted time.
 sync_files() {
+  fetch_clamav_db
+
   echo "▶ Syncing to $REMOTE_HOST…"
   rsync -avz --delete \
     -e "ssh -i $SSH_KEY" \
@@ -91,6 +93,17 @@ sync_files() {
   sudo chown -R apache:apache log/
   sudo chmod -R 775 log/
   sudo chcon -Rt httpd_sys_rw_content_t log/
+
+  # ClamAV signatures — database.clamav.net blocks this EC2 range, so
+  # signatures are downloaded locally and rsynced in via clamav-db/ instead
+  # of freshclam. Install whatever is present, then restart clamd@scan.
+  if compgen -G "clamav-db/*.cvd" > /dev/null || compgen -G "clamav-db/*.cld" > /dev/null; then
+    sudo cp clamav-db/*.cvd clamav-db/*.cld /var/lib/clamav/ 2>/dev/null
+    sudo chown clamupdate:clamupdate /var/lib/clamav/*.cvd /var/lib/clamav/*.cld 2>/dev/null
+    sudo chmod 644 /var/lib/clamav/*.cvd /var/lib/clamav/*.cld 2>/dev/null
+    sudo systemctl restart clamd@scan 2>/dev/null && echo "  ✓ ClamAV signatures installed, clamd@scan restarted" \
+      || echo "  ⚠ ClamAV signatures copied but clamd@scan restart failed — check manually"
+  fi
 
   sudo systemctl reload php-fpm
   sudo systemctl reload httpd
