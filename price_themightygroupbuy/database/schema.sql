@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS pc_users (
   display_name           VARCHAR(100) NOT NULL,
   email_token            VARCHAR(64)  NULL,          -- plain hex; cleared on verify
   email_verified_at      DATETIME     NULL,
-  referral_code          VARCHAR(20)  NOT NULL UNIQUE,
+  referral_code          CHAR(24)     NOT NULL UNIQUE,  -- 24 hex chars, random.random_bytes(12)
   referred_by_id         INT UNSIGNED NULL,
   is_admin               BOOLEAN      NOT NULL DEFAULT FALSE,
   theme                  ENUM('system','light','dark') NOT NULL DEFAULT 'system',
@@ -83,7 +83,7 @@ CREATE TABLE IF NOT EXISTS pc_waitlist (
   id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   email         VARCHAR(254) NOT NULL UNIQUE,
   name          VARCHAR(100) NULL,
-  referral_code VARCHAR(20)  NULL,         -- code used to get invited
+  referral_code CHAR(24)     NULL,         -- code used to get invited
   invite_token  VARCHAR(64)  NULL UNIQUE,  -- token emailed to invitee
   invited_at               DATETIME     NULL,
   joined_at                DATETIME     NULL,         -- set when they complete registration

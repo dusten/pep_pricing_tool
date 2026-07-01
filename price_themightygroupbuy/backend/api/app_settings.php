@@ -15,13 +15,29 @@ const PUBLIC_SETTINGS = [
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $stmt = db()->prepare(
-        'SELECT `key`, value FROM pc_app_settings WHERE `key` IN (' .
-        implode(',', array_fill(0, count(PUBLIC_SETTINGS), '?')) . ')'
-    );
-    $stmt->execute(PUBLIC_SETTINGS);
+    // Admins (valid bearer token) get every setting; everyone else gets the public subset.
+    $isAdmin = false;
+    if (preg_match('/^Bearer\s+(\S+)$/i', $_SERVER['HTTP_AUTHORIZATION'] ?? '', $m)) {
+        $s = db()->prepare(
+            'SELECT u.is_admin FROM pc_users u JOIN pc_sessions s ON s.user_id = u.id
+             WHERE s.token_hash = ? AND s.expires_at > NOW() LIMIT 1'
+        );
+        $s->execute([hashToken($m[1])]);
+        $isAdmin = !empty($s->fetch()['is_admin']);
+    }
+
+    if ($isAdmin) {
+        $rows = db()->query('SELECT `key`, value FROM pc_app_settings')->fetchAll();
+    } else {
+        $stmt = db()->prepare(
+            'SELECT `key`, value FROM pc_app_settings WHERE `key` IN (' .
+            implode(',', array_fill(0, count(PUBLIC_SETTINGS), '?')) . ')'
+        );
+        $stmt->execute(PUBLIC_SETTINGS);
+        $rows = $stmt->fetchAll();
+    }
     $settings = [];
-    foreach ($stmt->fetchAll() as $row) $settings[$row['key']] = $row['value'];
+    foreach ($rows as $row) $settings[$row['key']] = $row['value'];
     jsonResponse($settings);
 }
 

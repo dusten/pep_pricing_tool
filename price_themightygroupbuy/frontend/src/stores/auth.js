@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { post, get, setTokenGetter } from '@/utils/api.js'
+import { post, get, patch, setTokenGetter } from '@/utils/api.js'
 
 const TOKEN_KEY = 'pc_token'
 const USER_KEY  = 'pc_user'

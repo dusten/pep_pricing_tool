@@ -7,12 +7,14 @@
         <slot />
       </main>
     </div>
+    <BottomNav />
   </div>
 </template>
 
 <script setup>
-import Sidebar from './Sidebar.vue'
-import TopBar  from './TopBar.vue'
+import Sidebar   from './Sidebar.vue'
+import TopBar    from './TopBar.vue'
+import BottomNav from './BottomNav.vue'
 
 defineProps({
   title: { type: String, default: '' },
@@ -43,6 +45,6 @@ defineProps({
 
 @media (max-width: 768px) {
   .app-main { margin-left: 0; }
-  .app-content { padding: 16px; }
+  .app-content { padding: 16px; padding-bottom: calc(58px + 16px); }
 }
 </style>

@@ -10,92 +10,36 @@
     </div>
 
     <div class="admin-body">
-      <!-- Users -->
-      <div v-if="activeTab === 'users'">
-        <div class="tab-placeholder">
-          <p>Users table — lists all registered users with tier, status, and admin controls.</p>
-          <p class="text-muted text-sm">Built in Phase 2 alongside subscription management.</p>
-        </div>
-      </div>
-
-      <!-- Waitlist -->
-      <div v-if="activeTab === 'waitlist'">
-        <div class="tab-placeholder">
-          <p>Waitlist management — invite individuals or in bulk, toggle waitlist mode.</p>
-          <p class="text-muted text-sm">Built in Phase 2.</p>
-        </div>
-      </div>
-
-      <!-- Vendors -->
-      <div v-if="activeTab === 'vendors'">
-        <div class="tab-placeholder">
-          <p>Vendor management — add/edit vendors, upload price lists.</p>
-          <p class="text-muted text-sm">Built in Phase 3 (Claude pipeline phase).</p>
-        </div>
-      </div>
-
-      <!-- Products -->
-      <div v-if="activeTab === 'products'">
-        <div class="tab-placeholder">
-          <p>Product catalogue — canonical names, aliases, merge tool.</p>
-          <p class="text-muted text-sm">Built in Phase 3.</p>
-        </div>
-      </div>
-
-      <!-- Files -->
-      <div v-if="activeTab === 'files'">
-        <div class="tab-placeholder">
-          <p>File processing queue — upload vendor price lists, trigger Claude extraction.</p>
-          <p class="text-muted text-sm">Built in Phase 3 (Claude pipeline phase).</p>
-        </div>
-      </div>
-
-      <!-- Subscriptions -->
-      <div v-if="activeTab === 'subscriptions'">
-        <div class="tab-placeholder">
-          <p>Subscriber list — tier, status, Stripe links, manual credit.</p>
-          <p class="text-muted text-sm">Built in Phase 2 (Stripe phase).</p>
-        </div>
-      </div>
-
-      <!-- Settings -->
-      <div v-if="activeTab === 'settings'">
-        <SettingsTab />
-      </div>
-
-      <!-- Performance -->
-      <div v-if="activeTab === 'performance'">
-        <div class="tab-placeholder">
-          <p>Navigation Timing metrics, 90-day retention sparklines.</p>
-          <p class="text-muted text-sm">Built in Phase 2.</p>
-        </div>
-      </div>
-
-      <!-- Feedback -->
-      <div v-if="activeTab === 'feedback'">
-        <FeedbackTab />
-      </div>
-
-      <!-- Backup -->
-      <div v-if="activeTab === 'backup'">
-        <div class="tab-placeholder">
-          <p>Download ZIP of database + vendor_files, restore with SQL validation.</p>
-          <p class="text-muted text-sm">Built in Phase 2.</p>
-        </div>
-      </div>
+      <UsersTab         v-if="activeTab === 'users'" />
+      <WaitlistTab      v-if="activeTab === 'waitlist'" />
+      <SubscriptionsTab v-if="activeTab === 'subscriptions'" />
+      <VendorsTab       v-if="activeTab === 'vendors'" />
+      <ProductsTab      v-if="activeTab === 'products'" />
+      <FilesTab         v-if="activeTab === 'files'" />
+      <SettingsTab      v-if="activeTab === 'settings'" />
+      <PerformanceTab   v-if="activeTab === 'performance'" />
+      <FeedbackTab      v-if="activeTab === 'feedback'" />
+      <BackupTab        v-if="activeTab === 'backup'" />
     </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { ref, defineAsyncComponent } from 'vue'
+import { ref } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 
-// Only wire up tabs that are built; stubs for the rest
-const SettingsTab = defineAsyncComponent(() => import('./tabs/SettingsTab.vue').catch(() => ({ template: '<div class="tab-placeholder"><p>Settings tab loading…</p></div>' })))
-const FeedbackTab = defineAsyncComponent(() => import('./tabs/FeedbackTab.vue').catch(() => ({ template: '<div class="tab-placeholder"><p>Feedback tab loading…</p></div>' })))
+import UsersTab         from './tabs/UsersTab.vue'
+import WaitlistTab      from './tabs/WaitlistTab.vue'
+import SubscriptionsTab from './tabs/SubscriptionsTab.vue'
+import VendorsTab       from './tabs/VendorsTab.vue'
+import ProductsTab      from './tabs/ProductsTab.vue'
+import FilesTab         from './tabs/FilesTab.vue'
+import SettingsTab      from './tabs/SettingsTab.vue'
+import PerformanceTab   from './tabs/PerformanceTab.vue'
+import FeedbackTab      from './tabs/FeedbackTab.vue'
+import BackupTab        from './tabs/BackupTab.vue'
 
-const activeTab = ref('settings')
+const activeTab = ref('users')
 
 const tabs = [
   { id: 'users',         label: 'Users' },
@@ -135,13 +79,4 @@ const tabs = [
 .admin-tab.active { background: var(--primary); border-color: var(--primary); color: var(--text-on-primary); }
 
 .admin-body { }
-.tab-placeholder {
-  background: var(--surface);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-lg);
-  padding: 40px;
-  text-align: center;
-  color: var(--text-secondary);
-}
-.tab-placeholder p { margin: 0 0 8px; }
 </style>

@@ -60,10 +60,18 @@ $ROUTES = [
     'app-settings'         => 'app_settings.php',
     'feedback'             => 'feedback.php',
     'perf'                 => 'perf.php',
-    // ── Phase 2+ (uncomment as built) ────────────────────────────
-    // 'vendors'              => 'vendors/index.php',
-    // 'products'             => 'products/index.php',
-    // 'comparison'           => 'comparison/index.php',
+    'vendors'              => 'vendors/index.php',
+    'products'             => 'products/index.php',
+    'comparison'           => 'comparison/index.php',
+    'comparison/filters'   => 'comparison/filters.php',
+    'calendar'             => 'calendar.php',
+    'admin/users'          => 'admin/users.php',
+    'admin/waitlist'       => 'admin/waitlist.php',
+    'admin/files'          => 'admin/files.php',
+    'admin/feedback'       => 'admin/feedback.php',
+    'admin/performance'    => 'admin/performance.php',
+    'admin/backup'         => 'admin/backup.php',
+    // ── Backlog — Stripe billing, do not build yet ───────────────
     // 'billing/checkout'     => 'billing/checkout.php',
     // 'billing/portal'       => 'billing/portal.php',
     // 'billing/webhook'      => 'billing/webhook.php',
@@ -71,13 +79,19 @@ $ROUTES = [
 
 // Dynamic route patterns: ['regex' => ['file', 'param1', ...]]
 $DYNAMIC = [
-    // 'vendors/(\d+)'              => ['vendors/show.php',       'id'],
-    // 'vendors/(\d+)/files'        => ['vendors/files.php',      'id'],
-    // 'files/(\d+)/process'        => ['files/process.php',      'id'],
-    // 'files/(\d+)/status'         => ['files/status.php',       'id'],
-    // 'products/(\d+)'             => ['products/show.php',       'id'],
-    // 'products/(\d+)/aliases'     => ['products/aliases.php',    'id'],
-    // 'products/(\d+)/merge'       => ['products/merge.php',      'id'],
+    'vendors/(\d+)'                    => ['vendors/show.php',       'id'],
+    'vendors/(\d+)/files'               => ['vendors/files.php',      'id'],
+    'files/(\d+)/download'              => ['files/download.php',    'id'],
+    'files/(\d+)/process'               => ['files/process.php',     'id'],
+    'files/(\d+)/status'                => ['files/status.php',      'id'],
+    'files/(\d+)'                       => ['files/delete.php',      'id'],
+    'products/(\d+)'                    => ['products/show.php',     'id'],
+    'products/(\d+)/aliases'            => ['products/aliases.php',  'id'],
+    'products/(\d+)/aliases/(\d+)'      => ['products/aliases.php',  'id', 'aliasId'],
+    'products/(\d+)/merge'              => ['products/merge.php',    'id'],
+    'admin/users/(\d+)'                 => ['admin/users_show.php',    'id'],
+    'admin/waitlist/(\d+)'              => ['admin/waitlist_show.php', 'id'],
+    'admin/feedback/(\d+)'              => ['admin/feedback_show.php', 'id'],
 ];
 
 $apiPath = substr($uri, 4); // strip 'api/'

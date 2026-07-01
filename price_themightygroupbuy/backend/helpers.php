@@ -76,6 +76,7 @@ function requireAdmin(): array {
 function requireTier(string $min): array {
     $tierOrder = ['free' => 0, 'advanced' => 1, 'pro' => 2, 'expert' => 3];
     $user      = requireAuth();
+    if (!empty($user['is_admin'])) return $user; // admins are always Expert-and-above
     $isActive  = in_array($user['tier_status'], ['active', 'trialing'], true);
     $userLevel = $tierOrder[$isActive ? $user['tier'] : 'free'] ?? 0;
     $minLevel  = $tierOrder[$min] ?? 0;

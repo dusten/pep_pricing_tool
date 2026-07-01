@@ -42,8 +42,9 @@ Subscription SaaS with annual pricing tiers ($50 / $140 / $340).
 ## Backlog (in priority order)
 
 1. **Stripe billing** — annual tiers $50 / $140 / $340
-2. Claude extraction pipeline (deferred from Phase 1)
+2. ~~Claude extraction pipeline~~ — built (`backend/api/files/process.php`, `backend/lib/claude.php`)
 3. **Post-deploy health check** — after `deploy.sh` finishes, hit a `/api/health` endpoint that exercises DB (query), Memcached (set/get), and email config (reachability only); print a pass/fail summary per component
+4. **ClamAV scan on vendor file uploads** — admin-uploaded PDF/XLSX/CSV files go straight into `backend/api/vendors/files.php` → Claude extraction with no malware scan. Add a `clamdscan` (via clamd daemon, not the slower `clamscan` CLI) check between `move_uploaded_file()` and the file being marked available for processing; quarantine/reject on a positive match.
 
 ## Wiki / Knowledge Base
 

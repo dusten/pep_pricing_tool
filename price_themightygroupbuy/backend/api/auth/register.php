@@ -53,7 +53,7 @@ if ($referralCode) {
 }
 
 // ── Create user ───────────────────────────────────────────────────
-$myCode     = strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
+$myCode     = generateToken(12); // 24-char unique hash
 $emailToken = generateToken(16); // 32-char hex; stored plain for simpler verify URL
 
 $stmt = db()->prepare(

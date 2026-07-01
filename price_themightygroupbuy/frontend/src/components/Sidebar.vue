@@ -11,6 +11,9 @@
       <NavItem to="/dashboard" label="Dashboard">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       </NavItem>
+      <NavItem to="/calendar" label="Calendar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </NavItem>
       <NavItem to="/comparison" label="Comparison">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 3h18v4H3z"/><path d="M3 11h18v2H3z"/><path d="M3 17h11v4H3z"/><path d="M17 17l2 2 4-4"/></svg>
       </NavItem>
@@ -20,42 +23,23 @@
       <NavItem to="/account" label="Account">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
       </NavItem>
-
-      <!-- Admin section -->
-      <template v-if="auth.isAdmin">
-        <div class="sidebar-section-label">Admin</div>
-        <NavItem to="/admin" label="Admin Panel">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2l3 3h4v4l3 3-3 3v4h-4l-3 3-3-3H5v-4L2 12l3-3V5h4z"/></svg>
-        </NavItem>
-      </template>
     </nav>
 
-    <!-- Bottom: tier badge + logout -->
+    <!-- Bottom: tier badge -->
     <div class="sidebar-footer">
-      <span :class="['badge', `badge-${auth.tier}`]" style="margin-bottom:10px">
+      <span :class="['badge', `badge-${auth.tier}`]">
         {{ auth.tier.charAt(0).toUpperCase() + auth.tier.slice(1) }}
       </span>
-      <button class="sidebar-logout" @click="handleLogout">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Sign out
-      </button>
     </div>
   </aside>
 </template>
 
 <script setup>
 import { defineComponent, h } from 'vue'
-import { RouterLink, useLink } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
-import { useRouter }    from 'vue-router'
 
-const auth   = useAuthStore()
-const router = useRouter()
-
-async function handleLogout() {
-  await auth.logout()
-  router.push('/login')
-}
+const auth = useAuthStore()
 
 // Inline NavItem to avoid extra file — ponytail: fewest files
 const NavItem = defineComponent({
@@ -136,36 +120,10 @@ const NavItem = defineComponent({
   flex-shrink: 0;
 }
 
-.sidebar-section-label {
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: rgba(148,163,184,.4);
-  font-weight: 600;
-  padding: 14px 10px 4px;
-}
-
 .sidebar-footer {
   padding: 12px 14px 18px;
   border-top: 1px solid rgba(255,255,255,.06);
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
 }
-
-.sidebar-logout {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: rgba(148,163,184,.6);
-  font-size: 12.5px;
-  padding: 4px 0;
-  transition: color var(--transition);
-}
-.sidebar-logout:hover { color: var(--danger); }
 
 @media (max-width: 768px) {
   .sidebar { display: none; }
