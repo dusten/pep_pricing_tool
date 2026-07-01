@@ -333,6 +333,10 @@ INSERT IGNORE INTO pc_specifications (product_id, spec_label, numeric_value, uni
   (3, '2mg',   2.0000, 'mg'),
   (3, '5mg',   5.0000, 'mg');
 
+-- Only 001 is pre-seeded here — it's the migration that created these tables
+-- in the first place, so schema.sql's CREATE TABLE already IS its end state.
+-- Never add later migrations to this seed list: schema.sql's CREATE TABLE
+-- IF NOT EXISTS is a no-op on an existing install, so pre-marking a later
+-- migration "applied" here means migrate.sh skips its real ALTER TABLE work
+-- against that install and it silently never gets the new columns.
 INSERT IGNORE INTO pc_migrations (filename) VALUES ('001_initial.sql');
-INSERT IGNORE INTO pc_migrations (filename) VALUES ('002_widen_referral_code.sql');
-INSERT IGNORE INTO pc_migrations (filename) VALUES ('003_settings_admin_expansion.sql');
