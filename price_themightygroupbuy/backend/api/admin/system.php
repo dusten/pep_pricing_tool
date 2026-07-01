@@ -31,8 +31,11 @@ if ($mc) {
 }
 
 // ── Database ─────────────────────────────────────────────────────
+// GLOBAL, not session, status — every request opens a fresh PDO connection
+// (no persistent connections), so plain SHOW STATUS reads that new
+// connection's own near-empty session counters and never visibly moves.
 $statusRows = db()->query(
-    "SHOW STATUS WHERE Variable_name IN ('Threads_connected','Questions','Slow_queries','Uptime')"
+    "SHOW GLOBAL STATUS WHERE Variable_name IN ('Threads_connected','Questions','Slow_queries','Uptime')"
 )->fetchAll(PDO::FETCH_KEY_PAIR);
 
 $database = [

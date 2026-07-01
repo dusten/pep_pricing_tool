@@ -25,8 +25,8 @@
         <div class="stat-label">Cache memory used</div>
       </div>
       <div class="stat-tile"><div class="stat-value">{{ sys.database.connections }}</div><div class="stat-label">DB connections</div></div>
-      <div class="stat-tile"><div class="stat-value">{{ sys.database.total_queries.toLocaleString() }}</div><div class="stat-label">Total queries</div></div>
-      <div class="stat-tile"><div class="stat-value">{{ sys.database.slow_queries }}</div><div class="stat-label">Slow queries</div></div>
+      <div class="stat-tile"><div class="stat-value">{{ sys.database.total_queries.toLocaleString() }}</div><div class="stat-label">Total queries</div><div class="stat-sublabel">since restart</div></div>
+      <div class="stat-tile"><div class="stat-value">{{ sys.database.slow_queries }}</div><div class="stat-label">Slow queries</div><div class="stat-sublabel">since restart</div></div>
     </div>
 
     <h4 class="section-title">Slow queries — this database only</h4>
@@ -190,6 +190,7 @@ async function rerun(q) {
 .stat-tile { background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
 .stat-value { font-size: 20px; font-weight: 700; color: var(--primary); }
 .stat-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; margin-top: 4px; }
+.stat-sublabel { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
 
 .section-title { margin: 24px 0 10px; font-size: 13.5px; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
