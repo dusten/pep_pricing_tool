@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         jsonResponse(['error' => 'Password is incorrect.'], 401);
     }
     db()->prepare('DELETE FROM pc_users WHERE id = ?')->execute([$user['id']]);
+    cacheBustSession($user['_token_hash']);
     jsonResponse(['message' => 'Account deleted.']);
 }
 
@@ -46,6 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
         $vals[] = $user['id'];
         db()->prepare('UPDATE pc_users SET ' . implode(', ', $fields) . ' WHERE id = ?')
             ->execute($vals);
+        cacheBustSession($user['_token_hash']); // otherwise the next fetchMe() can serve the pre-edit row for up to 60s
     }
 
     // Re-fetch updated user

@@ -31,6 +31,10 @@ try {
     $pdo->prepare('DELETE FROM pc_sessions WHERE user_id = ? AND id != ?')
         ->execute([$user['id'], $user['session_id']]);
     $pdo->commit();
+    // Bust the surviving session's own cache entry too — it still holds the
+    // old password_hash, which would fail a same-window re-verify (e.g.
+    // immediately deleting the account with the new password).
+    cacheBustSession($user['_token_hash']);
 } catch (Throwable $e) {
     $pdo->rollBack();
     error_log('[me/password] ' . $e->getMessage());

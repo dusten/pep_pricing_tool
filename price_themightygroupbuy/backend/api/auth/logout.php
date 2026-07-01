@@ -9,6 +9,7 @@ $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
 if (preg_match('/^Bearer\s+(\S+)$/i', $header, $m)) {
     $hash = hashToken($m[1]);
     db()->prepare('DELETE FROM pc_sessions WHERE token_hash = ?')->execute([$hash]);
+    cacheBustSession($hash);
 }
 
 jsonResponse(['message' => 'Logged out.']);

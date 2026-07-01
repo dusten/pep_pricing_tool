@@ -42,6 +42,16 @@ function hashToken(string $token): string {
 /**
  * Returns current user row (with session_id) or emits 401.
  * Also bumps last_seen_at on the session.
+ *
+ * The token→user lookup is cached (60s TTL, keyed by token_hash) — this runs
+ * on every single authenticated request, easily the highest-frequency query
+ * in the app. A cache hit can only ever go stale in the "still looks valid"
+ * direction (a just-revoked token working a little longer), never the
+ * reverse, so a short TTL bounds that risk. Every endpoint that revokes a
+ * specific token or edits the current user's own row must call
+ * cacheBustSession($user['_token_hash']) — see logout.php, me/password.php,
+ * me/sessions_revoke_all.php, me.php, me/email.php confirm — otherwise a
+ * self-edit (theme/name/timezone) can appear not to have saved for up to 60s.
  */
 function requireAuth(): array {
     $header = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
@@ -51,18 +61,27 @@ function requireAuth(): array {
     $hash = hashToken($m[1]);
     // Re-check email_verified_at on every request, not just at login — a session
     // token alone isn't proof the account is still in good standing.
-    $stmt = db()->prepare(
-        'SELECT u.*, s.id AS session_id FROM pc_users u
-         JOIN pc_sessions s ON s.user_id = u.id
-         WHERE s.token_hash = ? AND s.expires_at > NOW() AND u.email_verified_at IS NOT NULL
-         LIMIT 1'
-    );
-    $stmt->execute([$hash]);
-    $user = $stmt->fetch() ?: null;
+    $user = cacheGet('session', $hash, 60, function () use ($hash) {
+        $stmt = db()->prepare(
+            'SELECT u.*, s.id AS session_id FROM pc_users u
+             JOIN pc_sessions s ON s.user_id = u.id
+             WHERE s.token_hash = ? AND s.expires_at > NOW() AND u.email_verified_at IS NOT NULL
+             LIMIT 1'
+        );
+        $stmt->execute([$hash]);
+        return $stmt->fetch() ?: null;
+    });
     if (!$user) jsonResponse(['error' => 'Unauthorized'], 401);
     db()->prepare('UPDATE pc_sessions SET last_seen_at = NOW() WHERE id = ?')
         ->execute([$user['session_id']]);
+    $user['_token_hash'] = $hash;
     return $user;
+}
+
+/** Bust one specific token's cached session lookup — see requireAuth() docblock. */
+function cacheBustSession(string $tokenHash): void {
+    $mc = mc();
+    if ($mc) $mc->delete('c:' . cacheGroupKey('session') . ':' . $tokenHash);
 }
 
 function requireAdmin(): array {

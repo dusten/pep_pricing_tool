@@ -24,6 +24,7 @@ if ($stmt->fetch()) jsonResponse(['error' => 'That email is already in use.'], 4
 $token = generateToken(16);
 db()->prepare('UPDATE pc_users SET pending_email = ?, email_change_token = ? WHERE id = ?')
     ->execute([$newEmail, $token, $user['id']]);
+cacheBustSession($user['_token_hash']); // so the immediate fetchMe() shows "confirmation pending"
 
 $confirmUrl = APP_URL . '/verify-email-change?token=' . $token;
 sendVerificationEmail($newEmail, $user['display_name'], $confirmUrl);
