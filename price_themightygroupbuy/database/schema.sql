@@ -281,6 +281,27 @@ CREATE TABLE IF NOT EXISTS pc_maintenance_runs (
   INDEX (ran_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Per-database slow-query capture — see migrations/005_slow_query_cache.sql
+-- for why this exists (mysql.slow_log is server-wide, shared with the grp
+-- app on this box) and the CREATE EVENT that feeds this table hourly.
+CREATE TABLE IF NOT EXISTS pc_slow_query_cache (
+  id                BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  query_hash        CHAR(64) NOT NULL UNIQUE,
+  query_time_secs   DECIMAL(10,3) NOT NULL,
+  lock_time_secs    DECIMAL(10,3) NOT NULL DEFAULT 0.000,
+  rows_sent         BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  rows_examined     BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  query_sql         MEDIUMTEXT NOT NULL,
+  first_seen_at     DATETIME NOT NULL,
+  last_seen_at      DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  occurrence_count  INT UNSIGNED NOT NULL DEFAULT 1,
+  status            ENUM('new','acknowledged','resolved') NOT NULL DEFAULT 'new',
+  status_note       TEXT NULL,
+  status_updated_at DATETIME NULL,
+  INDEX (status, last_seen_at),
+  INDEX (query_time_secs)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS pc_referral_credits (
   id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   referrer_id  INT UNSIGNED NOT NULL,

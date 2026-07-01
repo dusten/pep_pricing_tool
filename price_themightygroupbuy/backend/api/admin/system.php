@@ -42,29 +42,10 @@ $database = [
     'uptime_sec'   => (int)($statusRows['Uptime'] ?? 0),
 ];
 
-// ── Slow query log — read from performance_schema's own aggregated-by-digest
-// table rather than tailing/parsing the slow-query log file: it's already
-// deduplicated (one row per normalized query shape, not per execution) and
-// needs no server config changes to populate.
-$slowQueries = [];
-try {
-    $slowQueries = db()->query(
-        "SELECT DIGEST_TEXT AS query, COUNT_STAR AS exec_count,
-                ROUND(AVG_TIMER_WAIT / 1000000000, 2) AS avg_ms,
-                ROUND(MAX_TIMER_WAIT / 1000000000, 2) AS max_ms
-         FROM performance_schema.events_statements_summary_by_digest
-         WHERE DIGEST_TEXT IS NOT NULL
-         ORDER BY AVG_TIMER_WAIT DESC LIMIT 15"
-    )->fetchAll();
-    foreach ($slowQueries as &$q) {
-        $q['exec_count'] = (int)$q['exec_count'];
-        $q['avg_ms']     = (float)$q['avg_ms'];
-        $q['max_ms']     = (float)$q['max_ms'];
-    }
-} catch (Throwable $e) {
-    // performance_schema may be disabled — degrade gracefully, don't fail the whole tab
-    error_log('[admin/system] performance_schema unavailable: ' . $e->getMessage());
-}
+// Slow queries live in their own endpoint now (admin/slow_queries.php) —
+// pc_slow_query_cache, fed hourly by the pc_import_slow_queries EVENT from
+// this db's own rows in mysql.slow_log (server-wide table, shared with the
+// grp app on this box; both events are scoped by `db` so they don't race).
 
 // ── Maintenance run history ─────────────────────────────────────
 $maintenance = db()->query(
@@ -74,6 +55,5 @@ $maintenance = db()->query(
 jsonResponse([
     'cache'         => $cache,
     'database'      => $database,
-    'slow_queries'  => $slowQueries,
     'maintenance'   => $maintenance,
 ]);

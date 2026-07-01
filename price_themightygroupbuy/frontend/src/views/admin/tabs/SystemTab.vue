@@ -29,19 +29,37 @@
       <div class="stat-tile"><div class="stat-value">{{ sys.database.slow_queries }}</div><div class="stat-label">Slow queries</div></div>
     </div>
 
-    <h4 class="section-title">Slow queries (deduplicated, by avg time)</h4>
-    <table v-if="sys" class="admin-table">
-      <thead><tr><th>Query</th><th>Executions</th><th>Avg</th><th>Max</th></tr></thead>
+    <h4 class="section-title">Slow queries — this database only</h4>
+    <p class="text-muted text-sm" style="margin-bottom:10px">
+      Fed hourly from mysql.slow_log (server-wide, shared with other DBs on this box — scoped to tmgb_price's own rows only).
+      Includes queries that were slow <em>or</em> didn't use an index.
+    </p>
+    <div class="toolbar">
+      <select v-model="sqStatus" @change="loadSlowQueries">
+        <option value="">All statuses</option>
+        <option value="new">New</option>
+        <option value="acknowledged">Acknowledged</option>
+        <option value="resolved">Resolved</option>
+      </select>
+    </div>
+    <table v-if="slowQueries" class="admin-table">
+      <thead><tr><th>Query</th><th>Time</th><th>Rows examined</th><th>Seen</th><th>Status</th><th></th></tr></thead>
       <tbody>
-        <tr v-for="(q, i) in sys.slow_queries" :key="i">
-          <td class="text-sm mono">{{ q.query }}</td>
-          <td class="text-sm">{{ q.exec_count }}</td>
-          <td class="text-sm">{{ q.avg_ms }}ms</td>
-          <td class="text-sm">{{ q.max_ms }}ms</td>
+        <tr v-for="q in slowQueries" :key="q.id">
+          <td class="text-sm mono" :title="q.query_sql">{{ q.query_sql }}</td>
+          <td class="text-sm">{{ q.query_time_secs }}s</td>
+          <td class="text-sm">{{ q.rows_examined.toLocaleString() }}</td>
+          <td class="text-sm text-muted">×{{ q.occurrence_count }}, last {{ q.last_seen_at }}</td>
+          <td><span :class="['badge', statusBadge(q.status)]">{{ q.status }}</span></td>
+          <td class="sq-actions">
+            <button v-if="q.status !== 'acknowledged'" class="btn btn-ghost btn-sm" @click="setStatus(q, 'acknowledged')">Acknowledge</button>
+            <button v-if="q.status !== 'resolved'" class="btn btn-ghost btn-sm" @click="setStatus(q, 'resolved')">Resolve</button>
+            <button v-if="q.status === 'resolved'" class="btn btn-ghost btn-sm" @click="setStatus(q, 'new')">Reopen</button>
+          </td>
         </tr>
       </tbody>
     </table>
-    <p v-if="sys && !sys.slow_queries.length" class="text-muted text-sm">No slow-query data available.</p>
+    <p v-if="slowQueries && !slowQueries.length" class="text-muted text-sm">No slow-query data available.</p>
 
     <h4 class="section-title">Maintenance run history</h4>
     <table v-if="sys" class="admin-table">
@@ -84,7 +102,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
-import { get, post } from '@/utils/api.js'
+import { get, post, patch } from '@/utils/api.js'
 
 const sys            = ref(null)
 const loading         = ref(false)
@@ -113,6 +131,24 @@ function fmtBytes(n) {
   if (!n) return '—'
   const mb = n / 1024 / 1024
   return mb >= 1 ? `${mb.toFixed(1)}MB` : `${(n / 1024).toFixed(0)}KB`
+}
+
+// ── Slow queries (this db only, status-tracked) ──────────────────
+const slowQueries = ref(null)
+const sqStatus     = ref('')
+async function loadSlowQueries() {
+  const params = sqStatus.value ? `?status=${sqStatus.value}` : ''
+  const res = await get(`/api/admin/slow-queries${params}`)
+  slowQueries.value = res.queries
+}
+onMounted(loadSlowQueries)
+
+function statusBadge(status) {
+  return status === 'resolved' ? 'badge-pro' : status === 'acknowledged' ? 'badge-advanced' : 'badge-free'
+}
+async function setStatus(q, status) {
+  await patch(`/api/admin/slow-queries/${q.id}`, { status })
+  q.status = status
 }
 
 // ── Comparison query log ─────────────────────────────────────────
@@ -160,6 +196,7 @@ async function rerun(q) {
 .admin-table th, .admin-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
 .admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 .mono { font-family: var(--font-mono); max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.sq-actions { display: flex; gap: 4px; flex-wrap: nowrap; }
 .text-danger { color: var(--danger); font-weight: 700; }
 
 .rerun-result { margin-top: 12px; padding: 10px 14px; background: var(--surface-alt); border-radius: var(--radius); font-size: 13px; }

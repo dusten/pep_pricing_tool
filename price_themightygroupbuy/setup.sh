@@ -86,6 +86,9 @@ CREATE USER IF NOT EXISTS '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASS}';
 GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, DROP, INDEX, ALTER,
       LOCK TABLES, EVENT
   ON \`${DB_NAME}\`.* TO '${DB_USER}'@'127.0.0.1';
+-- mysql.slow_log is server-wide (shared with other DBs on this box); the
+-- pc_import_slow_queries EVENT needs this to read/clear its own db's rows.
+GRANT SELECT, DELETE ON mysql.slow_log TO '${DB_USER}'@'127.0.0.1';
 FLUSH PRIVILEGES;
 SQL
 

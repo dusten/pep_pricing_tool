@@ -130,6 +130,7 @@ $ROUTES = [
     'admin/performance'    => 'admin/performance.php',
     'admin/system'         => 'admin/system.php',
     'admin/query-log'      => 'admin/query_log.php',
+    'admin/slow-queries'   => 'admin/slow_queries.php',
     'admin/backup'         => 'admin/backup.php',
     // ── Backlog — Stripe billing, do not build yet ───────────────
     // 'billing/checkout'     => 'billing/checkout.php',
@@ -154,6 +155,7 @@ $DYNAMIC = [
     'admin/waitlist/(\d+)'              => ['admin/waitlist_show.php', 'id'],
     'admin/feedback/(\d+)'              => ['admin/feedback_show.php', 'id'],
     'admin/query-log/(\d+)/rerun'       => ['admin/query_log_rerun.php', 'id'],
+    'admin/slow-queries/(\d+)'          => ['admin/slow_queries_show.php', 'id'],
 ];
 
 $apiPath = substr($uri, 4); // strip 'api/'
