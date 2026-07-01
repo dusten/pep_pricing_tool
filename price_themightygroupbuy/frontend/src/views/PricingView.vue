@@ -164,9 +164,9 @@ function selectPlan(plan) {
     auth.isAuthenticated ? router.push('/dashboard') : router.push('/register')
     return
   }
-  // ponytail: Stripe checkout wired in Phase 2; for now redirect to account
+  // ponytail: Stripe checkout wired in Phase 2; for now redirect to settings
   if (!auth.isAuthenticated) { router.push('/register'); return }
-  router.push('/account')
+  router.push('/settings')
 }
 </script>
 

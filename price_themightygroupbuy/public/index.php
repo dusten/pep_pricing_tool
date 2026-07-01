@@ -110,6 +110,7 @@ $ROUTES = [
     'me/email'             => 'me/email.php',
     'me/login-history'     => 'me/login_history.php',
     'me/export'            => 'me/export.php',
+    'me/referral-stats'    => 'me/referral_stats.php',
     'me/sessions/revoke-all' => 'me/sessions_revoke_all.php',
     'auth/verify-email-change' => 'auth/verify_email_change.php',
     'app-settings'         => 'app_settings.php',

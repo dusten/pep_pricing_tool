@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS pc_admin_audit_log (
 CREATE TABLE IF NOT EXISTS pc_feedback (
   id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id    INT UNSIGNED NULL,
-  type       ENUM('bug','feature','other') NOT NULL DEFAULT 'other',
+  type       ENUM('general','ui_ux','feature','bug','performance','other') NOT NULL DEFAULT 'general',
   message    TEXT NOT NULL,
   url        VARCHAR(500) NULL,
   is_read    BOOLEAN NOT NULL DEFAULT FALSE,

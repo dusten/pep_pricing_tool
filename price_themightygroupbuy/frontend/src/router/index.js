@@ -69,8 +69,7 @@ const router = createRouter({
     },
     {
       path: '/account',
-      component: () => import('@/views/AccountView.vue'),
-      meta: { requiresAuth: true },
+      redirect: '/settings',
     },
     {
       path: '/settings',
