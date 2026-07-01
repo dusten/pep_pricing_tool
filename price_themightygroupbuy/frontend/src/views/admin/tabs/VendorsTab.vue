@@ -47,7 +47,7 @@
       </div>
 
       <div class="field-row">
-        <textarea v-model="pasteText" placeholder="Paste the vendor's filled-out template reply here…" rows="4" class="paste-box"></textarea>
+        <textarea v-model="pasteText" :placeholder="INTAKE_TEMPLATE" rows="12" class="paste-box"></textarea>
       </div>
       <div class="field-row">
         <button class="btn btn-ghost btn-sm" :disabled="!pasteText.trim() || parsing" @click="parseIntake">
@@ -120,6 +120,18 @@ const PAYMENT_METHODS = [
   { value: 'western_union', label: 'Western Union' }, { value: 'zelle', label: 'Zelle' },
   { value: 'cashapp', label: 'CashApp' }, { value: 'credit_card', label: 'Credit card' },
 ]
+
+const INTAKE_TEMPLATE = `Vendor Name:
+Contact Name:
+Email:
+WhatsApp:
+Discord:
+Telegram:
+Website:
+Phone Number(s):
+Payment Methods (list all that apply — USDT/USDC Solana, USDT/USDC Tron, USDT/USDC ERC20,
+  BTC, ETH, SOL, PayPal, Wise, Alipay, Alibaba, Wire Transfer, Western Union, Zelle, CashApp, Credit Card):
+Shipping Price:`
 
 function emptyForm() {
   return {
