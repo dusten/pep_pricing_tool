@@ -50,10 +50,13 @@ if (!move_uploaded_file($_FILES['file']['tmp_name'], $storedPath)) {
 // file (kept for inspection, not deleted) and records a failed file row so
 // the reason is visible in the admin UI rather than the upload silently
 // vanishing.
-try {
-    $clean = scanFileForMalware($storedPath);
-} catch (Throwable $e) {
-    jsonResponse(['error' => 'Malware scan could not run. Upload rejected.', 'message' => $e->getMessage()], 503);
+$clean = true;
+if (MALWARE_SCAN_ENABLED) {
+    try {
+        $clean = scanFileForMalware($storedPath);
+    } catch (Throwable $e) {
+        jsonResponse(['error' => 'Malware scan could not run. Upload rejected.', 'message' => $e->getMessage()], 503);
+    }
 }
 if (!$clean) {
     $quarantinedPath = quarantineFile($storedPath);

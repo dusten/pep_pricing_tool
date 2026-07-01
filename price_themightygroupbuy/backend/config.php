@@ -49,6 +49,12 @@ define('ANTHROPIC_API_KEY',     _env('ANTHROPIC_API_KEY'));
 define('STRIPE_SECRET_KEY',     _env('STRIPE_SECRET_KEY'));
 define('STRIPE_WEBHOOK_SECRET', _env('STRIPE_WEBHOOK_SECRET'));
 
+// ponytail: temporary kill switch while clamd has no signatures (CDN blocks
+// this EC2 range from database.clamav.net) — flip MALWARE_SCAN_ENABLED=false
+// in .env_pricetool to unblock uploads, delete this flag once real
+// clamav-db/ signatures are in place and clamd@scan stays up for good.
+define('MALWARE_SCAN_ENABLED', _env('MALWARE_SCAN_ENABLED', 'true') !== 'false');
+
 // ── Singletons ────────────────────────────────────────────────────
 
 // MySQL's own Questions/Slow_queries status vars are server-wide — this box
