@@ -21,3 +21,7 @@ MAILTO=""
 
 # Weekly table optimization (Sunday 04:00) — surfaced in Admin > System
 0 4 * * 0 ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "OPTIMIZE TABLE pc_prices, pc_query_log, pc_comparison_log, pc_perf_metrics; INSERT INTO pc_maintenance_runs (job, status, details) VALUES ('optimize_tables','ok','pc_prices, pc_query_log, pc_comparison_log, pc_perf_metrics');" 2>/dev/null
+
+# Daily table analyze — refreshes index cardinality stats for the query optimizer.
+# Cheap (no rebuild/lock like OPTIMIZE), so runs daily rather than weekly. Surfaced in Admin > System.
+30 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "ANALYZE TABLE pc_prices, pc_products, pc_specifications, pc_vendors, pc_query_log, pc_comparison_log, pc_perf_metrics; INSERT INTO pc_maintenance_runs (job, status, details) VALUES ('analyze_tables','ok','pc_prices, pc_products, pc_specifications, pc_vendors, pc_query_log, pc_comparison_log, pc_perf_metrics');" 2>/dev/null

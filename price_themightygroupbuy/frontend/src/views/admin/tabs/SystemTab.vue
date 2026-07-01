@@ -6,6 +6,7 @@
         Auto-refresh:
         <select v-model="pollInterval" @change="setupPolling">
           <option value="0">Off</option>
+          <option value="1000">Live (1s)</option>
           <option value="60000">1m</option>
           <option value="180000">3m</option>
           <option value="300000">5m</option>
