@@ -5,6 +5,7 @@
 <script setup>
 import { watch, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth.js'
+import { sendPerfBeacon } from '@/utils/perfBeacon.js'
 
 const auth = useAuthStore()
 
@@ -17,6 +18,9 @@ function applyTheme(theme) {
   }
 }
 
-onMounted(() => applyTheme(auth.user?.theme))
+onMounted(() => {
+  applyTheme(auth.user?.theme)
+  sendPerfBeacon()
+})
 watch(() => auth.user?.theme, applyTheme)
 </script>
