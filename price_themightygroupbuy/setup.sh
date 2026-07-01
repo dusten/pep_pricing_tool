@@ -37,6 +37,25 @@ sudo dnf install -y \
 sudo dnf install -y php8.2-memcached 2>/dev/null || \
   echo "  ⚠  php8.2-memcached unavailable — rate limiting will degrade gracefully."
 
+# ── ClamAV (malware scanning on vendor file uploads) ──────────
+echo "=== ClamAV setup ==="
+sudo dnf install -y clamav clamav-update clamav-filesystem clamav-server clamav-server-systemd
+
+# Freshclam needs to run once before clamd can start (fresh install ships no signatures)
+sudo sed -i 's/^Example/#Example/' /etc/freshclam.conf
+sudo freshclam
+
+# clamd@scan listens on a unix socket at /run/clamd.scan/clamd.sock by default
+sudo sed -i 's/^Example/#Example/' /etc/clamd.d/scan.conf
+sudo systemctl enable --now clamd@scan
+
+# Keep signatures current (freshclam.service ships disabled on AL2023)
+sudo systemctl enable --now clamav-freshclam 2>/dev/null || \
+  echo "  ⚠  clamav-freshclam.service not found — cron a daily 'freshclam' instead."
+
+echo "  ✓ ClamAV installed, signatures loaded, clamd@scan running"
+echo "    PHP calls: clamdscan --no-summary --fdpass <file>  (via clamd, not the slower clamscan CLI)"
+
 # ── [3/10] PHP configuration ──────────────────────────────────
 echo "=== [3/10] PHP configuration ==="
 PHP_INI=$(php --ini 2>/dev/null | grep "Loaded Configuration" | awk '{print $NF}')
