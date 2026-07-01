@@ -4,6 +4,8 @@ require_once dirname(__DIR__, 2) . '/config.php';
 require_once dirname(__DIR__, 2) . '/helpers.php';
 require_once dirname(__DIR__, 2) . '/lib/claude.php';
 require_once dirname(__DIR__, 2) . '/lib/xlsx_reader.php';
+require_once dirname(__DIR__, 2) . '/lib/price_import.php';
+require_once dirname(__DIR__, 2) . '/lib/vendor_file_processor.php';
 
 method('POST');
 $admin = requireAdmin();
@@ -15,104 +17,25 @@ $stmt->execute([$id]);
 $file = $stmt->fetch();
 if (!$file) jsonResponse(['error' => 'File not found.'], 404);
 
+// Large image-scanned PDFs risk the request timeout — queue those for the
+// async cron worker instead of calling Claude inline. Everything else stays
+// synchronous: mark "processing" and do the work in this same request.
 db()->prepare('UPDATE pc_vendor_files SET processing_status = ? WHERE id = ?')->execute(['processing', $id]);
 
-$fullPath = dirname(__DIR__, 2) . '/storage/' . $file['stored_path'];
+if (vendorFileQualifiesForAsync($file)) {
+    logAdminAction((int)$admin['id'], 'queue_vendor_file_async', ['file_id' => $id]);
+    jsonResponse(['message' => 'Large PDF queued for background processing. Check back shortly.', 'queued' => true]);
+}
+
 try {
-    if (!is_file($fullPath)) throw new RuntimeException('Stored file is missing from disk.');
-
-    $pdfBase64 = null;
-    $plainText = null;
-    if ($file['file_type'] === 'pdf') {
-        $pdfBase64 = base64_encode((string)file_get_contents($fullPath));
-    } elseif ($file['file_type'] === 'xlsx') {
-        $plainText = xlsxToText($fullPath);
-    } else {
-        $plainText = (string)file_get_contents($fullPath);
-    }
-
-    $result   = callClaudeExtraction(buildExtractionSystemPrompt(), $pdfBase64, $plainText, $model);
-    $warnings = $result['warnings'] ?? [];
-    $contact  = $result['contact'] ?? [];
-
-    $pdo = db();
-    $pdo->beginTransaction();
-
-    // Fill in any missing vendor contact fields from the extracted document.
-    if ($contact) {
-        $fillable = [];
-        $vals     = [];
-        foreach (['contact_name' => 'name', 'email' => 'email', 'whatsapp' => 'whatsapp', 'website' => 'website'] as $col => $key) {
-            if (!empty($contact[$key])) { $fillable[] = "$col = COALESCE($col, ?)"; $vals[] = $contact[$key]; }
-        }
-        if ($fillable) {
-            $vals[] = $file['vendor_id'];
-            $pdo->prepare('UPDATE pc_vendors SET ' . implode(', ', $fillable) . ' WHERE id = ?')->execute($vals);
-        }
-    }
-
-    $findProduct = $pdo->prepare(
-        'SELECT id FROM pc_products WHERE LOWER(canonical_name) = LOWER(?)
-         UNION SELECT product_id FROM pc_product_aliases WHERE LOWER(alias) = LOWER(?) LIMIT 1'
-    );
-    $insertProduct = $pdo->prepare('INSERT INTO pc_products (canonical_name) VALUES (?)');
-    $findSpec      = $pdo->prepare('SELECT id FROM pc_specifications WHERE product_id = ? AND spec_label = ?');
-    $insertSpec    = $pdo->prepare('INSERT INTO pc_specifications (product_id, spec_label, numeric_value, unit) VALUES (?,?,?,?)');
-    $upsertPrice   = $pdo->prepare(
-        'INSERT INTO pc_prices (vendor_id, product_id, specification_id, price_usd, price_per_unit, kit_vial_count, non_standard_kit, source_file_id, is_active)
-         VALUES (?,?,?,?,?,?,?,?,1)
-         ON DUPLICATE KEY UPDATE price_usd = VALUES(price_usd), price_per_unit = VALUES(price_per_unit),
-           kit_vial_count = VALUES(kit_vial_count), non_standard_kit = VALUES(non_standard_kit),
-           source_file_id = VALUES(source_file_id), is_active = 1, created_at = NOW()'
-    );
-
-    $imported = 0;
-    foreach ($result['prices'] as $p) {
-        $name  = trim((string)($p['canonical_name'] ?? ''));
-        $label = trim((string)($p['spec_label'] ?? ''));
-        $value = (float)($p['numeric_value'] ?? 0);
-        $price = (float)($p['price_usd'] ?? 0);
-        if (!$name || !$label || $value <= 0 || $price <= 0) continue;
-
-        $findProduct->execute([$name, $name]);
-        $productId = $findProduct->fetchColumn();
-        if (!$productId) {
-            $insertProduct->execute([$name]);
-            $productId = (int)$pdo->lastInsertId();
-        }
-
-        $findSpec->execute([$productId, $label]);
-        $specId = $findSpec->fetchColumn();
-        if (!$specId) {
-            $unit = in_array($p['unit'] ?? '', ['mg', 'iu', 'ml'], true) ? $p['unit'] : 'other';
-            $insertSpec->execute([$productId, $label, $value, $unit]);
-            $specId = (int)$pdo->lastInsertId();
-        }
-
-        $kitCount = (int)($p['kit_vial_count'] ?? 10);
-        $upsertPrice->execute([
-            $file['vendor_id'], $productId, $specId, $price, round($price / $value, 6),
-            $kitCount, !empty($p['non_standard_kit']) ? 1 : 0, $id,
-        ]);
-        $imported++;
-    }
-
-    $notes = $warnings ? implode(' | ', $warnings) : null;
-    $pdo->prepare('UPDATE pc_vendor_files SET processing_status = ?, processing_notes = ?, processed_at = NOW() WHERE id = ?')
-        ->execute(['complete', $notes, $id]);
-    $pdo->prepare('UPDATE pc_vendor_files SET is_current = 1 WHERE id = ?')->execute([$id]);
-    $pdo->commit();
-
-    // The main price-writing path — touches pc_prices/pc_products/pc_specifications
-    // and the vendor's price_count/last_upload, so all three cached views go stale.
-    cacheBust('pricing_data');
-    cacheBust('admin_vendors');
-    cacheBust('admin_products');
-
-    logAdminAction((int)$admin['id'], 'process_vendor_file', ['file_id' => $id, 'imported' => $imported, 'warnings' => count($warnings)]);
-    jsonResponse(['message' => "Imported $imported price rows.", 'imported' => $imported, 'warnings' => $warnings]);
+    $result = processVendorFile($file, $model);
+    logAdminAction((int)$admin['id'], 'process_vendor_file', [
+        'file_id' => $id, 'imported' => $result['imported'], 'pending' => $result['pending'], 'warnings' => count($result['warnings']),
+    ]);
+    $msg = "Imported {$result['imported']} price rows.";
+    if ($result['pending'] > 0) $msg .= " {$result['pending']} row(s) sent to the review queue.";
+    jsonResponse(['message' => $msg] + $result);
 } catch (Throwable $e) {
-    if (db()->inTransaction()) db()->rollBack();
     db()->prepare('UPDATE pc_vendor_files SET processing_status = ?, processing_notes = ? WHERE id = ?')
         ->execute(['failed', $e->getMessage(), $id]);
     jsonResponse(['error' => 'Processing failed.', 'message' => $e->getMessage()], 500);

@@ -15,6 +15,7 @@
       <WaitlistTab      v-if="activeTab === 'waitlist'" />
       <SubscriptionsTab v-if="activeTab === 'subscriptions'" />
       <VendorsTab       v-if="activeTab === 'vendors'" />
+      <ReviewQueueTab   v-if="activeTab === 'review-queue'" />
       <ProductsTab      v-if="activeTab === 'products'" />
       <FilesTab         v-if="activeTab === 'files'" />
       <SettingsTab      v-if="activeTab === 'settings'" />
@@ -35,6 +36,7 @@ import UsersTab         from './tabs/UsersTab.vue'
 import WaitlistTab      from './tabs/WaitlistTab.vue'
 import SubscriptionsTab from './tabs/SubscriptionsTab.vue'
 import VendorsTab       from './tabs/VendorsTab.vue'
+import ReviewQueueTab   from './tabs/ReviewQueueTab.vue'
 import ProductsTab      from './tabs/ProductsTab.vue'
 import FilesTab         from './tabs/FilesTab.vue'
 import SettingsTab      from './tabs/SettingsTab.vue'
@@ -51,6 +53,7 @@ const tabs = [
   { id: 'waitlist',      label: 'Waitlist' },
   { id: 'subscriptions', label: 'Subscriptions' },
   { id: 'vendors',       label: 'Vendors' },
+  { id: 'review-queue',  label: 'Review Queue' },
   { id: 'products',      label: 'Products' },
   { id: 'files',         label: 'Files' },
   { id: 'settings',      label: 'Settings' },

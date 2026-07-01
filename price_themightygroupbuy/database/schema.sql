@@ -172,6 +172,7 @@ CREATE TABLE IF NOT EXISTS pc_app_settings (
 CREATE TABLE IF NOT EXISTS pc_products (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   canonical_name VARCHAR(200) NOT NULL UNIQUE,
+  abbreviation   VARCHAR(50)  NULL,
   category       ENUM('glp1','peptide','hormone','blend','consumable','other') NOT NULL DEFAULT 'peptide',
   notes          TEXT NULL,
   created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -197,16 +198,38 @@ CREATE TABLE IF NOT EXISTS pc_specifications (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pc_vendors (
-  id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  display_name VARCHAR(100) NOT NULL,
-  contact_name VARCHAR(100) NULL,
-  email        VARCHAR(200) NULL,
-  whatsapp     VARCHAR(50)  NULL,
-  website      VARCHAR(300) NULL,
-  notes        TEXT         NULL,
-  is_active    BOOLEAN      NOT NULL DEFAULT TRUE,
-  created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  display_name   VARCHAR(100) NOT NULL,
+  contact_name   VARCHAR(100) NULL,
+  email          VARCHAR(200) NULL,
+  whatsapp       VARCHAR(50)  NULL,
+  discord        VARCHAR(100) NULL,
+  telegram       VARCHAR(100) NULL,
+  website        VARCHAR(300) NULL,
+  shipping_price DECIMAL(8,2) NULL,
+  notes          TEXT         NULL,
+  is_active      BOOLEAN      NOT NULL DEFAULT TRUE,
+  is_verified    BOOLEAN      NOT NULL DEFAULT FALSE,  -- manual admin toggle, not auto-computed
+  created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pc_vendor_phones (
+  id        INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  vendor_id INT UNSIGNED NOT NULL,
+  phone     VARCHAR(30) NOT NULL,
+  FOREIGN KEY (vendor_id) REFERENCES pc_vendors(id) ON DELETE CASCADE,
+  INDEX (vendor_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pc_vendor_payment_methods (
+  id        INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  vendor_id INT UNSIGNED NOT NULL,
+  method    ENUM('usdt_sol','usdc_sol','usdt_trc20','usdc_trc20','usdt_erc20','usdc_erc20',
+                  'btc','eth','sol','paypal','wise','alipay','alibaba','wire','western_union',
+                  'zelle','cashapp','credit_card') NOT NULL,
+  FOREIGN KEY (vendor_id) REFERENCES pc_vendors(id) ON DELETE CASCADE,
+  UNIQUE KEY (vendor_id, method)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pc_vendor_files (
@@ -215,6 +238,7 @@ CREATE TABLE IF NOT EXISTS pc_vendor_files (
   original_filename VARCHAR(300) NOT NULL,
   stored_path       VARCHAR(500) NOT NULL,
   file_type         ENUM('pdf','xlsx','csv') NOT NULL,
+  category          ENUM('price_list','coa','other') NOT NULL DEFAULT 'price_list',
   file_size_bytes   INT UNSIGNED NULL,
   uploaded_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   processed_at      DATETIME NULL,
@@ -223,6 +247,7 @@ CREATE TABLE IF NOT EXISTS pc_vendor_files (
   is_current        BOOLEAN NOT NULL DEFAULT TRUE,
   FOREIGN KEY (vendor_id) REFERENCES pc_vendors(id) ON DELETE CASCADE,
   INDEX (vendor_id, is_current),
+  INDEX (vendor_id, category),
   INDEX (processing_status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -234,15 +259,49 @@ CREATE TABLE IF NOT EXISTS pc_prices (
   price_usd        DECIMAL(10,2) NOT NULL,
   price_per_unit   DECIMAL(12,6) NOT NULL,   -- = price_usd / specifications.numeric_value; computed in PHP
   kit_vial_count   TINYINT UNSIGNED NOT NULL DEFAULT 10,
+  tier_kit_size    TINYINT UNSIGNED NOT NULL DEFAULT 1,  -- 1/10/100-kit tiered pricing column this row came from
   non_standard_kit BOOLEAN NOT NULL DEFAULT FALSE,
   source_file_id   INT UNSIGNED NULL,
   is_active        BOOLEAN NOT NULL DEFAULT TRUE,
   created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY (vendor_id, product_id, specification_id),
+  UNIQUE KEY uq_price (vendor_id, product_id, specification_id, tier_kit_size),
   FOREIGN KEY (vendor_id)        REFERENCES pc_vendors(id)       ON DELETE CASCADE,
   FOREIGN KEY (product_id)       REFERENCES pc_products(id)      ON DELETE CASCADE,
   FOREIGN KEY (specification_id) REFERENCES pc_specifications(id) ON DELETE CASCADE,
   INDEX (product_id, specification_id, is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pc_pending_imports (
+  id                   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  vendor_file_id       INT UNSIGNED NOT NULL,
+  vendor_id            INT UNSIGNED NOT NULL,
+  raw_json             JSON NOT NULL,        -- the single extracted price row as Claude returned it
+  match_type           ENUM('new_product','new_spec','name_mismatch') NOT NULL,
+  candidate_product_id INT UNSIGNED NULL,    -- best-guess existing product, if any (fuzzy match)
+  status               ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  reviewed_by          INT UNSIGNED NULL,
+  reviewed_at          DATETIME NULL,
+  created_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (vendor_file_id) REFERENCES pc_vendor_files(id) ON DELETE CASCADE,
+  FOREIGN KEY (vendor_id) REFERENCES pc_vendors(id) ON DELETE CASCADE,
+  INDEX (status, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pc_coa_submissions (
+  id                   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id              INT UNSIGNED NOT NULL,
+  vendor_id            INT UNSIGNED NOT NULL,
+  product_id           INT UNSIGNED NULL,          -- set for standard (dropdown) path
+  custom_product_name  VARCHAR(200) NULL,          -- set for custom-blend path
+  coa_url              VARCHAR(500) NOT NULL,
+  status               ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+  reviewed_by          INT UNSIGNED NULL,
+  reviewed_at          DATETIME NULL,
+  created_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES pc_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (vendor_id) REFERENCES pc_vendors(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES pc_products(id) ON DELETE CASCADE,
+  INDEX (status, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ------------------------------------------------------------------

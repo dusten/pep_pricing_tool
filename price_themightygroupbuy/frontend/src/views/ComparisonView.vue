@@ -13,11 +13,16 @@
           <input type="checkbox" v-model="multiOnly" />
           Only rows with multiple vendors
         </label>
+        <label class="toggle-label">
+          <input type="checkbox" v-model="verifiedOnly" />
+          Verified vendors only
+        </label>
       </div>
       <div v-if="comparison.vendors.length" class="vendor-checks">
         <label v-for="v in comparison.vendors" :key="v.id" class="vendor-check">
           <input type="checkbox" :value="v.id" v-model="selectedVendors" />
           {{ v.display_name }}
+          <span v-if="v.is_verified" class="badge badge-pro">Verified</span>
         </label>
       </div>
     </div>
@@ -45,7 +50,10 @@
             <tr>
               <th class="sticky-col col-product" rowspan="2">Product</th>
               <th class="sticky-col col-spec" rowspan="2">Spec</th>
-              <th v-for="v in vendorColumns" :key="v.id" colspan="2" class="vendor-header">{{ v.name }}</th>
+              <th v-for="v in vendorColumns" :key="v.id" colspan="2" class="vendor-header">
+                {{ v.name }}
+                <span v-if="v.is_verified" class="badge badge-pro">✓</span>
+              </th>
               <th rowspan="2" class="stat-header">Avg</th>
               <th rowspan="2" class="stat-header">Median</th>
             </tr>
@@ -103,17 +111,21 @@ const categories = [
 const category         = ref('')
 const search            = ref('')
 const multiOnly          = ref(false)
+const verifiedOnly       = ref(false)
 const selectedVendors    = ref([])
 
 function runSearch() {
-  comparison.search({ category: category.value, vendors: selectedVendors.value, multiOnly: multiOnly.value })
+  comparison.search({
+    category: category.value, vendors: selectedVendors.value,
+    multiOnly: multiOnly.value, verifiedOnly: verifiedOnly.value,
+  })
 }
 
 onMounted(async () => {
   await comparison.loadFilters()
   runSearch()
 })
-watch([category, multiOnly, selectedVendors], runSearch, { deep: true })
+watch([category, multiOnly, verifiedOnly, selectedVendors], runSearch, { deep: true })
 
 const filteredRows = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -125,9 +137,11 @@ const filteredRows = computed(() => {
 const vendorColumns = computed(() => {
   const map = new Map()
   for (const row of filteredRows.value) {
-    for (const v of row.vendors) if (!map.has(v.vendor_id)) map.set(v.vendor_id, v.name)
+    for (const v of row.vendors) if (!map.has(v.vendor_id)) map.set(v.vendor_id, { name: v.name, is_verified: v.is_verified })
   }
-  return [...map.entries()].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name))
+  return [...map.entries()]
+    .map(([id, v]) => ({ id, name: v.name, is_verified: v.is_verified }))
+    .sort((a, b) => a.name.localeCompare(b.name))
 })
 </script>
 

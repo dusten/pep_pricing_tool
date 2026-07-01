@@ -11,7 +11,7 @@ requireAuth();
 // so it shares the 'pricing_data' cache group with the comparison results.
 $data = cacheGet('pricing_data', 'filters', 300, function () {
     $vendors = db()->query(
-        "SELECT DISTINCT v.id, v.display_name FROM pc_vendors v
+        "SELECT DISTINCT v.id, v.display_name, v.is_verified FROM pc_vendors v
          JOIN pc_prices pr ON pr.vendor_id = v.id AND pr.is_active = 1
          WHERE v.is_active = 1 ORDER BY v.display_name"
     )->fetchAll();
@@ -20,7 +20,7 @@ $data = cacheGet('pricing_data', 'filters', 300, function () {
          JOIN pc_prices pr ON pr.product_id = p.id AND pr.is_active = 1
          ORDER BY p.canonical_name"
     )->fetchAll();
-    foreach ($vendors as &$v)  { $v['id'] = (int)$v['id']; }
+    foreach ($vendors as &$v)  { $v['id'] = (int)$v['id']; $v['is_verified'] = (bool)$v['is_verified']; }
     foreach ($products as &$p) { $p['id'] = (int)$p['id']; }
     return ['vendors' => $vendors, 'products' => $products];
 });

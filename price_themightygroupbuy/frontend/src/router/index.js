@@ -68,6 +68,11 @@ const router = createRouter({
       component: () => import('@/views/PricingView.vue'),
     },
     {
+      path: '/submit-coa',
+      component: () => import('@/views/SubmitCoaView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/account',
       redirect: '/settings',
     },

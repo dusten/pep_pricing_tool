@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/config.php';
 require_once dirname(__DIR__, 2) . '/helpers.php';
+require_once dirname(__DIR__, 2) . '/lib/vendor_helpers.php';
 
 method('GET', 'POST');
 $admin = requireAdmin();
@@ -19,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         foreach ($rows as &$r) {
             $r['id']          = (int)$r['id'];
             $r['is_active']   = (bool)$r['is_active'];
+            $r['is_verified'] = (bool)$r['is_verified'];
             $r['price_count'] = (int)$r['price_count'];
         }
         return $rows;
@@ -31,19 +33,29 @@ $d           = input();
 $displayName = trim($d['display_name'] ?? '');
 if (mb_strlen($displayName) < 2) jsonResponse(['error' => 'Display name is required.'], 422);
 
-$stmt = db()->prepare(
-    'INSERT INTO pc_vendors (display_name, contact_name, email, whatsapp, website, notes)
-     VALUES (?,?,?,?,?,?)'
+$pdo = db();
+$pdo->beginTransaction();
+
+$stmt = $pdo->prepare(
+    'INSERT INTO pc_vendors (display_name, contact_name, email, whatsapp, discord, telegram, website, shipping_price, notes)
+     VALUES (?,?,?,?,?,?,?,?,?)'
 );
 $stmt->execute([
     $displayName,
     trim($d['contact_name'] ?? '') ?: null,
     trim($d['email'] ?? '') ?: null,
     trim($d['whatsapp'] ?? '') ?: null,
+    trim($d['discord'] ?? '') ?: null,
+    trim($d['telegram'] ?? '') ?: null,
     trim($d['website'] ?? '') ?: null,
+    isset($d['shipping_price']) && $d['shipping_price'] !== '' ? (float)$d['shipping_price'] : null,
     trim($d['notes'] ?? '') ?: null,
 ]);
-$id = (int)db()->lastInsertId();
+$id = (int)$pdo->lastInsertId();
+
+saveVendorPhonesAndPaymentMethods($pdo, $id, $d);
+
+$pdo->commit();
 cacheBust('admin_vendors');
 logAdminAction((int)$admin['id'], 'create_vendor', ['vendor_id' => $id, 'display_name' => $displayName]);
 

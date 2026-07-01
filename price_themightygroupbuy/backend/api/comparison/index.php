@@ -13,14 +13,15 @@ $vendorIds  = array_map('intval', (array)($_GET['vendors']  ?? []));
 $specIds    = array_map('intval', (array)($_GET['specs']    ?? []));
 $category   = in_array($_GET['category'] ?? '', ['glp1','peptide','hormone','blend','consumable','other'], true)
     ? $_GET['category'] : null;
-$multiOnly  = in_array($_GET['multi_only'] ?? '', ['1', 'true'], true);
+$multiOnly    = in_array($_GET['multi_only'] ?? '', ['1', 'true'], true);
+$verifiedOnly = in_array($_GET['verified_only'] ?? '', ['1', 'true'], true);
 
 // ── Free-tier metering ──────────────────────────────────────────────
 $isAdmin = !empty($user['is_admin']);
 $isFree  = !$isAdmin && ($user['tier'] === 'free' || !in_array($user['tier_status'], ['active', 'trialing'], true));
 
 sort($productIds); sort($vendorIds); sort($specIds); // normalize before hashing so param order doesn't matter
-$filterHash = sha1(json_encode(compact('productIds', 'vendorIds', 'specIds', 'category', 'multiOnly')));
+$filterHash = sha1(json_encode(compact('productIds', 'vendorIds', 'specIds', 'category', 'multiOnly', 'verifiedOnly')));
 
 if ($isFree) {
     $limit = (int)getAppSetting('free_tier_query_limit', '3');
@@ -54,7 +55,7 @@ if ($isFree) {
 // vendors/products change. duration_ms below still reflects real
 // user-perceived latency (a cache hit just makes it fast, which is correct).
 $rows = cacheGet('pricing_data', $filterHash, 300, fn() =>
-    runComparisonQuery($productIds, $vendorIds, $specIds, $category, $multiOnly));
+    runComparisonQuery($productIds, $vendorIds, $specIds, $category, $multiOnly, $verifiedOnly));
 
 // ── Query performance logging (for the admin replay/debug tool) ────────
 // Budget: ~1-2s p95. duration_ms over that is flagged slow so admins can
@@ -64,7 +65,7 @@ db()->prepare(
     'INSERT INTO pc_comparison_log (user_id, selection_params, duration_ms, result_count, slow_flag) VALUES (?,?,?,?,?)'
 )->execute([
     $user['id'],
-    json_encode(compact('productIds', 'vendorIds', 'specIds', 'category', 'multiOnly')),
+    json_encode(compact('productIds', 'vendorIds', 'specIds', 'category', 'multiOnly', 'verifiedOnly')),
     $durationMs,
     count($rows),
     $durationMs > 1500 ? 1 : 0,

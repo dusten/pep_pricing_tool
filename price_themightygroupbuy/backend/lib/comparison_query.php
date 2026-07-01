@@ -5,16 +5,19 @@ declare(strict_types=1);
  * Shared by the comparison endpoint and the admin query-log "re-run" tool —
  * one place for the query shape so the two never drift out of sync.
  */
-function runComparisonQuery(array $productIds, array $vendorIds, array $specIds, ?string $category, bool $multiOnly): array {
-    $where  = ['pr.is_active = 1', 'v.is_active = 1'];
+function runComparisonQuery(array $productIds, array $vendorIds, array $specIds, ?string $category, bool $multiOnly, bool $verifiedOnly = false): array {
+    // Tiered pricing (1/10/100-kit) is now stored, but the comparison table only
+    // ever shows the 1-kit tier — browsing other tiers isn't a built UI yet.
+    $where  = ['pr.is_active = 1', 'v.is_active = 1', 'pr.tier_kit_size = 1'];
     $params = [];
 
     if ($category) { $where[] = 'p.category = ?'; $params[] = $category; }
     if ($productIds) { $where[] = 'pr.product_id IN (' . implode(',', array_fill(0, count($productIds), '?')) . ')'; array_push($params, ...$productIds); }
     if ($vendorIds)  { $where[] = 'pr.vendor_id IN ('  . implode(',', array_fill(0, count($vendorIds), '?'))  . ')'; array_push($params, ...$vendorIds); }
     if ($specIds)    { $where[] = 'pr.specification_id IN (' . implode(',', array_fill(0, count($specIds), '?')) . ')'; array_push($params, ...$specIds); }
+    if ($verifiedOnly) { $where[] = 'v.is_verified = 1'; }
 
-    $sql = "SELECT pr.vendor_id, v.display_name AS vendor_name,
+    $sql = "SELECT pr.vendor_id, v.display_name AS vendor_name, v.is_verified,
                    pr.product_id, p.canonical_name, p.category,
                    pr.specification_id, s.spec_label, s.numeric_value, s.unit,
                    pr.price_usd, pr.price_per_unit, pr.kit_vial_count, pr.non_standard_kit, pr.source_file_id
@@ -45,6 +48,7 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
         $grouped[$key]['vendors'][] = [
             'vendor_id'        => (int)$r['vendor_id'],
             'name'             => $r['vendor_name'],
+            'is_verified'      => (bool)$r['is_verified'],
             'price'            => (float)$r['price_usd'],
             'price_per_unit'   => (float)$r['price_per_unit'],
             'kit_vial_count'   => (int)$r['kit_vial_count'],

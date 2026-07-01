@@ -95,6 +95,19 @@ chmod 600 /home/ec2-user/.pc_my.cnf
 chown ec2-user:ec2-user /home/ec2-user/.pc_my.cnf
 echo "Written: /home/ec2-user/.pc_my.cnf"
 
+# ── ClamAV (malware scanning on vendor file uploads) ──────────
+# This server was originally provisioned by the sibling grp app's
+# setup-al2023.sh, which never installed ClamAV either — install it here too.
+echo "=== ClamAV setup ==="
+dnf install -y clamav clamav-update clamav-filesystem clamav-server clamav-server-systemd
+sed -i 's/^Example/#Example/' /etc/freshclam.conf
+freshclam
+sed -i 's/^Example/#Example/' /etc/clamd.d/scan.conf
+systemctl enable --now clamd@scan
+systemctl enable --now clamav-freshclam 2>/dev/null || \
+  echo "  ⚠  clamav-freshclam.service not found — cron a daily 'freshclam' instead."
+echo "  ✓ ClamAV installed, signatures loaded, clamd@scan running"
+
 # ── [3/5] Storage directory ───────────────────────────────────
 echo "=== [3/5] Storage directory ==="
 mkdir -p "${APP_DIR}/backend/storage/vendor_files"
