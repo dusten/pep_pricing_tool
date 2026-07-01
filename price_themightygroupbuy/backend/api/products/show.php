@@ -41,6 +41,8 @@ if (array_key_exists('notes', $d)) {
 if ($fields) {
     $vals[] = $id;
     db()->prepare('UPDATE pc_products SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);
+    cacheBust('admin_products');
+    cacheBust('pricing_data'); // canonical_name/category feed comparison results
     logAdminAction((int)$admin['id'], 'update_product', ['product_id' => $id, 'fields' => array_keys($d)]);
 }
 

@@ -48,7 +48,13 @@ if ($isFree) {
     }
 }
 
-$rows = runComparisonQuery($productIds, $vendorIds, $specIds, $category, $multiOnly);
+// The result rows don't depend on who's asking — only the quota bookkeeping
+// above does, and that already ran. Cached by filter hash, shares the
+// 'pricing_data' group with comparison/filters.php; busted whenever prices/
+// vendors/products change. duration_ms below still reflects real
+// user-perceived latency (a cache hit just makes it fast, which is correct).
+$rows = cacheGet('pricing_data', $filterHash, 300, fn() =>
+    runComparisonQuery($productIds, $vendorIds, $specIds, $category, $multiOnly));
 
 // ── Query performance logging (for the admin replay/debug tool) ────────
 // Budget: ~1-2s p95. duration_ms over that is flagged slow so admins can

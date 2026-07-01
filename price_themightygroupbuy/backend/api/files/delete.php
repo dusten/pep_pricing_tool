@@ -13,6 +13,7 @@ if (!$stmt->fetch()) jsonResponse(['error' => 'File not found.'], 404);
 
 // Remove the record only — physical file stays on disk in case it's needed later.
 db()->prepare('DELETE FROM pc_vendor_files WHERE id = ?')->execute([$id]);
+cacheBust('admin_vendors'); // last_upload may have changed
 logAdminAction((int)$admin['id'], 'delete_vendor_file', ['file_id' => $id]);
 
 jsonResponse(['message' => 'File record removed.']);

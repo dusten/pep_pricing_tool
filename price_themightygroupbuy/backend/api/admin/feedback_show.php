@@ -11,6 +11,7 @@ $d     = input();
 
 db()->prepare('UPDATE pc_feedback SET is_read = ? WHERE id = ?')
     ->execute([!empty($d['is_read']) ? 1 : 0, $id]);
+cacheBust('admin_feedback');
 logAdminAction((int)$admin['id'], 'update_feedback', ['id' => $id, 'is_read' => !empty($d['is_read'])]);
 
 jsonResponse(['message' => 'Feedback updated.']);

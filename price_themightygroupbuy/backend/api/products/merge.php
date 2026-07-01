@@ -73,5 +73,7 @@ try {
     jsonResponse(['error' => 'Merge failed. Nothing was changed.'], 500);
 }
 
+cacheBust('admin_products');
+cacheBust('pricing_data');
 logAdminAction((int)$admin['id'], 'merge_product', ['winner_id' => $winnerId, 'loser_id' => $loserId]);
 jsonResponse(['message' => 'Products merged.']);

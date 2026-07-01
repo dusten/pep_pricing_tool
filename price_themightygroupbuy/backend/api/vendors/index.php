@@ -7,19 +7,22 @@ method('GET', 'POST');
 $admin = requireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $rows = db()->query(
-        "SELECT v.*, COUNT(p.id) AS price_count, MAX(f.uploaded_at) AS last_upload
-         FROM pc_vendors v
-         LEFT JOIN pc_prices p ON p.vendor_id = v.id AND p.is_active = 1
-         LEFT JOIN pc_vendor_files f ON f.vendor_id = v.id
-         GROUP BY v.id
-         ORDER BY v.display_name ASC"
-    )->fetchAll();
-    foreach ($rows as &$r) {
-        $r['id']          = (int)$r['id'];
-        $r['is_active']   = (bool)$r['is_active'];
-        $r['price_count'] = (int)$r['price_count'];
-    }
+    $rows = cacheGet('admin_vendors', 'all', 60, function () {
+        $rows = db()->query(
+            "SELECT v.*, COUNT(p.id) AS price_count, MAX(f.uploaded_at) AS last_upload
+             FROM pc_vendors v
+             LEFT JOIN pc_prices p ON p.vendor_id = v.id AND p.is_active = 1
+             LEFT JOIN pc_vendor_files f ON f.vendor_id = v.id
+             GROUP BY v.id
+             ORDER BY v.display_name ASC"
+        )->fetchAll();
+        foreach ($rows as &$r) {
+            $r['id']          = (int)$r['id'];
+            $r['is_active']   = (bool)$r['is_active'];
+            $r['price_count'] = (int)$r['price_count'];
+        }
+        return $rows;
+    });
     jsonResponse(['vendors' => $rows]);
 }
 
@@ -41,6 +44,7 @@ $stmt->execute([
     trim($d['notes'] ?? '') ?: null,
 ]);
 $id = (int)db()->lastInsertId();
+cacheBust('admin_vendors');
 logAdminAction((int)$admin['id'], 'create_vendor', ['vendor_id' => $id, 'display_name' => $displayName]);
 
 jsonResponse(['id' => $id], 201);

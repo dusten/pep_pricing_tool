@@ -103,6 +103,12 @@ try {
     $pdo->prepare('UPDATE pc_vendor_files SET is_current = 1 WHERE id = ?')->execute([$id]);
     $pdo->commit();
 
+    // The main price-writing path — touches pc_prices/pc_products/pc_specifications
+    // and the vendor's price_count/last_upload, so all three cached views go stale.
+    cacheBust('pricing_data');
+    cacheBust('admin_vendors');
+    cacheBust('admin_products');
+
     logAdminAction((int)$admin['id'], 'process_vendor_file', ['file_id' => $id, 'imported' => $imported, 'warnings' => count($warnings)]);
     jsonResponse(['message' => "Imported $imported price rows.", 'imported' => $imported, 'warnings' => $warnings]);
 } catch (Throwable $e) {

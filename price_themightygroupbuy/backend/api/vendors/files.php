@@ -49,6 +49,7 @@ $stmt = db()->prepare(
 );
 $stmt->execute([$vendorId, $original, "vendor_files/$vendorId/$storedName", $typeMap[$ext], (int)$_FILES['file']['size']]);
 $fileId = (int)db()->lastInsertId();
+cacheBust('admin_vendors'); // last_upload changed
 
 logAdminAction((int)$admin['id'], 'upload_vendor_file', ['vendor_id' => $vendorId, 'file_id' => $fileId, 'filename' => $original]);
 

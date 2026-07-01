@@ -18,5 +18,6 @@ rateLimit('feedback_' . $user['id'], 10, 3600);
 db()->prepare(
     'INSERT INTO pc_feedback (user_id, type, message, url) VALUES (?,?,?,?)'
 )->execute([$user['id'], $type, $message, $url ?: null]);
+cacheBust('admin_feedback');
 
 jsonResponse(['message' => 'Feedback submitted. Thank you!'], 201);

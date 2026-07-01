@@ -11,6 +11,7 @@ $aliasId   = isset($PARAMS['aliasId']) ? (int)$PARAMS['aliasId'] : null;
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     if (!$aliasId) jsonResponse(['error' => 'Alias id required.'], 422);
     db()->prepare('DELETE FROM pc_product_aliases WHERE id = ? AND product_id = ?')->execute([$aliasId, $productId]);
+    cacheBust('admin_products');
     logAdminAction((int)$admin['id'], 'delete_alias', ['product_id' => $productId, 'alias_id' => $aliasId]);
     jsonResponse(['message' => 'Alias removed.']);
 }
@@ -24,5 +25,6 @@ $exists->execute([$alias]);
 if ($exists->fetch()) jsonResponse(['error' => 'That alias is already in use.'], 409);
 
 db()->prepare('INSERT INTO pc_product_aliases (product_id, alias) VALUES (?,?)')->execute([$productId, $alias]);
+cacheBust('admin_products');
 logAdminAction((int)$admin['id'], 'add_alias', ['product_id' => $productId, 'alias' => $alias]);
 jsonResponse(['message' => 'Alias added.'], 201);

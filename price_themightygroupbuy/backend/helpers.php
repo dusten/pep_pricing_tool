@@ -191,15 +191,24 @@ function cacheGet(string $group, string $variant, int $ttlSec, callable $compute
     return $data;
 }
 
-// ── App settings (cached per request) ────────────────────────────
+// ── App settings ──────────────────────────────────────────────────
+// This is checked on nearly every request (the maintenance-mode gate in
+// public/index.php runs unconditionally), so it's backed by the same
+// Memcached cache as app_settings.php's public GET — same 'app_settings'
+// group, so admin edits (which already call cacheBust('app_settings'))
+// invalidate this too. Falls back to a live query if Memcached is down.
 
 function getAppSetting(string $key, string $default = ''): string {
-    static $cache = [];
-    if (array_key_exists($key, $cache)) return $cache[$key];
-    $stmt = db()->prepare('SELECT value FROM pc_app_settings WHERE `key` = ? LIMIT 1');
-    $stmt->execute([$key]);
-    $row = $stmt->fetch();
-    return $cache[$key] = $row ? $row['value'] : $default;
+    static $all = null;
+    if ($all === null) {
+        $all = cacheGet('app_settings', 'all_kv', 300, function () {
+            $rows = db()->query('SELECT `key`, value FROM pc_app_settings')->fetchAll();
+            $out = [];
+            foreach ($rows as $r) $out[$r['key']] = $r['value'];
+            return $out;
+        });
+    }
+    return $all[$key] ?? $default;
 }
 
 // ── User public shape ─────────────────────────────────────────────
