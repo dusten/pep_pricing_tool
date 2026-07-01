@@ -7,6 +7,7 @@
     <div v-if="showAdd" class="card add-form">
       <div class="field-row">
         <input v-model="form.canonical_name" placeholder="Canonical name *" />
+        <input v-model="form.abbreviation" placeholder="Abbreviation" />
         <select v-model="form.category">
           <option value="peptide">Peptide</option>
           <option value="glp1">GLP-1</option>
@@ -20,10 +21,14 @@
     </div>
 
     <table class="admin-table">
-      <thead><tr><th>Name</th><th>Category</th><th>Aliases</th><th>Vendors</th><th>Merge into</th></tr></thead>
+      <thead><tr><th>Name</th><th>Abbreviation</th><th>Category</th><th>Aliases</th><th>Vendors</th><th>Merge into</th></tr></thead>
       <tbody>
         <tr v-for="p in products" :key="p.id">
           <td>{{ p.canonical_name }}</td>
+          <td class="text-muted text-sm">
+            {{ p.abbreviation || '—' }}
+            <button class="btn btn-ghost btn-sm" @click="editAbbreviation(p)">edit</button>
+          </td>
           <td>{{ p.category }}</td>
           <td>
             <span v-for="a in aliasesFor(p)" :key="a.id" class="chip">
@@ -46,12 +51,12 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
-import { get, post, del } from '@/utils/api.js'
+import { get, post, put, del } from '@/utils/api.js'
 
 const products = ref([])
 const detail   = reactive({}) // productId -> { aliases }
 const showAdd  = ref(false)
-const form     = reactive({ canonical_name: '', category: 'peptide' })
+const form     = reactive({ canonical_name: '', abbreviation: '', category: 'peptide' })
 
 async function load() {
   const res = await get('/api/products')
@@ -73,6 +78,12 @@ async function create() {
   await load()
 }
 
+async function editAbbreviation(p) {
+  const abbreviation = prompt('Abbreviation for ' + p.canonical_name + ':', p.abbreviation || '')
+  if (abbreviation === null) return
+  await put(`/api/products/${p.id}`, { abbreviation })
+  await load()
+}
 async function addAlias(p) {
   const alias = prompt('New alias for ' + p.canonical_name + ':')
   if (!alias) return

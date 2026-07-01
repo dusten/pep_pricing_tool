@@ -24,7 +24,8 @@ $rows = runComparisonQuery(
     (array)($p['vendorIds']  ?? []),
     (array)($p['specIds']    ?? []),
     $p['category'] ?? null,
-    (bool)($p['multiOnly']   ?? false)
+    (bool)($p['multiOnly']   ?? false),
+    (bool)($p['verifiedOnly'] ?? false)
 );
 $newDurationMs = (int)round((microtime(true) - $startedAt) * 1000);
 

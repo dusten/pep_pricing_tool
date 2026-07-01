@@ -25,3 +25,8 @@ MAILTO=""
 # Daily table analyze — refreshes index cardinality stats for the query optimizer.
 # Cheap (no rebuild/lock like OPTIMIZE), so runs daily rather than weekly. Surfaced in Admin > System.
 30 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "ANALYZE TABLE pc_prices, pc_products, pc_specifications, pc_vendors, pc_query_log, pc_comparison_log, pc_perf_metrics; INSERT INTO pc_maintenance_runs (job, status, details) VALUES ('analyze_tables','ok','pc_prices, pc_products, pc_specifications, pc_vendors, pc_query_log, pc_comparison_log, pc_perf_metrics');" 2>/dev/null
+
+# Async vendor file processing — picks up large PDFs that files/process.php
+# queued instead of calling Claude inline (every 5 min; uses .env_pricetool
+# via config.php, not the mysql options file, since it's a PHP script).
+*/5 * * * * ec2-user php /home/ec2-user/price_themightygroupbuy/backend/cron/process_async_queue.php >> /home/ec2-user/price_themightygroupbuy/log/cron.log 2>&1

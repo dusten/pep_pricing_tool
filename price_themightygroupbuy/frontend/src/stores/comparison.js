@@ -26,8 +26,9 @@ export const useComparisonStore = defineStore('comparison', () => {
     const params = new URLSearchParams()
     ;(filters.vendors  || []).forEach(v => params.append('vendors[]', v))
     ;(filters.products || []).forEach(p => params.append('products[]', p))
-    if (filters.category)   params.set('category', filters.category)
-    if (filters.multiOnly)  params.set('multi_only', '1')
+    if (filters.category)     params.set('category', filters.category)
+    if (filters.multiOnly)    params.set('multi_only', '1')
+    if (filters.verifiedOnly) params.set('verified_only', '1')
 
     try {
       const res = await get(`/api/comparison?${params.toString()}`)
