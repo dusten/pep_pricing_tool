@@ -39,8 +39,10 @@
         </div>
       </div>
 
-      <div class="field-row payment-methods">
+      <div class="field-row">
         <span class="label-sm">Payment methods</span>
+      </div>
+      <div class="payment-methods-grid">
         <label v-for="m in PAYMENT_METHODS" :key="m.value" class="pm-check">
           <input type="checkbox" :value="m.value" v-model="form.payment_methods" /> {{ m.label }}
         </label>
@@ -50,6 +52,9 @@
         <textarea v-model="pasteText" :placeholder="INTAKE_TEMPLATE" rows="12" class="paste-box"></textarea>
       </div>
       <div class="field-row">
+        <button class="btn btn-ghost btn-sm" @click="copyTemplate">
+          {{ copyNote || 'Copy template to send to vendor' }}
+        </button>
         <button class="btn btn-ghost btn-sm" :disabled="!pasteText.trim() || parsing" @click="parseIntake">
           {{ parsing ? 'Parsing…' : 'Parse reply' }}
         </button>
@@ -147,6 +152,7 @@ const newPhone           = ref('')
 const pasteText          = ref('')
 const parsing            = ref(false)
 const parseNote          = ref('')
+const copyNote           = ref('')
 const uploadCategory     = ref('price_list')
 const fileInput          = ref(null)
 const files              = ref([])
@@ -177,6 +183,12 @@ async function onSelectVendor() {
   files.value = v.files || []
   pasteText.value = ''
   parseNote.value = ''
+}
+
+async function copyTemplate() {
+  await navigator.clipboard.writeText(INTAKE_TEMPLATE)
+  copyNote.value = 'Copied!'
+  setTimeout(() => { copyNote.value = '' }, 2000)
 }
 
 function addPhone() {
@@ -250,9 +262,14 @@ async function upload(event) {
 .verified-toggle input { width: auto; }
 .phones-editor { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .phone-input { max-width: 140px; }
-.payment-methods { gap: 10px; }
-.pm-check { display: flex; align-items: center; gap: 4px; font-size: 12px; }
-.pm-check input { width: auto; }
+.payment-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px 12px;
+  margin-bottom: 12px;
+}
+.pm-check { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.pm-check input { width: auto; margin: 0; }
 .upload-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .upload-row select { max-width: 140px; }
 .file-repo { margin-top: 8px; }
