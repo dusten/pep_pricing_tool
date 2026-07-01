@@ -3,21 +3,26 @@
 # deploy.sh — build and push price.themightygroupbuy.com
 #
 # Usage:
-#   bash deploy.sh                          # full deploy — code only, never touches the DB
-#   bash deploy.sh price.themightygroupbuy.com
+#   bash deploy.sh                          # build + sync (default, code only, never touches the DB)
+#   bash deploy.sh --sync-files             # sync files only — skips npm build, uses existing frontend/dist
+#   bash deploy.sh --build                  # same as default: npm build, then sync
 #   bash deploy.sh --sync-schema            # DB only — applies schema.sql + migrate.sh, no code deploy
-#   bash deploy.sh --sync-schema price.themightygroupbuy.com
+#   bash deploy.sh --all                    # everything — schema sync, then build + sync
+#   (append a hostname to any of the above to override the default target)
 #
-# A full deploy and a schema sync are always separate, explicit actions —
-# run both if you need both. Neither implies the other.
+# These are always separate, explicit steps — pick the one you need.
+# --all is the only mode that combines schema + code.
 # =============================================================
 set -euo pipefail
 
-MODE="full"
+MODE="build"
 HOST_ARG=""
 for arg in "$@"; do
   case "$arg" in
     --sync-schema) MODE="sync-schema" ;;
+    --sync-files)  MODE="sync-files" ;;
+    --build)       MODE="build" ;;
+    --all)         MODE="all" ;;
     *) HOST_ARG="$arg" ;;
   esac
 done
@@ -32,9 +37,9 @@ SSH_KEY="${SSH_KEY:-$(dirname "$(dirname "$SCRIPT_DIR")")/pepcal_key.pem}"
 
 # ── Schema/migrations-only sync ───────────────────────────────
 # For when database/schema.sql or database/migrations/*.sql changed but
-# nothing else needs a full rebuild+deploy. Re-running schema.sql is safe —
+# nothing else needs a rebuild+deploy. Re-running schema.sql is safe —
 # it's all CREATE TABLE IF NOT EXISTS / INSERT IGNORE.
-if [[ "$MODE" == "sync-schema" ]]; then
+sync_schema() {
   echo "▶ Syncing database/ and migrate.sh to $REMOTE_HOST…"
   rsync -avz \
     -e "ssh -i $SSH_KEY" \
@@ -56,45 +61,61 @@ if [[ "$MODE" == "sync-schema" ]]; then
   ssh -i "$SSH_KEY" "$REMOTE_USER@$REMOTE_HOST" bash -s <<< "$REMOTE_SCRIPT"
 
   echo "✓ Schema sync complete — https://$REMOTE_HOST"
-  exit 0
-fi
+}
 
-# ── Full deploy ────────────────────────────────────────────────
-echo "▶ Building frontend…"
-cd "$SCRIPT_DIR/frontend"
-npm install
-npm run build
-cd "$SCRIPT_DIR"
+# ── File sync + remote post-deploy steps (no build) ───────────
+# Assumes frontend/dist is already up to date (either committed or built
+# in a prior --build/--all run). Use this for backend-only or config-only
+# changes where rebuilding the frontend would just be wasted time.
+sync_files() {
+  echo "▶ Syncing to $REMOTE_HOST…"
+  rsync -avz --delete \
+    -e "ssh -i $SSH_KEY" \
+    --exclude='.env_pricetool' \
+    --exclude='.git/' \
+    --exclude='frontend/node_modules/' \
+    --exclude='frontend/.vite/' \
+    --exclude='backend/storage/vendor_files/' \
+    --exclude='log/' \
+    "$SCRIPT_DIR/" \
+    "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/"
 
-echo "▶ Syncing to $REMOTE_HOST…"
-rsync -avz --delete \
-  -e "ssh -i $SSH_KEY" \
-  --exclude='.env_pricetool' \
-  --exclude='.git/' \
-  --exclude='frontend/node_modules/' \
-  --exclude='frontend/.vite/' \
-  --exclude='backend/storage/vendor_files/' \
-  --exclude='log/' \
-  "$SCRIPT_DIR/" \
-  "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/"
+  echo "▶ Running remote post-deploy steps…"
+  REMOTE_SCRIPT='
+  set -euo pipefail
+  cd /home/ec2-user/price_themightygroupbuy
 
-echo "▶ Running remote post-deploy steps…"
-REMOTE_SCRIPT='
-set -euo pipefail
-cd /home/ec2-user/price_themightygroupbuy
+  sudo cp cron/price /etc/cron.d/price
+  sudo chmod 644 /etc/cron.d/price
 
-sudo cp cron/price /etc/cron.d/price
-sudo chmod 644 /etc/cron.d/price
+  sudo chown -R apache:apache log/
+  sudo chmod -R 775 log/
+  sudo chcon -Rt httpd_sys_rw_content_t log/
 
-sudo chown -R apache:apache log/
-sudo chmod -R 775 log/
-sudo chcon -Rt httpd_sys_rw_content_t log/
+  sudo systemctl reload php-fpm
+  sudo systemctl reload httpd
 
-sudo systemctl reload php-fpm
-sudo systemctl reload httpd
+  echo "Deploy complete"
+  '
+  ssh -i "$SSH_KEY" "$REMOTE_USER@$REMOTE_HOST" bash -s <<< "$REMOTE_SCRIPT"
 
-echo "Deploy complete"
-'
-ssh -i "$SSH_KEY" "$REMOTE_USER@$REMOTE_HOST" bash -s <<< "$REMOTE_SCRIPT"
+  echo "✓ Done — https://$REMOTE_HOST"
+}
 
-echo "✓ Done — https://$REMOTE_HOST"
+# ── Build frontend, then sync files ────────────────────────────
+build_and_sync() {
+  echo "▶ Building frontend…"
+  cd "$SCRIPT_DIR/frontend"
+  npm install
+  npm run build
+  cd "$SCRIPT_DIR"
+
+  sync_files
+}
+
+case "$MODE" in
+  sync-schema) sync_schema ;;
+  sync-files)  sync_files ;;
+  build)       build_and_sync ;;
+  all)         sync_schema; build_and_sync ;;
+esac
