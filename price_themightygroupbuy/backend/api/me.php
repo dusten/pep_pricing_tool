@@ -24,7 +24,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'PATCH') {
         $vals[] = $user['id'];
         db()->prepare('UPDATE pc_users SET ' . implode(', ', $fields) . ' WHERE id = ?')
             ->execute($vals);
-        invalidateUserCache((int)$user['id']);
     }
 
     // Re-fetch updated user

@@ -48,6 +48,7 @@ if (getAppSetting('maintenance_mode') === '1') {
 // pattern => handler file (relative to backend/api/)
 // Static routes only for Phase 1; dynamic {id} routes added per phase
 $ROUTES = [
+    'waitlist/join'        => 'waitlist/join.php',
     'auth/login'           => 'auth/login.php',
     'auth/register'        => 'auth/register.php',
     'auth/logout'          => 'auth/logout.php',

@@ -38,22 +38,16 @@ define('DB_PASS', _env('DB_PASS', ''));
 define('MC_HOST', _env('MC_HOST', '127.0.0.1'));
 define('MC_PORT', (int)_env('MC_PORT', '11211'));
 
-// ── Email (Brevo) ─────────────────────────────────────────────────
-define('BREVO_API_KEY',   _env('BREVO_API_KEY'));
-define('MAIL_FROM',       'noreply@price.themightygroupbuy.com');
-define('MAIL_FROM_NAME',  'TheMightyGroupBuy Prices');
+// ── Email ─────────────────────────────────────────────────────────
+define('MAIL_DRIVER',    _env('MAIL_DRIVER',    'brevo')); // brevo | log
+define('BREVO_API_KEY',  _env('BREVO_API_KEY'));
+define('MAIL_FROM',      _env('MAIL_FROM_EMAIL', 'noreply@price.themightygroupbuy.com'));
+define('MAIL_FROM_NAME', _env('MAIL_FROM_NAME',  'TheMightyGroupBuy Prices'));
 
 // ── External services (populated in later phases) ─────────────────
 define('ANTHROPIC_API_KEY',     _env('ANTHROPIC_API_KEY'));
 define('STRIPE_SECRET_KEY',     _env('STRIPE_SECRET_KEY'));
 define('STRIPE_WEBHOOK_SECRET', _env('STRIPE_WEBHOOK_SECRET'));
-// Stripe Price IDs — set in .env_price when Stripe phase is built
-define('STRIPE_PRICE_ADV_MONTHLY',    _env('STRIPE_PRICE_ADV_MONTHLY'));
-define('STRIPE_PRICE_ADV_ANNUAL',     _env('STRIPE_PRICE_ADV_ANNUAL'));
-define('STRIPE_PRICE_PRO_MONTHLY',    _env('STRIPE_PRICE_PRO_MONTHLY'));
-define('STRIPE_PRICE_PRO_ANNUAL',     _env('STRIPE_PRICE_PRO_ANNUAL'));
-define('STRIPE_PRICE_EXPERT_MONTHLY', _env('STRIPE_PRICE_EXPERT_MONTHLY'));
-define('STRIPE_PRICE_EXPERT_ANNUAL',  _env('STRIPE_PRICE_EXPERT_ANNUAL'));
 
 // ── Singletons ────────────────────────────────────────────────────
 

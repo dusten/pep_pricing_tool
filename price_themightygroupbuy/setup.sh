@@ -15,7 +15,7 @@ set -euo pipefail
 
 APP_DIR="/home/ec2-user/price_themightygroupbuy"
 DOMAIN="${1:-price.themightygroupbuy.com}"
-ENV_FILE="${APP_DIR}/.env_price"
+ENV_FILE="/home/ec2-user/.env_pricetool"
 
 # ── [1/10] System update ──────────────────────────────────────
 echo "=== [1/10] System update ==="
@@ -62,9 +62,12 @@ sudo cp "${APP_DIR}/price-standalone.conf" /etc/httpd/conf.d/price.conf
 echo "=== [5/10] SELinux permissions ==="
 sudo setsebool -P httpd_can_network_connect 1
 sudo setsebool -P httpd_can_network_connect_db 1
-sudo chcon -Rt httpd_sys_content_t    "${APP_DIR}/public"                   2>/dev/null || true
-sudo chcon -Rt httpd_sys_content_t    "${APP_DIR}/public/dist"              2>/dev/null || true
-sudo chcon -Rt httpd_sys_rw_content_t "${APP_DIR}/backend/storage"          2>/dev/null || true
+sudo setsebool -P httpd_enable_homedirs 1
+sudo setsebool -P httpd_read_user_content 1
+sudo chcon -Rt httpd_sys_content_t    "${APP_DIR}/public"          2>/dev/null || true
+sudo chcon -Rt httpd_sys_content_t    "${APP_DIR}/public/dist"     2>/dev/null || true
+sudo chcon -Rt httpd_sys_rw_content_t "${APP_DIR}/backend/storage" 2>/dev/null || true
+sudo chcon -Rt httpd_sys_rw_content_t "${APP_DIR}/log"             2>/dev/null || true
 
 # ── [6/10] MariaDB ────────────────────────────────────────────
 echo "=== [6/10] MariaDB setup ==="
@@ -107,6 +110,10 @@ DB_PASS=${DB_PASS}
 MC_HOST=127.0.0.1
 MC_PORT=11211
 
+MAIL_DRIVER=brevo
+MAIL_FROM_EMAIL=noreply@${DOMAIN}
+MAIL_FROM_NAME=TheMightyGroupBuy Prices
+
 BREVO_API_KEY=${BREVO_KEY}
 ANTHROPIC_API_KEY=${ANTHROPIC_KEY}
 
@@ -120,7 +127,9 @@ STRIPE_PRICE_PRO_ANNUAL=
 STRIPE_PRICE_EXPERT_MONTHLY=
 STRIPE_PRICE_EXPERT_ANNUAL=
 ENV
-chmod 600 "${ENV_FILE}"
+chown ec2-user:apache "${ENV_FILE}"
+chmod 640 "${ENV_FILE}"
+sudo chcon -t httpd_sys_content_t "${ENV_FILE}" 2>/dev/null || true
 echo "Written: ${ENV_FILE}"
 
 # MySQL options file so cron jobs never need passwords on the command line
@@ -134,13 +143,17 @@ CNF
 chmod 600 /home/ec2-user/.pc_my.cnf
 echo "Written: /home/ec2-user/.pc_my.cnf"
 
-# ── [8/10] Storage directory ──────────────────────────────────
-echo "=== [8/10] Storage directory ==="
+# ── [8/10] Storage + log directories ─────────────────────────
+echo "=== [8/10] Storage + log directories ==="
 mkdir -p "${APP_DIR}/backend/storage/vendor_files"
 mkdir -p "${APP_DIR}/public/dist"
+mkdir -p "${APP_DIR}/log"
 sudo chown -R ec2-user:apache "${APP_DIR}/backend/storage"
 sudo chmod -R 770              "${APP_DIR}/backend/storage"
 sudo chcon -Rt httpd_sys_rw_content_t "${APP_DIR}/backend/storage" 2>/dev/null || true
+sudo chown apache:apache "${APP_DIR}/log"
+sudo chmod 775           "${APP_DIR}/log"
+sudo chcon -t httpd_sys_rw_content_t "${APP_DIR}/log" 2>/dev/null || true
 
 # ── [9/10] Import schema + install cron ──────────────────────
 echo "=== [9/10] Schema + cron ==="

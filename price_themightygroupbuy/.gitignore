@@ -21,6 +21,9 @@ frontend/.env
 # Uploaded vendor files — excluded from rsync too
 backend/storage/vendor_files/
 
+# Email log files (directory tracked via .gitkeep)
+log/*.log
+
 # OS / editor
 .DS_Store
 Thumbs.db

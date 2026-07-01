@@ -49,21 +49,15 @@ function requireAuth(): array {
         jsonResponse(['error' => 'Unauthorized'], 401);
     }
     $hash = hashToken($m[1]);
-    $user = mcUserByToken($hash);
-    if (!$user) {
-        // Cache miss — hit the DB
-        $stmt = db()->prepare(
-            'SELECT u.*, s.id AS session_id FROM pc_users u
-             JOIN pc_sessions s ON s.user_id = u.id
-             WHERE s.token_hash = ? AND s.expires_at > NOW()
-             LIMIT 1'
-        );
-        $stmt->execute([$hash]);
-        $user = $stmt->fetch() ?: null;
-        if (!$user) jsonResponse(['error' => 'Unauthorized'], 401);
-        mcSetUser($user);
-    }
-    // Async-safe last_seen bump (fire and forget, no try/catch overhead)
+    $stmt = db()->prepare(
+        'SELECT u.*, s.id AS session_id FROM pc_users u
+         JOIN pc_sessions s ON s.user_id = u.id
+         WHERE s.token_hash = ? AND s.expires_at > NOW()
+         LIMIT 1'
+    );
+    $stmt->execute([$hash]);
+    $user = $stmt->fetch() ?: null;
+    if (!$user) jsonResponse(['error' => 'Unauthorized'], 401);
     db()->prepare('UPDATE pc_sessions SET last_seen_at = NOW() WHERE id = ?')
         ->execute([$user['session_id']]);
     return $user;
@@ -75,18 +69,16 @@ function requireAdmin(): array {
     return $user;
 }
 
-/** Tier order for comparison */
-const TIER_ORDER = ['free' => 0, 'advanced' => 1, 'pro' => 2, 'expert' => 3];
-
 /**
  * Gate by minimum tier. Downgrades past_due/canceled to free capabilities.
  * Returns user row on pass, emits 402 on fail.
  */
 function requireTier(string $min): array {
+    $tierOrder = ['free' => 0, 'advanced' => 1, 'pro' => 2, 'expert' => 3];
     $user      = requireAuth();
     $isActive  = in_array($user['tier_status'], ['active', 'trialing'], true);
-    $userLevel = TIER_ORDER[$isActive ? $user['tier'] : 'free'] ?? 0;
-    $minLevel  = TIER_ORDER[$min] ?? 0;
+    $userLevel = $tierOrder[$isActive ? $user['tier'] : 'free'] ?? 0;
+    $minLevel  = $tierOrder[$min] ?? 0;
     if ($userLevel < $minLevel) {
         jsonResponse(['error' => 'subscription_required', 'upgrade_to' => $min,
                       'message' => "This feature requires the $min plan or above."], 402);
@@ -94,7 +86,7 @@ function requireTier(string $min): array {
     return $user;
 }
 
-// ── Rate limiting (Memcached; degrades gracefully without it) ─────
+// ── Rate limiting ─────────────────────────────────────────────────
 
 function rateLimit(string $key, int $max = 10, int $windowSec = 300): void {
     $mc = mc();
@@ -109,48 +101,6 @@ function rateLimit(string $key, int $max = 10, int $windowSec = 300): void {
         jsonResponse(['error' => 'Too many attempts. Please try again later.'], 429);
     }
     $mc->increment($mcKey);
-}
-
-// ── Memcached generation-counter helpers ──────────────────────────
-
-/** Bump generation — invalidates all keys under this namespace */
-function mcBumpGen(string $ns): void {
-    $mc = mc();
-    if (!$mc) return;
-    if ($mc->get("gen_$ns") === false) {
-        $mc->set("gen_$ns", 1, 86400);
-    } else {
-        $mc->increment("gen_$ns");
-    }
-}
-
-function mcGenKey(string $ns, string $sub): string {
-    $mc  = mc();
-    $gen = ($mc && ($g = $mc->get("gen_$ns")) !== false) ? $g : 0;
-    return "pc_{$ns}_{$gen}_{$sub}";
-}
-
-function mcGetUser(string $tokenHash): array|false {
-    $mc = mc();
-    if (!$mc) return false;
-    return $mc->get(mcGenKey("sess_$tokenHash", 'u')) ?: false;
-}
-
-// ponytail: aliased to match requireAuth usage
-function mcUserByToken(string $tokenHash): array|false {
-    return mcGetUser($tokenHash);
-}
-
-function mcSetUser(array $user, int $ttl = 300): void {
-    $mc = mc();
-    if (!$mc) return;
-    $ns = "sess_{$user['token_hash']}";   // note: token_hash not in select; skip caching if missing
-    // We don't cache by token_hash here since the JOIN doesn't expose it — session cache is a future optimization
-    // ponytail: cache by user_id gen instead when needed
-}
-
-function invalidateUserCache(int $userId): void {
-    mcBumpGen("user_$userId");
 }
 
 // ── Audit log ────────────────────────────────────────────────────

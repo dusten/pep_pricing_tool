@@ -2,13 +2,19 @@
 declare(strict_types=1);
 
 function sendEmail(string $toEmail, string $toName, string $subject, string $html): bool {
+    if (MAIL_DRIVER === 'log') {
+        $entry = sprintf("[%s] TO:%s SUBJECT:%s\n%s\n%s\n",
+            date('Y-m-d H:i:s'), $toEmail, $subject, str_repeat('-', 60), $html);
+        file_put_contents(dirname(__DIR__) . '/log/mail.log', $entry, FILE_APPEND | LOCK_EX);
+        return true;
+    }
     if (!BREVO_API_KEY) {
         error_log("[email] BREVO_API_KEY not set — skipping send to $toEmail");
         return false;
     }
     $payload = json_encode([
         'sender'      => ['email' => MAIL_FROM, 'name' => MAIL_FROM_NAME],
-        'to'          => [['email' => $toEmail, 'name' => $toName]],
+        'to'          => [['email' => $toEmail, 'name' => $toName ?: $toEmail]],
         'subject'     => $subject,
         'htmlContent' => $html,
     ]);
@@ -33,11 +39,20 @@ function sendEmail(string $toEmail, string $toName, string $subject, string $htm
     return true;
 }
 
-// ── Base template ─────────────────────────────────────────────────
+function loadTemplate(string $name, array $vars = []): string {
+    $path = dirname(__DIR__) . '/backend/email_templates/' . $name . '.html';
+    $body = file_get_contents($path);
+    foreach ($vars as $k => $v) {
+        $body = str_replace('{{' . $k . '}}', $v, $body);
+    }
+    return $body;
+}
+
+// ── Base email wrapper ────────────────────────────────────────────
 
 function emailTemplate(string $title, string $body): string {
-    $navy  = '#0E2245';
-    $gold  = '#C8A227';
+    $navy   = '#0E2245';
+    $gold   = '#C8A227';
     $appUrl = APP_URL;
     return <<<HTML
 <!DOCTYPE html>
@@ -81,53 +96,32 @@ HTML;
 // ── Specific emails ───────────────────────────────────────────────
 
 function sendVerificationEmail(string $email, string $name, string $verifyUrl): bool {
-    $btn  = _btn($verifyUrl, 'Verify Email Address');
-    $body = <<<HTML
-<p style="color:#374151;font-size:15px;margin:0 0 16px">Hi {$name},</p>
-<p style="color:#374151;font-size:15px;margin:0 0 20px">Thanks for signing up. Click below to verify your email address and activate your account.</p>
-{$btn}
-<p style="color:#6b7280;font-size:12px;margin:16px 0 0">Or copy this link:<br>
-<a href="{$verifyUrl}" style="color:#0E2245;word-break:break-all">{$verifyUrl}</a></p>
-<p style="color:#9ca3af;font-size:12px;margin:12px 0 0">This link expires in 72 hours. If you didn't create an account, you can ignore this email.</p>
-HTML;
+    $body = loadTemplate('verification', ['name' => $name, 'url' => $verifyUrl, 'button' => _btn($verifyUrl, 'Verify Email Address')]);
     return sendEmail($email, $name, 'Verify your email — TheMightyGroupBuy Prices',
                      emailTemplate('Verify Your Email', $body));
 }
 
 function sendPasswordResetEmail(string $email, string $name, string $resetUrl): bool {
-    $btn  = _btn($resetUrl, 'Reset Password');
-    $body = <<<HTML
-<p style="color:#374151;font-size:15px;margin:0 0 16px">Hi {$name},</p>
-<p style="color:#374151;font-size:15px;margin:0 0 20px">We received a request to reset your password. This link expires in <strong>1 hour</strong>.</p>
-{$btn}
-<p style="color:#6b7280;font-size:12px;margin:16px 0 0">Or copy this link:<br>
-<a href="{$resetUrl}" style="color:#0E2245;word-break:break-all">{$resetUrl}</a></p>
-<p style="color:#9ca3af;font-size:12px;margin:12px 0 0">If you didn't request a password reset, no action is needed — your password has not changed.</p>
-HTML;
+    $body = loadTemplate('password_reset', ['name' => $name, 'url' => $resetUrl, 'button' => _btn($resetUrl, 'Reset Password')]);
     return sendEmail($email, $name, 'Reset your password — TheMightyGroupBuy Prices',
                      emailTemplate('Reset Password', $body));
 }
 
 function sendWelcomeEmail(string $email, string $name): bool {
-    $btn  = _btn(APP_URL, 'Go to Dashboard');
-    $body = <<<HTML
-<p style="color:#374151;font-size:15px;margin:0 0 16px">Hi {$name},</p>
-<p style="color:#374151;font-size:15px;margin:0 0 20px">Your email is verified and your account is ready. Start exploring peptide vendor price comparisons.</p>
-{$btn}
-HTML;
+    $body = loadTemplate('welcome', ['name' => $name, 'button' => _btn(APP_URL, 'Go to Dashboard')]);
     return sendEmail($email, $name, 'Welcome to TheMightyGroupBuy Price Comparison',
                      emailTemplate('Welcome!', $body));
 }
 
+function sendWaitlistConfirmationEmail(string $email, string $name): bool {
+    $greeting = $name ? "Hi {$name}," : 'Hi there,';
+    $body = loadTemplate('waitlist_confirmation', ['greeting' => $greeting]);
+    return sendEmail($email, $name, "You're on the waitlist — TheMightyGroupBuy Prices",
+                     emailTemplate("You're on the list!", $body));
+}
+
 function sendWaitlistInviteEmail(string $email, string $name, string $inviteUrl): bool {
-    $btn  = _btn($inviteUrl, 'Accept Invite & Sign Up');
-    $body = <<<HTML
-<p style="color:#374151;font-size:15px;margin:0 0 16px">Hi {$name},</p>
-<p style="color:#374151;font-size:15px;margin:0 0 20px">Your spot on the waitlist is ready. Click below to create your account — this link is unique to you.</p>
-{$btn}
-<p style="color:#6b7280;font-size:12px;margin:16px 0 0">Or copy this link:<br>
-<a href="{$inviteUrl}" style="color:#0E2245;word-break:break-all">{$inviteUrl}</a></p>
-HTML;
+    $body = loadTemplate('waitlist_invite', ['name' => $name, 'url' => $inviteUrl, 'button' => _btn($inviteUrl, 'Accept Invite & Sign Up')]);
     return sendEmail($email, $name, "You're invited — TheMightyGroupBuy Price Comparison",
                      emailTemplate("You're In!", $body));
 }

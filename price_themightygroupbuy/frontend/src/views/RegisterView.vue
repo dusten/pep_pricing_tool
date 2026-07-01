@@ -132,11 +132,10 @@ async function joinWaitlist() {
   error.value   = ''
   loading.value = true
   try {
-    // ponytail: waitlist join endpoint in Phase 2; for now show a placeholder
-    await new Promise(r => setTimeout(r, 600))
+    await post('/api/waitlist/join', { email: wlEmail.value, referral_code: refCode.value || undefined })
     waitlistSuccess.value = true
-  } catch {
-    error.value = 'Something went wrong. Please try again.'
+  } catch (err) {
+    error.value = err.message || 'Something went wrong. Please try again.'
   } finally {
     loading.value = false
   }

@@ -85,9 +85,10 @@ CREATE TABLE IF NOT EXISTS pc_waitlist (
   name          VARCHAR(100) NULL,
   referral_code VARCHAR(20)  NULL,         -- code used to get invited
   invite_token  VARCHAR(64)  NULL UNIQUE,  -- token emailed to invitee
-  invited_at    DATETIME     NULL,
-  joined_at     DATETIME     NULL,         -- set when they complete registration
-  created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  invited_at               DATETIME     NULL,
+  joined_at                DATETIME     NULL,         -- set when they complete registration
+  confirmation_emails_sent TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  created_at               DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX (invite_token)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

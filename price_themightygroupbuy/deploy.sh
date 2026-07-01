@@ -30,26 +30,27 @@ rsync -avz --delete \
   --exclude='frontend/node_modules/' \
   --exclude='frontend/.vite/' \
   --exclude='backend/storage/vendor_files/' \
+  --exclude='log/' \
   "$SCRIPT_DIR/" \
   "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/"
 
 echo "▶ Running remote post-deploy steps…"
-ssh -i "$SSH_KEY" "$REMOTE_USER@$REMOTE_HOST" bash << 'REMOTE'
+REMOTE_SCRIPT='
 set -euo pipefail
 cd /home/ec2-user/price_themightygroupbuy
 
-# Apply any pending DB migrations
-bash migrate.sh
-
-# Install / refresh cron
 sudo cp cron/price /etc/cron.d/price
 sudo chmod 644 /etc/cron.d/price
 
-# Graceful reload only — picks up config changes without dropping connections
-# or affecting the grp. vhost sharing this server. Never restart here.
+sudo chown -R apache:apache log/
+sudo chmod -R 775 log/
+sudo chcon -Rt httpd_sys_rw_content_t log/
+
+sudo systemctl reload php-fpm
 sudo systemctl reload httpd
 
-echo "✓ Deploy complete"
-REMOTE
+echo "Deploy complete"
+'
+ssh -i "$SSH_KEY" "$REMOTE_USER@$REMOTE_HOST" bash -s <<< "$REMOTE_SCRIPT"
 
 echo "✓ Done — https://$REMOTE_HOST"
