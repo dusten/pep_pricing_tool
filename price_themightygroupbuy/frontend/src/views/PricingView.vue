@@ -192,6 +192,8 @@ function selectPlan(plan) {
   padding: 28px 24px;
   position: relative;
   transition: box-shadow var(--transition);
+  display: flex;
+  flex-direction: column;
 }
 .pricing-card:hover    { box-shadow: var(--shadow); }
 .pricing-card.featured { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), var(--shadow); }
@@ -204,7 +206,7 @@ function selectPlan(plan) {
 .price-annual  { font-size: 12px; color: var(--success); margin-bottom: 12px; }
 .plan-promise  { font-size: 13px; color: var(--text-secondary); margin: 12px 0 18px; min-height: 38px; }
 
-.plan-features { list-style: none; padding: 0; margin: 0 0 24px; display: flex; flex-direction: column; gap: 10px; }
+.plan-features { list-style: none; padding: 0; margin: 0 0 24px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
 .plan-features li { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; }
 .plan-features li.disabled { color: var(--text-muted); }
 .feature-icon { flex-shrink: 0; margin-top: 1px; }
