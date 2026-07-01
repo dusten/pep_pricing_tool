@@ -51,11 +51,36 @@ define('STRIPE_WEBHOOK_SECRET', _env('STRIPE_WEBHOOK_SECRET'));
 
 // ── Singletons ────────────────────────────────────────────────────
 
+// MySQL's own Questions/Slow_queries status vars are server-wide — this box
+// runs two apps (tmgb_price + grp's themightygroupbuy) sharing one MariaDB
+// instance, so those counters mix both apps' traffic. performance_schema
+// would give a per-schema breakdown but it's globally OFF on this server
+// (would need a restart to enable). Instead, count this app's own queries
+// directly via a thin PDO wrapper + a Memcached counter — the same pattern
+// already used for rate limiting.
+class CountingPDO extends PDO {
+    public function prepare(string $query, array $options = []): PDOStatement|false {
+        bumpAppQueryCount();
+        return parent::prepare($query, $options);
+    }
+    public function query(string $query, ?int $fetchMode = null, mixed ...$fetchModeArgs): PDOStatement|false {
+        bumpAppQueryCount();
+        return parent::query($query, $fetchMode, ...$fetchModeArgs);
+    }
+}
+
+function bumpAppQueryCount(): void {
+    $mc = mc();
+    if (!$mc) return;
+    $mc->add('app_query_count', 0, 0); // seed once, no expiry — resets only if Memcached restarts
+    $mc->increment('app_query_count');
+}
+
 function db(): PDO {
     static $pdo;
     if (!$pdo) {
         $dsn = sprintf('mysql:host=%s;port=%s;dbname=%s;charset=utf8mb4', DB_HOST, DB_PORT, DB_NAME);
-        $pdo = new PDO($dsn, DB_USER, DB_PASS, [
+        $pdo = new CountingPDO($dsn, DB_USER, DB_PASS, [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
             PDO::ATTR_EMULATE_PREPARES   => false,

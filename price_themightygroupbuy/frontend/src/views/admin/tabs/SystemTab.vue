@@ -25,8 +25,12 @@
         <div class="stat-label">Cache memory used</div>
       </div>
       <div class="stat-tile"><div class="stat-value">{{ sys.database.connections }}</div><div class="stat-label">DB connections</div></div>
-      <div class="stat-tile"><div class="stat-value">{{ sys.database.total_queries.toLocaleString() }}</div><div class="stat-label">Total queries</div><div class="stat-sublabel">since restart</div></div>
-      <div class="stat-tile"><div class="stat-value">{{ sys.database.slow_queries }}</div><div class="stat-label">Slow queries</div><div class="stat-sublabel">since restart</div></div>
+      <div class="stat-tile">
+        <div class="stat-value">{{ sys.database.total_queries === null ? 'n/a' : sys.database.total_queries.toLocaleString() }}</div>
+        <div class="stat-label">App queries</div>
+        <div class="stat-sublabel">this app only, since cache restart</div>
+      </div>
+      <div class="stat-tile"><div class="stat-value">{{ sys.database.slow_queries }}</div><div class="stat-label">Slow queries</div><div class="stat-sublabel">server-wide, since restart</div></div>
     </div>
 
     <h4 class="section-title">Slow queries — this database only</h4>

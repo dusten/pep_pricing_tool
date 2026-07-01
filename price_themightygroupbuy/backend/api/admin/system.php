@@ -34,15 +34,22 @@ if ($mc) {
 // GLOBAL, not session, status — every request opens a fresh PDO connection
 // (no persistent connections), so plain SHOW STATUS reads that new
 // connection's own near-empty session counters and never visibly moves.
+// Threads_connected/Uptime stay server-wide (accurate either way — this
+// box's total connection/uptime state, not per-schema). total_queries
+// deliberately does NOT use MySQL's global Questions counter — that's
+// shared across both apps on this box (see CountingPDO in config.php for
+// why) — it reads this app's own Memcached-tracked count instead.
 $statusRows = db()->query(
-    "SHOW GLOBAL STATUS WHERE Variable_name IN ('Threads_connected','Questions','Slow_queries','Uptime')"
+    "SHOW GLOBAL STATUS WHERE Variable_name IN ('Threads_connected','Slow_queries','Uptime')"
 )->fetchAll(PDO::FETCH_KEY_PAIR);
 
+$appQueryCount = $mc ? (int)($mc->get('app_query_count') ?: 0) : null;
+
 $database = [
-    'connections'  => (int)($statusRows['Threads_connected'] ?? 0),
-    'total_queries'=> (int)($statusRows['Questions'] ?? 0),
-    'slow_queries' => (int)($statusRows['Slow_queries'] ?? 0),
-    'uptime_sec'   => (int)($statusRows['Uptime'] ?? 0),
+    'connections'     => (int)($statusRows['Threads_connected'] ?? 0),
+    'total_queries'   => $appQueryCount,      // this app only, since Memcached last restarted
+    'slow_queries'    => (int)($statusRows['Slow_queries'] ?? 0), // server-wide; see the dedicated slow-query section below for this app's own
+    'uptime_sec'      => (int)($statusRows['Uptime'] ?? 0),
 ];
 
 // Slow queries live in their own endpoint now (admin/slow_queries.php) —
