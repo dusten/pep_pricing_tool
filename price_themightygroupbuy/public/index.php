@@ -5,12 +5,61 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/backend/config.php';
 require_once dirname(__DIR__) . '/backend/helpers.php';
 
-// ── CORS (dev only) ───────────────────────────────────────────────
-if (APP_ENV === 'development') {
-    header('Access-Control-Allow-Origin: http://localhost:5173');
+// ── Global exception handler ────────────────────────────────────────
+// Any unhandled failure past this point returns a generic 500, never a
+// stack trace or raw DB error — real detail goes to the server log only.
+set_exception_handler(function (Throwable $e): void {
+    error_log('[unhandled] ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+    jsonResponse(['error' => 'Something went wrong. Please try again.'], 500);
+});
+
+// ── Security headers (Apache also sets these for static/proxied
+// responses via price.conf; repeated here so nothing depends on that
+// vhost config alone, e.g. `php -S` local dev) ──────────────────────
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: DENY');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'");
+
+// ── CORS ──────────────────────────────────────────────────────────
+// Allowlist built from the app's own configured origin(s) — never a wildcard.
+// The API takes its token via the Authorization header, not a cookie, so
+// credentials are never part of this and Allow-Credentials is deliberately
+// not sent.
+$corsAllowed = [APP_URL];
+if (APP_ENV === 'development') $corsAllowed[] = 'http://localhost:5173';
+$reqOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array(rtrim($reqOrigin, '/'), $corsAllowed, true)) {
+    header("Access-Control-Allow-Origin: $reqOrigin");
+    header('Vary: Origin');
     header('Access-Control-Allow-Headers: Authorization, Content-Type');
     header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit;
+}
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit;
+
+// ── CSRF (defense in depth) ────────────────────────────────────────
+// Auth is a bearer token in the Authorization header, never a cookie, so a
+// forged cross-site <form>/<img> POST can't carry it — that alone defeats
+// classic CSRF. This Origin check is a second layer in case that ever
+// changes: reject mutating requests whose Origin doesn't match us.
+//
+// A request can legitimately arrive with NO Origin header (server-to-server
+// calls, e.g. a future payment-provider webhook) — those are allowed through
+// only if their path is on this named, individually-justified exemption list.
+// Nothing else gets a free pass for having an empty Origin.
+$CSRF_EXEMPT_NO_ORIGIN = [
+    'perf' => 'best-effort page-load timing beacon; fires pre-auth from real pages, no state to forge',
+];
+$mutating = in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'PATCH', 'DELETE'], true);
+if ($mutating && str_starts_with(ltrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/'), 'api/')) {
+    $apiPathForCsrf = substr(ltrim(parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH), '/'), 4);
+    if ($reqOrigin !== '') {
+        if (!in_array(rtrim($reqOrigin, '/'), $corsAllowed, true)) {
+            jsonResponse(['error' => 'Cross-origin request rejected.'], 403);
+        }
+    } elseif (!array_key_exists($apiPathForCsrf, $CSRF_EXEMPT_NO_ORIGIN)) {
+        jsonResponse(['error' => 'Cross-origin request rejected.'], 403);
+    }
 }
 
 // ── Route to SPA for non-API requests ────────────────────────────
@@ -57,6 +106,12 @@ $ROUTES = [
     'auth/reset-password'  => 'auth/reset_password.php',
     'me'                   => 'me.php',
     'me/quota'             => 'me/quota.php',
+    'me/password'          => 'me/password.php',
+    'me/email'             => 'me/email.php',
+    'me/login-history'     => 'me/login_history.php',
+    'me/export'            => 'me/export.php',
+    'me/sessions/revoke-all' => 'me/sessions_revoke_all.php',
+    'auth/verify-email-change' => 'auth/verify_email_change.php',
     'app-settings'         => 'app_settings.php',
     'feedback'             => 'feedback.php',
     'perf'                 => 'perf.php',
@@ -65,11 +120,15 @@ $ROUTES = [
     'comparison'           => 'comparison/index.php',
     'comparison/filters'   => 'comparison/filters.php',
     'calendar'             => 'calendar.php',
+    'admin/overview'       => 'admin/overview.php',
     'admin/users'          => 'admin/users.php',
     'admin/waitlist'       => 'admin/waitlist.php',
+    'admin/waitlist/export' => 'admin/waitlist_export.php',
     'admin/files'          => 'admin/files.php',
     'admin/feedback'       => 'admin/feedback.php',
     'admin/performance'    => 'admin/performance.php',
+    'admin/system'         => 'admin/system.php',
+    'admin/query-log'      => 'admin/query_log.php',
     'admin/backup'         => 'admin/backup.php',
     // ── Backlog — Stripe billing, do not build yet ───────────────
     // 'billing/checkout'     => 'billing/checkout.php',
@@ -90,8 +149,10 @@ $DYNAMIC = [
     'products/(\d+)/aliases/(\d+)'      => ['products/aliases.php',  'id', 'aliasId'],
     'products/(\d+)/merge'              => ['products/merge.php',    'id'],
     'admin/users/(\d+)'                 => ['admin/users_show.php',    'id'],
+    'admin/users/(\d+)/referrals'       => ['admin/user_referrals.php','id'],
     'admin/waitlist/(\d+)'              => ['admin/waitlist_show.php', 'id'],
     'admin/feedback/(\d+)'              => ['admin/feedback_show.php', 'id'],
+    'admin/query-log/(\d+)/rerun'       => ['admin/query_log_rerun.php', 'id'],
 ];
 
 $apiPath = substr($uri, 4); // strip 'api/'

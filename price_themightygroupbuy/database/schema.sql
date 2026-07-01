@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS pc_migrations (
 CREATE TABLE IF NOT EXISTS pc_users (
   id                     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   email                  VARCHAR(254) NOT NULL UNIQUE,
+  pending_email          VARCHAR(254) NULL,          -- awaiting confirmation via email_change_token
+  email_change_token     VARCHAR(64)  NULL,
   password_hash          VARCHAR(255) NOT NULL,
   display_name           VARCHAR(100) NOT NULL,
   email_token            VARCHAR(64)  NULL,          -- plain hex; cleared on verify
@@ -31,7 +33,10 @@ CREATE TABLE IF NOT EXISTS pc_users (
   referral_code          CHAR(24)     NOT NULL UNIQUE,  -- 24 hex chars, random.random_bytes(12)
   referred_by_id         INT UNSIGNED NULL,
   is_admin               BOOLEAN      NOT NULL DEFAULT FALSE,
+  test_account           BOOLEAN      NOT NULL DEFAULT FALSE,  -- excluded from real notifications/stats
   theme                  ENUM('system','light','dark') NOT NULL DEFAULT 'system',
+  timezone               VARCHAR(64)  NOT NULL DEFAULT 'UTC',
+  push_enabled           BOOLEAN      NOT NULL DEFAULT FALSE,
   -- Subscription (populated by Stripe webhooks)
   tier                   ENUM('free','advanced','pro','expert') NOT NULL DEFAULT 'free',
   stripe_customer_id     VARCHAR(64)  NULL,
@@ -62,6 +67,16 @@ CREATE TABLE IF NOT EXISTS pc_sessions (
   FOREIGN KEY (user_id) REFERENCES pc_users(id) ON DELETE CASCADE,
   INDEX (token_hash),
   INDEX (user_id, expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pc_login_history (
+  id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id    INT UNSIGNED NOT NULL,
+  ip         VARCHAR(45)  NULL,
+  user_agent VARCHAR(500) NULL,
+  created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES pc_users(id) ON DELETE CASCADE,
+  INDEX (user_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pc_password_resets (
@@ -133,6 +148,7 @@ CREATE TABLE IF NOT EXISTS pc_perf_metrics (
   id            BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id       INT UNSIGNED NULL,
   page          VARCHAR(200) NULL,
+  device_type   ENUM('desktop','mobile','tablet','other') NOT NULL DEFAULT 'other',
   dns_ms        SMALLINT UNSIGNED NULL,
   connect_ms    SMALLINT UNSIGNED NULL,
   ttfb_ms       SMALLINT UNSIGNED NULL,
@@ -242,6 +258,29 @@ CREATE TABLE IF NOT EXISTS pc_query_log (
   FOREIGN KEY (user_id) REFERENCES pc_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS pc_comparison_log (
+  id               BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id          INT UNSIGNED NOT NULL,
+  selection_params JSON         NOT NULL,   -- products/vendors/specs/category/multi_only, as sent
+  duration_ms      INT UNSIGNED NOT NULL,
+  result_count     INT UNSIGNED NOT NULL,
+  slow_flag        BOOLEAN      NOT NULL DEFAULT FALSE,  -- duration_ms over the configured budget
+  created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES pc_users(id) ON DELETE CASCADE,
+  INDEX (duration_ms),
+  INDEX (slow_flag, created_at),
+  INDEX (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pc_maintenance_runs (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  job        VARCHAR(100) NOT NULL,
+  status     ENUM('ok','failed') NOT NULL DEFAULT 'ok',
+  details    TEXT NULL,
+  ran_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX (ran_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS pc_referral_credits (
   id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   referrer_id  INT UNSIGNED NOT NULL,
@@ -295,3 +334,5 @@ INSERT IGNORE INTO pc_specifications (product_id, spec_label, numeric_value, uni
   (3, '5mg',   5.0000, 'mg');
 
 INSERT IGNORE INTO pc_migrations (filename) VALUES ('001_initial.sql');
+INSERT IGNORE INTO pc_migrations (filename) VALUES ('002_widen_referral_code.sql');
+INSERT IGNORE INTO pc_migrations (filename) VALUES ('003_settings_admin_expansion.sql');

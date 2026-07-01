@@ -49,10 +49,12 @@ function requireAuth(): array {
         jsonResponse(['error' => 'Unauthorized'], 401);
     }
     $hash = hashToken($m[1]);
+    // Re-check email_verified_at on every request, not just at login — a session
+    // token alone isn't proof the account is still in good standing.
     $stmt = db()->prepare(
         'SELECT u.*, s.id AS session_id FROM pc_users u
          JOIN pc_sessions s ON s.user_id = u.id
-         WHERE s.token_hash = ? AND s.expires_at > NOW()
+         WHERE s.token_hash = ? AND s.expires_at > NOW() AND u.email_verified_at IS NOT NULL
          LIMIT 1'
     );
     $stmt->execute([$hash]);
@@ -89,19 +91,36 @@ function requireTier(string $min): array {
 
 // ── Rate limiting ─────────────────────────────────────────────────
 
+/**
+ * Concrete thresholds in use: login 20/5min per IP + 10/5min per email,
+ * register 5/hour per IP, forgot-password 5/10min per IP, feedback 10/hour per user.
+ *
+ * Fails CLOSED: if the counter store is unreachable, the request is rejected rather
+ * than let through unlimited. A brute-force window during a cache outage is worse
+ * than a login/register outage during that same window — availability loses to abuse
+ * prevention here on purpose.
+ *
+ * add()+increment() instead of get()+set() to close the check-then-act race: two
+ * concurrent first-requests both calling add() means exactly one wins (Memcached
+ * add() is atomic — it no-ops and returns false if the key already exists), so the
+ * counter never gets silently reset by a losing racer.
+ */
 function rateLimit(string $key, int $max = 10, int $windowSec = 300): void {
     $mc = mc();
-    if (!$mc) return; // ponytail: no Memcached = no rate limit; add Redis fallback if needed
-    $mcKey    = 'rl_' . md5($key);
-    $attempts = $mc->get($mcKey);
+    if (!$mc) jsonResponse(['error' => 'Service temporarily unavailable. Please try again shortly.'], 503);
+
+    $mcKey = 'rl_' . md5($key);
+    $mc->add($mcKey, 0, $windowSec); // no-ops if another request already created it
+    $attempts = $mc->increment($mcKey);
+
     if ($attempts === false) {
-        $mc->set($mcKey, 1, $windowSec);
-        return;
+        // increment() only fails if the key vanished (expired) between add() and here,
+        // or the server is unreachable — either way we can't verify the count, so reject.
+        jsonResponse(['error' => 'Service temporarily unavailable. Please try again shortly.'], 503);
     }
-    if ($attempts >= $max) {
+    if ($attempts > $max) {
         jsonResponse(['error' => 'Too many attempts. Please try again later.'], 429);
     }
-    $mc->increment($mcKey);
 }
 
 // ── Audit log ────────────────────────────────────────────────────
@@ -111,6 +130,65 @@ function logAdminAction(int $adminId, string $action, array $details = []): void
         'INSERT INTO pc_admin_audit_log (admin_id, action, details, ip) VALUES (?,?,?,?)'
     )->execute([$adminId, $action, $details ? json_encode($details) : null,
                 $_SERVER['REMOTE_ADDR'] ?? null]);
+}
+
+// ── Device detection (perf/log breakdowns; not a security control) ─
+
+function deviceType(): string {
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    if (preg_match('/iPad|Android(?!.*Mobile)|Tablet/i', $ua)) return 'tablet';
+    if (preg_match('/Mobi|iPhone|Android/i', $ua))             return 'mobile';
+    if ($ua === '')                                            return 'other';
+    return 'desktop';
+}
+
+// ── Cache (Memcached, version-counter invalidation) ─────────────────
+//
+// Why a version counter instead of deleting/enumerating keys on write: a
+// write doesn't need to know every filtered/paginated variant of a cached
+// list that might exist (e.g. admin users list cached per tier filter) —
+// it just bumps one small counter for the group, which makes every existing
+// entry for that group unreachable (they're keyed by the old version) without
+// having to find and delete them individually. Old entries just expire away
+// on their own TTL instead of being cleaned up.
+//
+// Caching is a pure optimization here, never a correctness dependency, so
+// unlike rateLimit() this fails OPEN by design: no Memcached just means
+// every request computes fresh — never reject a request over a cache miss.
+//
+// TTL guidance: short (30-60s) for admin lists that change via routine admin
+// action (users, waitlist) — fast-changing, low cost to recompute. Longer
+// (5min+) for slow-changing reference-ish data (public app settings).
+// Never cache a user's own live data (comparison results, /api/me) — those
+// must always reflect the instant they were written.
+
+function cacheGroupKey(string $group): string {
+    $mc = mc();
+    if (!$mc) return $group . ':nocache';
+    $mc->add("cv:$group", 1, 0); // seed to 1 only if the counter doesn't exist yet
+    return $group . ':v' . $mc->get("cv:$group");
+}
+
+/** Bump a cache group's version, invalidating every entry cached under it. */
+function cacheBust(string $group): void {
+    $mc = mc();
+    if ($mc) $mc->increment("cv:$group");
+}
+
+/**
+ * $group scopes invalidation (cacheBust($group) busts every variant below).
+ * $variant distinguishes entries within that group that don't all change
+ * together — e.g. one filtered view of an admin list vs. another.
+ */
+function cacheGet(string $group, string $variant, int $ttlSec, callable $compute) {
+    $mc = mc();
+    if (!$mc) return $compute();
+    $key = 'c:' . cacheGroupKey($group) . ':' . $variant;
+    $hit = $mc->get($key);
+    if ($hit !== false) return json_decode($hit, true);
+    $data = $compute();
+    $mc->set($key, json_encode($data), $ttlSec);
+    return $data;
 }
 
 // ── App settings (cached per request) ────────────────────────────
@@ -137,7 +215,11 @@ function userShape(array $u): array {
         'account_credit_usd' => (float)$u['account_credit_usd'],
         'referral_code' => $u['referral_code'],
         'theme'        => $u['theme'],
+        'timezone'     => $u['timezone'],
+        'push_enabled' => (bool)$u['push_enabled'],
         'is_admin'     => (bool)$u['is_admin'],
+        'email_verified' => !empty($u['email_verified_at']),
+        'pending_email'  => $u['pending_email'] ?? null,
         'created_at'   => $u['created_at'],
     ];
 }

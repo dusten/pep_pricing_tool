@@ -10,6 +10,7 @@
     </div>
 
     <div class="admin-body">
+      <OverviewTab      v-if="activeTab === 'overview'" />
       <UsersTab         v-if="activeTab === 'users'" />
       <WaitlistTab      v-if="activeTab === 'waitlist'" />
       <SubscriptionsTab v-if="activeTab === 'subscriptions'" />
@@ -18,6 +19,7 @@
       <FilesTab         v-if="activeTab === 'files'" />
       <SettingsTab      v-if="activeTab === 'settings'" />
       <PerformanceTab   v-if="activeTab === 'performance'" />
+      <SystemTab        v-if="activeTab === 'system'" />
       <FeedbackTab      v-if="activeTab === 'feedback'" />
       <BackupTab        v-if="activeTab === 'backup'" />
     </div>
@@ -28,6 +30,7 @@
 import { ref } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 
+import OverviewTab      from './tabs/OverviewTab.vue'
 import UsersTab         from './tabs/UsersTab.vue'
 import WaitlistTab      from './tabs/WaitlistTab.vue'
 import SubscriptionsTab from './tabs/SubscriptionsTab.vue'
@@ -36,12 +39,14 @@ import ProductsTab      from './tabs/ProductsTab.vue'
 import FilesTab         from './tabs/FilesTab.vue'
 import SettingsTab      from './tabs/SettingsTab.vue'
 import PerformanceTab   from './tabs/PerformanceTab.vue'
+import SystemTab        from './tabs/SystemTab.vue'
 import FeedbackTab      from './tabs/FeedbackTab.vue'
 import BackupTab        from './tabs/BackupTab.vue'
 
-const activeTab = ref('users')
+const activeTab = ref('overview')
 
 const tabs = [
+  { id: 'overview',      label: 'Overview' },
   { id: 'users',         label: 'Users' },
   { id: 'waitlist',      label: 'Waitlist' },
   { id: 'subscriptions', label: 'Subscriptions' },
@@ -50,6 +55,7 @@ const tabs = [
   { id: 'files',         label: 'Files' },
   { id: 'settings',      label: 'Settings' },
   { id: 'performance',   label: 'Performance' },
+  { id: 'system',        label: 'System' },
   { id: 'feedback',      label: 'Feedback' },
   { id: 'backup',        label: 'Backup' },
 ]

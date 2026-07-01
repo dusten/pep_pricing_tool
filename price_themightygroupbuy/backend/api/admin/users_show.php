@@ -27,10 +27,15 @@ if (array_key_exists('tier_status', $d) && in_array($d['tier_status'], ['active'
     $fields[] = 'tier_status = ?';
     $vals[]   = $d['tier_status'];
 }
+if (array_key_exists('test_account', $d)) {
+    $fields[] = 'test_account = ?';
+    $vals[]   = (bool)$d['test_account'] ? 1 : 0;
+}
 if (!$fields) jsonResponse(['error' => 'No valid fields to update.'], 422);
 
 $vals[] = $id;
 db()->prepare('UPDATE pc_users SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);
+cacheBust('admin_users');
 logAdminAction((int)$admin['id'], 'update_user', ['user_id' => $id, 'fields' => $d]);
 
 jsonResponse(['message' => 'User updated.']);

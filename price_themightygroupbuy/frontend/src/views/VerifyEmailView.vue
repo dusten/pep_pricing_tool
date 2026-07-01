@@ -17,9 +17,9 @@
           <circle cx="12" cy="12" r="10"/>
           <path d="M8 12l3 3 5-5"/>
         </svg>
-        <h2 class="auth-title">Email verified!</h2>
-        <p style="color:var(--text-secondary);margin:0 0 24px">Your account is ready. You can now sign in.</p>
-        <RouterLink to="/login" class="btn btn-primary btn-block">Go to Sign In</RouterLink>
+        <h2 class="auth-title">{{ successTitle }}</h2>
+        <p style="color:var(--text-secondary);margin:0 0 24px">{{ successBody }}</p>
+        <RouterLink :to="successLink" class="btn btn-primary btn-block">{{ successLinkLabel }}</RouterLink>
       </template>
 
       <template v-else>
@@ -41,6 +41,14 @@ import { ref, onMounted } from 'vue'
 import { useRoute, RouterLink } from 'vue-router'
 import { get } from '@/utils/api.js'
 
+const props = defineProps({
+  apiPath:          { type: String, default: 'auth/verify-email' },
+  successTitle:     { type: String, default: 'Email verified!' },
+  successBody:      { type: String, default: 'Your account is ready. You can now sign in.' },
+  successLink:      { type: String, default: '/login' },
+  successLinkLabel: { type: String, default: 'Go to Sign In' },
+})
+
 const route   = useRoute()
 const loading = ref(true)
 const success = ref(false)
@@ -54,7 +62,7 @@ onMounted(async () => {
     return
   }
   try {
-    await get(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+    await get(`/api/${props.apiPath}?token=${encodeURIComponent(token)}`)
     success.value = true
   } catch (err) {
     error.value = err.message || 'This link is invalid or has expired. Request a new one by signing in.'

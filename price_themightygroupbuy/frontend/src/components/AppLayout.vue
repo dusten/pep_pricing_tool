@@ -1,18 +1,14 @@
 <template>
   <div class="app-shell">
-    <Sidebar />
-    <div class="app-main">
-      <TopBar :title="title" />
-      <main class="app-content">
-        <slot />
-      </main>
-    </div>
+    <TopBar :title="title" />
+    <main class="app-content">
+      <slot />
+    </main>
     <BottomNav />
   </div>
 </template>
 
 <script setup>
-import Sidebar   from './Sidebar.vue'
 import TopBar    from './TopBar.vue'
 import BottomNav from './BottomNav.vue'
 
@@ -23,28 +19,18 @@ defineProps({
 
 <style scoped>
 .app-shell {
-  display: flex;
   min-height: 100vh;
   background: var(--background);
 }
 
-.app-main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  margin-left: var(--sidebar-width);
-}
-
 .app-content {
-  flex: 1;
-  padding: 28px 32px;
+  padding: 28px 32px calc(var(--bottomnav-height, 58px) + 28px);
   max-width: 1400px;
+  margin: 0 auto;
   width: 100%;
 }
 
 @media (max-width: 768px) {
-  .app-main { margin-left: 0; }
-  .app-content { padding: 16px; padding-bottom: calc(58px + 16px); }
+  .app-content { padding: 16px calc(16px) calc(var(--bottomnav-height, 58px) + 16px); }
 }
 </style>

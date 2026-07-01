@@ -1,4 +1,5 @@
 <template>
+  <AppLayout title="Pricing">
   <div class="pricing-page">
     <div class="pricing-hero">
       <div class="pricing-eyebrow">Pricing</div>
@@ -80,11 +81,13 @@
       </table>
     </div>
   </div>
+  </AppLayout>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import AppLayout from '@/components/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth.js'
 
 const interval = ref('monthly')

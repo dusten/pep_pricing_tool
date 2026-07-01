@@ -8,13 +8,16 @@ PATH=/sbin:/bin:/usr/sbin:/usr/bin
 MAILTO=""
 
 # Clean expired sessions (daily 03:00)
-0 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "DELETE FROM pc_sessions WHERE expires_at < NOW();" 2>/dev/null
+0 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "DELETE FROM pc_sessions WHERE expires_at < NOW(); INSERT INTO pc_maintenance_runs (job, status) VALUES ('clean_expired_sessions','ok');" 2>/dev/null
 
 # Clean expired password resets (daily 03:05)
-5 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "DELETE FROM pc_password_resets WHERE expires_at < NOW();" 2>/dev/null
+5 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "DELETE FROM pc_password_resets WHERE expires_at < NOW(); INSERT INTO pc_maintenance_runs (job, status) VALUES ('clean_expired_password_resets','ok');" 2>/dev/null
 
 # Clean query log beyond 73h (daily 03:10)
-10 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "DELETE FROM pc_query_log WHERE created_at < DATE_SUB(NOW(), INTERVAL 73 HOUR);" 2>/dev/null
+10 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "DELETE FROM pc_query_log WHERE created_at < DATE_SUB(NOW(), INTERVAL 73 HOUR); INSERT INTO pc_maintenance_runs (job, status) VALUES ('clean_query_log','ok');" 2>/dev/null
 
 # 90-day perf metric retention (daily 03:15)
-15 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "DELETE FROM pc_perf_metrics WHERE created_at < DATE_SUB(NOW(), INTERVAL 90 DAY);" 2>/dev/null
+15 3 * * * ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "DELETE FROM pc_perf_metrics WHERE created_at < DATE_SUB(NOW(), INTERVAL 90 DAY); INSERT INTO pc_maintenance_runs (job, status) VALUES ('clean_perf_metrics','ok');" 2>/dev/null
+
+# Weekly table optimization (Sunday 04:00) — surfaced in Admin > System
+0 4 * * 0 ec2-user mysql --defaults-file=/home/ec2-user/.pc_my.cnf -e "OPTIMIZE TABLE pc_prices, pc_query_log, pc_comparison_log, pc_perf_metrics; INSERT INTO pc_maintenance_runs (job, status, details) VALUES ('optimize_tables','ok','pc_prices, pc_query_log, pc_comparison_log, pc_perf_metrics');" 2>/dev/null

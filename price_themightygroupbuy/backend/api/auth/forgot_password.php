@@ -19,6 +19,12 @@ $stmt = db()->prepare('SELECT * FROM pc_users WHERE email = ? AND email_verified
 $stmt->execute([$email]);
 $user = $stmt->fetch();
 
+if (!$user) {
+    // Burn roughly the same wall-clock time as the real path below so response
+    // timing can't be used to distinguish "no such account" from "email sent".
+    password_verify('', '$2y$10$abcdefghijklmnopqrstuuOeWEwvVJ.tPXO1lF7bMbAX/z2p1SMy');
+}
+
 if ($user) {
     // Invalidate any existing reset tokens for this user
     db()->prepare('DELETE FROM pc_password_resets WHERE user_id = ?')->execute([$user['id']]);

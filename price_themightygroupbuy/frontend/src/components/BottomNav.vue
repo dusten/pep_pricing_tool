@@ -12,6 +12,14 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M3 3h18v4H3z"/><path d="M3 11h18v2H3z"/><path d="M3 17h11v4H3z"/><path d="M17 17l2 2 4-4"/></svg>
       <span>Comparison</span>
     </RouterLink>
+    <RouterLink to="/pricing" class="bn-item" active-class="active">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M12 6v6l4 2"/></svg>
+      <span>Pricing</span>
+    </RouterLink>
+    <RouterLink to="/account" class="bn-item" active-class="active">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      <span>Account</span>
+    </RouterLink>
   </nav>
 </template>
 
@@ -21,7 +29,7 @@ import { RouterLink } from 'vue-router'
 
 <style scoped>
 .bottom-nav {
-  display: none;
+  display: flex;
   position: fixed;
   bottom: 0;
   left: 0;
@@ -31,10 +39,8 @@ import { RouterLink } from 'vue-router'
   border-top: 1px solid var(--topbar-border);
   z-index: 100;
   padding-bottom: env(safe-area-inset-bottom, 0);
-}
-
-@media (max-width: 768px) {
-  .bottom-nav { display: flex; }
+  max-width: 1400px;
+  margin: 0 auto;
 }
 
 .bn-item {

@@ -64,11 +64,14 @@
 
       <!-- Danger zone -->
       <div class="card" style="border-color:var(--danger)">
-        <h3 style="font-size:15px;margin-bottom:8px;color:var(--danger)">Sign out everywhere</h3>
+        <h3 style="font-size:15px;margin-bottom:8px;color:var(--danger)">Sign out other sessions</h3>
         <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px">
-          This will invalidate all active sessions.
+          Invalidates every other active session. This device stays signed in.
         </p>
-        <button class="btn btn-danger btn-sm" @click="handleLogout">Sign out</button>
+        <button class="btn btn-danger btn-sm" :disabled="revoking" @click="revokeOthers">
+          {{ revoking ? 'Signing out…' : 'Sign out other sessions' }}
+        </button>
+        <span v-if="revoked" style="font-size:12.5px;color:var(--success);margin-left:10px">Done!</span>
       </div>
     </div>
   </AppLayout>
@@ -79,7 +82,7 @@ import { ref, computed } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth.js'
-import { patch } from '@/utils/api.js'
+import { patch, post } from '@/utils/api.js'
 
 const auth   = useAuthStore()
 const router = useRouter()
@@ -88,6 +91,8 @@ const displayName = ref(auth.user?.display_name ?? '')
 const saving      = ref(false)
 const saved       = ref(false)
 const copied      = ref(false)
+const revoking     = ref(false)
+const revoked      = ref(false)
 
 async function saveName() {
   saving.value = true
@@ -111,6 +116,15 @@ async function copyRef() {
 async function handleLogout() {
   await auth.logout()
   router.push('/login')
+}
+
+async function revokeOthers() {
+  revoking.value = true; revoked.value = false
+  try {
+    await post('/api/me/sessions/revoke-all')
+    revoked.value = true
+    setTimeout(() => { revoked.value = false }, 2500)
+  } finally { revoking.value = false }
 }
 
 function fmtDate(d) {

@@ -22,6 +22,17 @@ const router = createRouter({
       component: () => import('@/views/VerifyEmailView.vue'),
     },
     {
+      path: '/verify-email-change',
+      component: () => import('@/views/VerifyEmailView.vue'),
+      props: {
+        apiPath: 'auth/verify-email-change',
+        successTitle: 'Email updated!',
+        successBody: 'Your account email address has been changed.',
+        successLink: '/settings',
+        successLinkLabel: 'Back to Settings',
+      },
+    },
+    {
       path: '/forgot-password',
       component: () => import('@/views/ForgotPasswordView.vue'),
       meta: { guestOnly: true },

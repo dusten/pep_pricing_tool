@@ -32,12 +32,15 @@ $token      = generateToken();
 $tokenHash  = hashToken($token);
 $days       = (int)getAppSetting('session_lifetime_days', '30');
 $expiresAt  = date('Y-m-d H:i:s', strtotime("+{$days} days"));
+$userAgent  = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500);
+$ip         = $_SERVER['REMOTE_ADDR'] ?? null;
 
 db()->prepare(
     'INSERT INTO pc_sessions (user_id, token_hash, expires_at, user_agent, ip) VALUES (?,?,?,?,?)'
-)->execute([$user['id'], $tokenHash, $expiresAt,
-            substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 500),
-            $_SERVER['REMOTE_ADDR'] ?? null]);
+)->execute([$user['id'], $tokenHash, $expiresAt, $userAgent, $ip]);
+
+db()->prepare('INSERT INTO pc_login_history (user_id, ip, user_agent) VALUES (?,?,?)')
+    ->execute([$user['id'], $ip, $userAgent]);
 
 db()->prepare('UPDATE pc_users SET last_login_at = NOW() WHERE id = ?')->execute([$user['id']]);
 

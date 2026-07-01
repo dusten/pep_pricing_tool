@@ -9,8 +9,9 @@ $d = input();
 $token    = trim($d['token'] ?? '');
 $password = $d['password'] ?? '';
 
-if (!$token)            jsonResponse(['error' => 'Reset token is required.'], 422);
-if (strlen($password) < 8) jsonResponse(['error' => 'Password must be at least 8 characters.'], 422);
+if (!$token)                jsonResponse(['error' => 'Reset token is required.'], 422);
+if (strlen($password) < 8)  jsonResponse(['error' => 'Password must be at least 8 characters.'], 422);
+if (strlen($password) > 200) jsonResponse(['error' => 'Password is too long.'], 422);
 
 $tokenHash = hashToken($token);
 $stmt = db()->prepare(

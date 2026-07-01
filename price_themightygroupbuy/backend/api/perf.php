@@ -17,11 +17,12 @@ if (preg_match('/^Bearer\s+(\S+)$/i', $authHeader, $m)) {
 
 $d = input();
 db()->prepare(
-    'INSERT INTO pc_perf_metrics (user_id, page, dns_ms, connect_ms, ttfb_ms, dom_load_ms, load_ms)
-     VALUES (?,?,?,?,?,?,?)'
+    'INSERT INTO pc_perf_metrics (user_id, page, device_type, dns_ms, connect_ms, ttfb_ms, dom_load_ms, load_ms)
+     VALUES (?,?,?,?,?,?,?,?)'
 )->execute([
     $userId,
     substr($d['page'] ?? '', 0, 200),
+    deviceType(),
     isset($d['dns_ms'])      ? (int)$d['dns_ms']      : null,
     isset($d['connect_ms'])  ? (int)$d['connect_ms']  : null,
     isset($d['ttfb_ms'])     ? (int)$d['ttfb_ms']     : null,

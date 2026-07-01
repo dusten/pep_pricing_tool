@@ -27,14 +27,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
     if ($isAdmin) {
+        // Admin view always live — an admin editing settings needs to see the
+        // change reflected immediately, not wait out the public cache TTL.
         $rows = db()->query('SELECT `key`, value FROM pc_app_settings')->fetchAll();
     } else {
-        $stmt = db()->prepare(
-            'SELECT `key`, value FROM pc_app_settings WHERE `key` IN (' .
-            implode(',', array_fill(0, count(PUBLIC_SETTINGS), '?')) . ')'
-        );
-        $stmt->execute(PUBLIC_SETTINGS);
-        $rows = $stmt->fetchAll();
+        $rows = cacheGet('app_settings', 'public', 300, function () {
+            $stmt = db()->prepare(
+                'SELECT `key`, value FROM pc_app_settings WHERE `key` IN (' .
+                implode(',', array_fill(0, count(PUBLIC_SETTINGS), '?')) . ')'
+            );
+            $stmt->execute(PUBLIC_SETTINGS);
+            return $stmt->fetchAll();
+        });
     }
     $settings = [];
     foreach ($rows as $row) $settings[$row['key']] = $row['value'];
@@ -61,6 +65,7 @@ foreach ($allowed as $key) {
 }
 
 if ($updated) {
+    cacheBust('app_settings');
     logAdminAction((int)$admin['id'], 'update_app_settings', $updated);
 }
 
