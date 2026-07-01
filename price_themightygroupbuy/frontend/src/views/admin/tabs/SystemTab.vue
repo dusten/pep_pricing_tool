@@ -2,16 +2,13 @@
   <div>
     <div class="toolbar">
       <button class="btn btn-ghost btn-sm" @click="refresh">{{ loading ? 'Refreshing…' : 'Refresh' }}</button>
-      <label class="poll-select">
-        Auto-refresh:
-        <select v-model="pollInterval" @change="setupPolling">
-          <option value="0">Off</option>
-          <option value="1000">Live (1s)</option>
-          <option value="60000">1m</option>
-          <option value="180000">3m</option>
-          <option value="300000">5m</option>
-        </select>
-      </label>
+      <div class="poll-pills">
+        <button v-for="opt in pollOptions" :key="opt.value"
+                :class="['poll-pill', { active: pollInterval === opt.value }]"
+                type="button" @click="setPoll(opt.value)">
+          {{ opt.label }}
+        </button>
+      </div>
       <span v-if="lastRefreshed" class="text-muted text-sm">Last updated {{ lastRefreshed }}</span>
     </div>
 
@@ -114,6 +111,18 @@ const lastRefreshed   = ref('')
 const pollInterval    = ref('0') // manual-refresh by default — no auto-poll on tab open
 let pollTimer         = null
 
+const pollOptions = [
+  { value: '1000',   label: 'Live' },
+  { value: '60000',  label: '1m' },
+  { value: '180000', label: '3m' },
+  { value: '300000', label: '5m' },
+  { value: '0',      label: 'Manual' },
+]
+function setPoll(value) {
+  pollInterval.value = value
+  setupPolling()
+}
+
 async function refresh() {
   loading.value = true
   try {
@@ -185,8 +194,14 @@ async function rerun(q) {
 
 <style scoped>
 .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
-.poll-select { font-size: 13px; display: flex; align-items: center; gap: 6px; }
-.poll-select select { padding: 4px 8px; }
+.poll-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.poll-pill {
+  padding: 5px 14px; border-radius: 99px; border: 1.5px solid var(--border);
+  background: var(--surface); color: var(--text-secondary); cursor: pointer;
+  font-size: 12.5px; font-weight: 500; transition: all var(--transition);
+}
+.poll-pill:hover  { border-color: var(--accent); color: var(--accent); }
+.poll-pill.active { background: var(--primary); border-color: var(--primary); color: var(--text-on-primary); }
 .toggle-row { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .toggle-row input { width: auto; }
 
