@@ -158,23 +158,17 @@ function callClaudeMessages(string $systemPrompt, array $userContent, string $mo
 }
 
 /**
- * Calls the Anthropic Messages API with a base64 PDF document block, a base64
- * image block (phone screenshot of a price list), or plain extracted text
- * (csv/xlsx) — exactly one of $pdfBase64/$image/$plainText should be set.
- * Returns the decoded JSON payload.
+ * Calls the Anthropic Messages API for price-list extraction. $userContent is
+ * the full content-block array (document/image/text blocks plus the trailing
+ * instruction text) — the caller builds it, since what it looks like now
+ * varies by source (one PDF block, one image block, several image/document
+ * blocks for a multi-page zip, or a plain text block for xlsx/csv). Used to
+ * be four separate mutually-exclusive params here (one per source type);
+ * collapsed to this when zip support made that shape awkward — one more
+ * source type would've meant a fifth bolted-on param. Returns the decoded
+ * JSON payload.
  */
-function callClaudeExtraction(string $systemPrompt, ?string $pdfBase64, ?string $plainText, string $model = CLAUDE_MODEL_DEFAULT, ?array $image = null): array {
-    $userContent = [];
-    if ($pdfBase64 !== null) {
-        $userContent[] = ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => $pdfBase64]];
-        $userContent[] = ['type' => 'text', 'text' => 'Please extract all pricing data from this vendor price list.'];
-    } elseif ($image !== null) {
-        $userContent[] = ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $image['media_type'], 'data' => $image['base64']]];
-        $userContent[] = ['type' => 'text', 'text' => 'Please extract all pricing data from this vendor price list image.'];
-    } else {
-        $userContent[] = ['type' => 'text', 'text' => "Vendor price list (extracted text):\n\n{$plainText}\n\nPlease extract all pricing data from this vendor price list."];
-    }
-
+function callClaudeExtraction(string $systemPrompt, array $userContent, string $model = CLAUDE_MODEL_DEFAULT): array {
     $parsed = callClaudeMessages($systemPrompt, $userContent, $model);
     if (!isset($parsed['prices'])) {
         throw new RuntimeException('Claude response was not valid extraction JSON.');

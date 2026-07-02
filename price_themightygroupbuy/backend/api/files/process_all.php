@@ -4,6 +4,7 @@ require_once dirname(__DIR__, 2) . '/config.php';
 require_once dirname(__DIR__, 2) . '/helpers.php';
 require_once dirname(__DIR__, 2) . '/lib/claude.php';
 require_once dirname(__DIR__, 2) . '/lib/xlsx_reader.php';
+require_once dirname(__DIR__, 2) . '/lib/zip_reader.php';
 require_once dirname(__DIR__, 2) . '/lib/price_import.php';
 require_once dirname(__DIR__, 2) . '/lib/vendor_file_processor.php';
 

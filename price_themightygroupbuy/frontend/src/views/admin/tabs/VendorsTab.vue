@@ -78,7 +78,7 @@
           <option value="coa">COA</option>
           <option value="other">Other</option>
         </select>
-        <input type="file" ref="fileInput" accept=".pdf,.xlsx,.csv,.jpg,.jpeg,.png" @change="upload" />
+        <input type="file" ref="fileInput" accept=".pdf,.xlsx,.csv,.jpg,.jpeg,.png,.zip" @change="upload" />
       </div>
 
       <div v-if="selectedVendorId && files.length" class="file-repo">
@@ -321,7 +321,10 @@ async function upload(event) {
     method: 'POST', body, headers: { Authorization: 'Bearer ' + localStorage.getItem('pc_token') },
   })
   if (res.ok) { await onSelectVendor(); await load() }
-  else { const data = await res.json().catch(() => ({})); alert(data.error || 'Upload failed.') }
+  else {
+    const data = await res.json().catch(() => ({}))
+    alert(data.message ? `${data.error} ${data.message}` : (data.error || 'Upload failed.'))
+  }
   event.target.value = ''
 }
 </script>

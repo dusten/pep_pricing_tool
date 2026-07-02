@@ -27,27 +27,44 @@ function processVendorFile(array $file, string $model): array {
     $fullPath = dirname(__DIR__) . '/storage/' . $file['stored_path'];
     if (!is_file($fullPath)) throw new RuntimeException('Stored file is missing from disk.');
 
-    $pdfBase64 = null;
-    $plainText = null;
-    $image     = null;
     $sheetNote = null;
     if ($file['file_type'] === 'pdf') {
-        $pdfBase64 = base64_encode((string)file_get_contents($fullPath));
+        $pdfBase64   = base64_encode((string)file_get_contents($fullPath));
+        $userContent = [
+            ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => $pdfBase64]],
+            ['type' => 'text', 'text' => 'Please extract all pricing data from this vendor price list.'],
+        ];
     } elseif ($file['file_type'] === 'xlsx') {
-        $plainText = xlsxToText($fullPath, $sheetNote);
+        $plainText   = xlsxToText($fullPath, $sheetNote);
+        $userContent = [
+            ['type' => 'text', 'text' => "Vendor price list (extracted text):\n\n{$plainText}\n\nPlease extract all pricing data from this vendor price list."],
+        ];
     } elseif ($file['file_type'] === 'image') {
         // Vendors often send a phone screenshot of a spreadsheet instead of a
         // real file — Claude reads the table straight out of the image, no
         // OCR step needed. media_type keyed off the stored extension, since
         // upload already restricted this to jpg/jpeg/png.
-        $ext       = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
-        $mediaType = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png'][$ext] ?? 'image/jpeg';
-        $image     = ['base64' => base64_encode((string)file_get_contents($fullPath)), 'media_type' => $mediaType];
+        $ext         = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+        $mediaType   = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png'][$ext] ?? 'image/jpeg';
+        $userContent = [
+            ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $mediaType, 'data' => base64_encode((string)file_get_contents($fullPath))]],
+            ['type' => 'text', 'text' => 'Please extract all pricing data from this vendor price list image.'],
+        ];
+    } elseif ($file['file_type'] === 'zip') {
+        // WhatsApp auto-zips a handful of shared images into one download —
+        // that's the case this handles, not a general multi-page uploader
+        // (see zip_reader.php's caps). All pages go in one call, in filename
+        // order, so Claude can use context from one page while reading another.
+        $userContent   = zipToContentBlocks($fullPath);
+        $userContent[] = ['type' => 'text', 'text' => 'Please extract all pricing data from this vendor price list — it may span multiple images/pages; treat them as one document.'];
     } else {
-        $plainText = (string)file_get_contents($fullPath);
+        $plainText   = (string)file_get_contents($fullPath);
+        $userContent = [
+            ['type' => 'text', 'text' => "Vendor price list (extracted text):\n\n{$plainText}\n\nPlease extract all pricing data from this vendor price list."],
+        ];
     }
 
-    $result   = callClaudeExtraction(buildExtractionSystemPrompt(), $pdfBase64, $plainText, $model, $image);
+    $result   = callClaudeExtraction(buildExtractionSystemPrompt(), $userContent, $model);
     $warnings = $result['warnings'] ?? [];
     if ($sheetNote) array_unshift($warnings, $sheetNote);
     $contact  = $result['contact'] ?? [];

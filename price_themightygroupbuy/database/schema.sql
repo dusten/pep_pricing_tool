@@ -236,7 +236,7 @@ CREATE TABLE IF NOT EXISTS pc_vendor_files (
   vendor_id         INT UNSIGNED NOT NULL,
   original_filename VARCHAR(300) NOT NULL,
   stored_path       VARCHAR(500) NOT NULL,
-  file_type         ENUM('pdf','xlsx','csv','image') NOT NULL,
+  file_type         ENUM('pdf','xlsx','csv','image','zip') NOT NULL,
   category          ENUM('price_list','coa','other') NOT NULL DEFAULT 'price_list',
   file_size_bytes   INT UNSIGNED NULL,
   uploaded_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

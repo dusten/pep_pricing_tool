@@ -9,6 +9,7 @@ require_once dirname(__DIR__) . '/config.php';
 require_once dirname(__DIR__) . '/helpers.php';
 require_once dirname(__DIR__) . '/lib/claude.php';
 require_once dirname(__DIR__) . '/lib/xlsx_reader.php';
+require_once dirname(__DIR__) . '/lib/zip_reader.php';
 require_once dirname(__DIR__) . '/lib/price_import.php';
 require_once dirname(__DIR__) . '/lib/vendor_file_processor.php';
 

@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/config.php';
 require_once dirname(__DIR__, 2) . '/helpers.php';
 require_once dirname(__DIR__, 2) . '/lib/malware_scan.php';
+require_once dirname(__DIR__, 2) . '/lib/zip_reader.php';
 
 // GET  /vendors/{id}/files  — list, optional ?category=price_list|coa|other
 // POST /vendors/{id}/files  — upload (multipart: file, category)
@@ -31,9 +32,9 @@ $category = in_array($_POST['category'] ?? '', ['price_list', 'coa', 'other'], t
 
 $original = $_FILES['file']['name'];
 $ext      = strtolower(pathinfo($original, PATHINFO_EXTENSION));
-$typeMap  = ['pdf' => 'pdf', 'xlsx' => 'xlsx', 'csv' => 'csv', 'jpg' => 'image', 'jpeg' => 'image', 'png' => 'image'];
+$typeMap  = ['pdf' => 'pdf', 'xlsx' => 'xlsx', 'csv' => 'csv', 'jpg' => 'image', 'jpeg' => 'image', 'png' => 'image', 'zip' => 'zip'];
 if (!isset($typeMap[$ext])) {
-    jsonResponse(['error' => 'Only PDF, XLSX, CSV, JPG, and PNG files are supported.'], 422);
+    jsonResponse(['error' => 'Only PDF, XLSX, CSV, JPG, PNG, and ZIP files are supported.'], 422);
 }
 
 $dir = dirname(__DIR__, 2) . "/storage/vendor_files/$vendorId";
@@ -45,15 +46,35 @@ if (!move_uploaded_file($_FILES['file']['tmp_name'], $storedPath)) {
     jsonResponse(['error' => 'Failed to save the uploaded file.'], 500);
 }
 
+// Zip structural validation up front — cheap (statIndex() only, no
+// decompression) and rejecting a bad zip immediately is much better UX than
+// accepting the upload and only failing later when "Process" is clicked.
+if ($typeMap[$ext] === 'zip') {
+    $zipCheck = new ZipArchive();
+    if ($zipCheck->open($storedPath) !== true) {
+        unlink($storedPath);
+        jsonResponse(['error' => 'Could not open the uploaded ZIP file.'], 422);
+    }
+    try {
+        validateZipEntries($zipCheck);
+    } catch (Throwable $e) {
+        $zipCheck->close();
+        unlink($storedPath);
+        jsonResponse(['error' => 'Invalid ZIP.', 'message' => $e->getMessage()], 422);
+    }
+    $zipCheck->close();
+}
+
 // Malware scan gate — every upload, every category, before the row is ever
 // marked available for processing/cataloging. Positive match quarantines the
 // file (kept for inspection, not deleted) and records a failed file row so
 // the reason is visible in the admin UI rather than the upload silently
-// vanishing.
+// vanishing. Zips are scanned entry-by-entry (see scanZipEntriesForMalware)
+// rather than as a whole, regardless of clamd's own archive-format support.
 $clean = true;
 if (MALWARE_SCAN_ENABLED) {
     try {
-        $clean = scanFileForMalware($storedPath);
+        $clean = $typeMap[$ext] === 'zip' ? scanZipEntriesForMalware($storedPath) : scanFileForMalware($storedPath);
     } catch (Throwable $e) {
         jsonResponse(['error' => 'Malware scan could not run. Upload rejected.', 'message' => $e->getMessage()], 503);
     }
