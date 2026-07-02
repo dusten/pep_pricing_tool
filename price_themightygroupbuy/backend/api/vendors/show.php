@@ -22,7 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // vendor+spec+tier, e.g. AOD9604 5mg is "5AD" but 10mg is "10AD" for the
     // same vendor. No admin view listed individual price rows before this.
     $prices = db()->prepare(
-        'SELECT pr.id, p.canonical_name, s.spec_label, pr.tier_kit_size, pr.price_usd, pr.vendor_sku
+        'SELECT pr.id, p.canonical_name, s.spec_label, pr.tier_kit_size, pr.price_usd, pr.vendor_sku,
+                pr.kit_vial_count, pr.non_standard_kit
          FROM pc_prices pr
          JOIN pc_products p ON p.id = pr.product_id
          JOIN pc_specifications s ON s.id = pr.specification_id

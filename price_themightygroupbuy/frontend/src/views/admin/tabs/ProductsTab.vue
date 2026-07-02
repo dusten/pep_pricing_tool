@@ -62,15 +62,23 @@
         </tr>
         <tr v-if="editingId === p.id" class="specs-row">
           <td colspan="6">
-            <div class="label-sm">Versions / specs — move one onto a different product if it doesn't actually belong here (e.g. a blend wrongly filed under a single-compound product)</div>
+            <div class="label-sm">Versions / specs — edit the mg amount, or move one onto a different product if it doesn't actually belong here (e.g. a blend wrongly filed under a single-compound product). Price/vial-count edits per vendor live on the Inventory tab.</div>
             <div v-if="!specsFor(p).length" class="text-muted text-sm">No specs yet.</div>
-            <span v-for="s in specsFor(p)" :key="s.id" class="chip spec-chip">
-              {{ s.spec_label }}
+            <div v-for="s in specsFor(p)" :key="s.id" class="spec-block">
+              <input v-model.number="s.numeric_value" type="number" step="any" style="width:70px" @change="saveSpec(s)" />
+              <select v-model="s.unit" style="width:70px" @change="saveSpec(s)">
+                <option value="mg">mg</option>
+                <option value="iu">iu</option>
+                <option value="ml">ml</option>
+                <option value="other">other</option>
+              </select>
+              <input v-model="s.spec_label" style="width:130px" placeholder="label" @change="saveSpec(s)" />
               <select @change="moveSpec(s, $event.target.value); $event.target.value=''">
                 <option value="">Move to…</option>
                 <option v-for="o in products.filter(o => o.id !== p.id)" :key="o.id" :value="o.id">{{ o.canonical_name }}</option>
               </select>
-            </span>
+              <span class="text-muted text-sm">{{ s.prices?.length || 0 }} active vendor price(s)</span>
+            </div>
           </td>
         </tr>
         </template>
@@ -126,6 +134,16 @@ async function saveEdit(p) {
   await load()
 }
 
+async function saveSpec(s) {
+  if (!s.numeric_value || s.numeric_value <= 0 || !s.spec_label.trim()) return
+  try {
+    await put(`/api/products/specifications/${s.id}`, { spec_label: s.spec_label, numeric_value: s.numeric_value, unit: s.unit })
+  } catch (err) {
+    alert(err.message)
+  }
+  await load()
+}
+
 async function moveSpec(spec, targetProductId) {
   if (!targetProductId) return
   try {
@@ -167,5 +185,5 @@ async function merge(loser, winnerId) {
 .actions { display: flex; gap: 4px; white-space: nowrap; }
 .specs-row td { background: var(--surface-alt); }
 .specs-row .label-sm { color: var(--text-muted); font-size: 11px; text-transform: uppercase; margin-bottom: 8px; }
-.spec-chip select { border: none; background: none; font-size: 11px; color: var(--text-secondary); padding: 0 0 0 4px; }
+.spec-block { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
 </style>

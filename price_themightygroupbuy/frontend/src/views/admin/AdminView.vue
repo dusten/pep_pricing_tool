@@ -17,6 +17,7 @@
       <VendorsTab       v-if="activeTab === 'vendors'" />
       <ReviewQueueTab   v-if="activeTab === 'review-queue'" />
       <ProductsTab      v-if="activeTab === 'products'" />
+      <InventoryTab     v-if="activeTab === 'inventory'" />
       <FilesTab         v-if="activeTab === 'files'" />
       <SettingsTab      v-if="activeTab === 'settings'" />
       <PerformanceTab   v-if="activeTab === 'performance'" />
@@ -38,6 +39,7 @@ import SubscriptionsTab from './tabs/SubscriptionsTab.vue'
 import VendorsTab       from './tabs/VendorsTab.vue'
 import ReviewQueueTab   from './tabs/ReviewQueueTab.vue'
 import ProductsTab      from './tabs/ProductsTab.vue'
+import InventoryTab     from './tabs/InventoryTab.vue'
 import FilesTab         from './tabs/FilesTab.vue'
 import SettingsTab      from './tabs/SettingsTab.vue'
 import PerformanceTab   from './tabs/PerformanceTab.vue'
@@ -55,6 +57,7 @@ const tabs = [
   { id: 'vendors',       label: 'Vendors' },
   { id: 'review-queue',  label: 'Review Queue' },
   { id: 'products',      label: 'Products' },
+  { id: 'inventory',     label: 'Inventory' },
   { id: 'files',         label: 'Files' },
   { id: 'settings',      label: 'Settings' },
   { id: 'performance',   label: 'Performance' },

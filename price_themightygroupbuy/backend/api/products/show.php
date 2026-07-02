@@ -17,8 +17,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $aliases->execute([$id]);
     $specs = db()->prepare('SELECT * FROM pc_specifications WHERE product_id = ? ORDER BY numeric_value');
     $specs->execute([$id]);
+    $specRows = $specs->fetchAll();
+
+    // Nested per-spec so the admin can edit a spec's mg amount and each
+    // vendor's kit_vial_count from the same product-edit view, without a
+    // separate round trip per spec — a handful of specs per product, so the
+    // N+1 here is cheap and this is an admin-only, on-demand view, not a hot path.
+    $pricesStmt = db()->prepare(
+        'SELECT pr.id, pr.vendor_id, v.display_name AS vendor_name, pr.price_usd,
+                pr.kit_vial_count, pr.tier_kit_size, pr.vendor_sku, pr.non_standard_kit
+         FROM pc_prices pr JOIN pc_vendors v ON v.id = pr.vendor_id
+         WHERE pr.specification_id = ? AND pr.is_active = 1
+         ORDER BY v.display_name, pr.tier_kit_size'
+    );
+    foreach ($specRows as &$spec) {
+        $pricesStmt->execute([$spec['id']]);
+        $spec['prices'] = $pricesStmt->fetchAll();
+    }
+    unset($spec);
+
     $product['aliases']       = $aliases->fetchAll();
-    $product['specifications'] = $specs->fetchAll();
+    $product['specifications'] = $specRows;
     jsonResponse($product);
 }
 
