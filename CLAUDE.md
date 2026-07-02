@@ -45,6 +45,7 @@ Subscription SaaS with annual pricing tiers ($50 / $140 / $340).
 2. ~~Claude extraction pipeline~~ — built (`backend/api/files/process.php`, `backend/lib/claude.php`)
 3. **Post-deploy health check** — after `deploy.sh` finishes, hit a `/api/health` endpoint that exercises DB (query), Memcached (set/get), and email config (reachability only); print a pass/fail summary per component
 4. **ClamAV scan on vendor file uploads** — admin-uploaded PDF/XLSX/CSV files go straight into `backend/api/vendors/files.php` → Claude extraction with no malware scan. Add a `clamdscan` (via clamd daemon, not the slower `clamscan` CLI) check between `move_uploaded_file()` and the file being marked available for processing; quarantine/reject on a positive match.
+5. **Full vendor purge** — vendors with file/price history can only be deactivated (`is_active=0`), never hard-deleted, since deleting would cascade-destroy price history and anything already surfaced on the comparison table. If a vendor needs to be fully gone (not just inactive), this probably isn't a real DB delete — more likely a "hidden" flag that excludes the vendor from every query (comparison table, admin lists, exports) while keeping the row and its history intact for audit purposes. Needs a decision on what "fully gone" actually means before building it.
 
 ## Wiki / Knowledge Base
 

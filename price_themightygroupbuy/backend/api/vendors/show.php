@@ -24,44 +24,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
+    $fileCount = db()->prepare('SELECT COUNT(*) FROM pc_vendor_files WHERE vendor_id = ?');
+    $fileCount->execute([$id]);
+
+    // Safe to hard-delete only if no files were ever uploaded — cascades
+    // clean up phones/payment methods/prices/pending imports/COA submissions.
+    // Once a vendor has file history, deactivate instead so that history
+    // (and anything already on the comparison table) isn't destroyed.
+    if ((int)$fileCount->fetchColumn() === 0) {
+        db()->prepare('DELETE FROM pc_vendors WHERE id = ?')->execute([$id]);
+        cacheBust('admin_vendors');
+        cacheBust('pricing_data');
+        logAdminAction((int)$admin['id'], 'delete_vendor', ['vendor_id' => $id, 'display_name' => $vendor['display_name']]);
+        jsonResponse(['message' => 'Vendor deleted.']);
+    }
+
     db()->prepare('UPDATE pc_vendors SET is_active = 0 WHERE id = ?')->execute([$id]);
     cacheBust('admin_vendors');
     cacheBust('pricing_data'); // is_active flag feeds comparison/filters results
     logAdminAction((int)$admin['id'], 'deactivate_vendor', ['vendor_id' => $id]);
-    jsonResponse(['message' => 'Vendor deactivated.']);
+    jsonResponse(['message' => 'Vendor has file history — deactivated instead of deleted.']);
 }
 
 // PUT — update
-$d       = input();
-$fields  = [];
-$vals    = [];
-foreach (['display_name', 'contact_name', 'email', 'whatsapp', 'discord', 'telegram', 'website', 'shipping_note', 'notes'] as $f) {
-    if (array_key_exists($f, $d)) {
-        $fields[] = "$f = ?";
-        $vals[]   = trim((string)$d[$f]) ?: null;
-    }
-}
-if (array_key_exists('is_active', $d)) {
-    $fields[] = 'is_active = ?';
-    $vals[]   = (bool)$d['is_active'] ? 1 : 0;
-}
-if (array_key_exists('is_verified', $d)) {
-    $fields[] = 'is_verified = ?';
-    $vals[]   = (bool)$d['is_verified'] ? 1 : 0;
-}
-
+$d   = input();
 $pdo = db();
 $pdo->beginTransaction();
-if ($fields) {
-    $vals[] = $id;
-    $pdo->prepare('UPDATE pc_vendors SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);
-}
+updateVendorScalarFields($pdo, $id, $d);
 saveVendorPhonesAndPaymentMethods($pdo, $id, $d);
 $pdo->commit();
 
-if ($fields || array_key_exists('phones', $d) || array_key_exists('payment_methods', $d)) {
+if ($d) {
     cacheBust('admin_vendors');
-    if (array_key_exists('is_active', $d)) cacheBust('pricing_data');
+    if (array_key_exists('is_active', $d))   cacheBust('pricing_data');
     if (array_key_exists('is_verified', $d)) cacheBust('pricing_data'); // verified badge/filter feeds comparison
     logAdminAction((int)$admin['id'], 'update_vendor', ['vendor_id' => $id, 'fields' => array_keys($d)]);
 }

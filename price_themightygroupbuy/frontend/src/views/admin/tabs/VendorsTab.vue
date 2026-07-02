@@ -98,7 +98,7 @@
     </div>
 
     <table class="admin-table">
-      <thead><tr><th>Name</th><th>Contact</th><th>Prices</th><th>Last upload</th><th>Active</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Contact</th><th>Prices</th><th>Last upload</th><th>Active</th><th>Merge into</th><th></th></tr></thead>
       <tbody>
         <tr v-for="v in vendors" :key="v.id">
           <td>{{ v.display_name }} <span v-if="v.is_verified" class="badge badge-pro">Verified</span></td>
@@ -109,7 +109,14 @@
             <input type="checkbox" :checked="v.is_active" @change="toggleActive(v, $event.target.checked)" />
           </td>
           <td>
+            <select @change="mergeVendor(v, $event.target.value); $event.target.value=''">
+              <option value="">Merge into…</option>
+              <option v-for="o in vendors.filter(o => o.id !== v.id)" :key="o.id" :value="o.id">{{ o.display_name }}</option>
+            </select>
+          </td>
+          <td>
             <button class="btn btn-ghost btn-sm" @click="selectedVendorId = v.id; onSelectVendor()">Manage</button>
+            <button class="btn btn-ghost btn-sm" @click="deleteVendor(v)">Delete</button>
           </td>
         </tr>
       </tbody>
@@ -119,7 +126,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { get, post, put } from '@/utils/api.js'
+import { get, post, put, del } from '@/utils/api.js'
 
 const PAYMENT_METHODS = [
   { value: 'usdt_sol', label: 'USDT (Solana)' }, { value: 'usdc_sol', label: 'USDC (Solana)' },
@@ -239,6 +246,7 @@ async function save() {
   } else {
     const res = await post('/api/vendors', body)
     selectedVendorId.value = res.id
+    if (res.updated_existing) parseNote.value = 'A vendor named this already existed — updated it instead of creating a duplicate.'
   }
   await load()
   await onSelectVendor()
@@ -247,6 +255,23 @@ async function save() {
 async function toggleActive(v, active) {
   await put(`/api/vendors/${v.id}`, { is_active: active })
   v.is_active = active
+}
+
+async function mergeVendor(loser, winnerId) {
+  if (!winnerId) return
+  const winner = vendors.value.find(o => o.id === Number(winnerId))
+  if (!confirm(`Merge "${loser.display_name}" into "${winner.display_name}"? Prices, files, and payment info move to "${winner.display_name}"; "${loser.display_name}" is deleted. This cannot be undone.`)) return
+  await post(`/api/vendors/${winnerId}/merge`, { loser_id: loser.id })
+  if (selectedVendorId.value === loser.id) startNew()
+  await load()
+}
+
+async function deleteVendor(v) {
+  if (!confirm(`Delete "${v.display_name}"? Vendors with file history are deactivated instead of deleted.`)) return
+  const res = await del(`/api/vendors/${v.id}`)
+  if (selectedVendorId.value === v.id) startNew()
+  await load()
+  alert(res.message)
 }
 
 async function upload(event) {

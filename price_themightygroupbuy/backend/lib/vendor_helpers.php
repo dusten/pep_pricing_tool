@@ -27,6 +27,23 @@ function saveVendorPhonesAndPaymentMethods(PDO $pdo, int $vendorId, array $d): v
     }
 }
 
+/** Updates a vendor's scalar contact/text fields from a create/update payload — only touches keys present in $d. Shared by vendors/index.php (name-collision update path) + show.php (PUT). */
+function updateVendorScalarFields(PDO $pdo, int $vendorId, array $d): void {
+    $fields = [];
+    $vals   = [];
+    foreach (['display_name', 'contact_name', 'email', 'whatsapp', 'discord', 'telegram', 'website', 'shipping_note', 'notes'] as $f) {
+        if (array_key_exists($f, $d)) {
+            $fields[] = "$f = ?";
+            $vals[]   = trim((string)$d[$f]) ?: null;
+        }
+    }
+    if (array_key_exists('is_active', $d))   { $fields[] = 'is_active = ?';   $vals[] = (bool)$d['is_active']   ? 1 : 0; }
+    if (array_key_exists('is_verified', $d)) { $fields[] = 'is_verified = ?'; $vals[] = (bool)$d['is_verified'] ? 1 : 0; }
+    if (!$fields) return;
+    $vals[] = $vendorId;
+    $pdo->prepare('UPDATE pc_vendors SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);
+}
+
 /** Fetches a vendor's phone numbers and payment methods for a show/detail response. */
 function loadVendorPhonesAndPaymentMethods(PDO $pdo, int $vendorId): array {
     $phones = $pdo->prepare('SELECT phone FROM pc_vendor_phones WHERE vendor_id = ? ORDER BY id');

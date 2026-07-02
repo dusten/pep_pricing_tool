@@ -147,6 +147,7 @@ $ROUTES = [
 $DYNAMIC = [
     'vendors/(\d+)'                    => ['vendors/show.php',       'id'],
     'vendors/(\d+)/files'               => ['vendors/files.php',      'id'],
+    'vendors/(\d+)/merge'                => ['vendors/merge.php',      'id'],
     'vendors/pending-imports/(\d+)/(approve|reject)' => ['vendors/pending_imports.php', 'id', 'action'],
     'admin/coa-queue/(\d+)/(approve|reject)'         => ['admin/coa_queue.php', 'id', 'action'],
     'files/(\d+)/download'              => ['files/download.php',    'id'],

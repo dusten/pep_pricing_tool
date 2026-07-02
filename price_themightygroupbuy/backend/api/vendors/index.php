@@ -28,14 +28,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     jsonResponse(['vendors' => $rows]);
 }
 
-// POST — create
+// POST — create (or update in place if display_name already matches an
+// existing vendor — case-insensitive — so re-pasting the same vendor's
+// intake reply doesn't silently create a duplicate row)
 $d           = input();
 $displayName = trim($d['display_name'] ?? '');
 if (mb_strlen($displayName) < 2) jsonResponse(['error' => 'Display name is required.'], 422);
 
 $pdo = db();
-$pdo->beginTransaction();
 
+$existing = $pdo->prepare('SELECT id FROM pc_vendors WHERE LOWER(display_name) = LOWER(?) LIMIT 1');
+$existing->execute([$displayName]);
+$existingId = $existing->fetchColumn();
+
+if ($existingId) {
+    $id = (int)$existingId;
+    $pdo->beginTransaction();
+    updateVendorScalarFields($pdo, $id, $d);
+    saveVendorPhonesAndPaymentMethods($pdo, $id, $d);
+    $pdo->commit();
+    cacheBust('admin_vendors');
+    logAdminAction((int)$admin['id'], 'update_vendor', ['vendor_id' => $id, 'display_name' => $displayName, 'via' => 'create_name_match']);
+    jsonResponse(['id' => $id, 'updated_existing' => true]);
+}
+
+$pdo->beginTransaction();
 $stmt = $pdo->prepare(
     'INSERT INTO pc_vendors (display_name, contact_name, email, whatsapp, discord, telegram, website, shipping_note, notes)
      VALUES (?,?,?,?,?,?,?,?,?)'
@@ -59,4 +76,4 @@ $pdo->commit();
 cacheBust('admin_vendors');
 logAdminAction((int)$admin['id'], 'create_vendor', ['vendor_id' => $id, 'display_name' => $displayName]);
 
-jsonResponse(['id' => $id], 201);
+jsonResponse(['id' => $id, 'updated_existing' => false], 201);
