@@ -66,16 +66,17 @@ function findOrCreateSpec(PDO $pdo, int $productId, string $label, float $value,
 
 function commitPriceRow(
     PDO $pdo, int $vendorId, int $productId, int $specId,
-    float $price, float $numericValue, int $kitCount, int $tierKitSize, bool $nonStandard, ?int $sourceFileId
+    float $price, float $numericValue, int $kitCount, int $tierKitSize, bool $nonStandard, ?int $sourceFileId,
+    ?string $vendorSku = null
 ): void {
     $pdo->prepare(
-        'INSERT INTO pc_prices (vendor_id, product_id, specification_id, price_usd, price_per_unit, kit_vial_count, tier_kit_size, non_standard_kit, source_file_id, is_active)
-         VALUES (?,?,?,?,?,?,?,?,?,1)
+        'INSERT INTO pc_prices (vendor_id, product_id, specification_id, price_usd, price_per_unit, kit_vial_count, tier_kit_size, vendor_sku, non_standard_kit, source_file_id, is_active)
+         VALUES (?,?,?,?,?,?,?,?,?,?,1)
          ON DUPLICATE KEY UPDATE price_usd = VALUES(price_usd), price_per_unit = VALUES(price_per_unit),
-           kit_vial_count = VALUES(kit_vial_count), non_standard_kit = VALUES(non_standard_kit),
+           kit_vial_count = VALUES(kit_vial_count), vendor_sku = VALUES(vendor_sku), non_standard_kit = VALUES(non_standard_kit),
            source_file_id = VALUES(source_file_id), is_active = 1, created_at = NOW()'
     )->execute([
         $vendorId, $productId, $specId, $price, round($price / $numericValue, 6),
-        $kitCount, $tierKitSize, $nonStandard ? 1 : 0, $sourceFileId,
+        $kitCount, $tierKitSize, $vendorSku ?: null, $nonStandard ? 1 : 0, $sourceFileId,
     ]);
 }

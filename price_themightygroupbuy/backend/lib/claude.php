@@ -49,13 +49,16 @@ Rules:
    AND no CAS number is given to disambiguate, still extract the row normally but add a
    warning string naming the ambiguity — do not block or drop the row:
    {$watchNames}
+9. If the source has its own catalog code for this row (column header like "Cat No.",
+   "Abbreviation", "SKU", "Model#", e.g. "TR5", "NJ100"), capture it verbatim as
+   vendor_sku. Leave it "" if the source has no such column.
 
 Return exactly this shape:
 {
   "contact": {"name": "", "email": "", "whatsapp": "", "website": ""},
   "warnings": ["..."],
   "prices": [{"canonical_name":"","is_new_product":false,"spec_label":"","numeric_value":0,"unit":"mg",
-              "price_usd":0,"kit_vial_count":10,"tier_kit_size":1,"non_standard_kit":false}]
+              "price_usd":0,"kit_vial_count":10,"tier_kit_size":1,"vendor_sku":"","non_standard_kit":false}]
 }
 PROMPT;
 }

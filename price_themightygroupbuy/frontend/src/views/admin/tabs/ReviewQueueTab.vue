@@ -14,12 +14,27 @@
         <div class="review-row"><span class="label-sm">Vendor</span> {{ importRow.vendor_name }}</div>
         <div class="review-row"><span class="label-sm">Source file</span> {{ importRow.original_filename }}</div>
         <div class="review-row"><span class="label-sm">Reason</span> <span class="badge">{{ matchTypeLabel(importRow.match_type) }}</span></div>
-        <div class="review-row"><span class="label-sm">Extracted name</span> {{ importRow.raw_json.canonical_name }}</div>
         <div class="review-row" v-if="importRow.candidate_name">
           <span class="label-sm">Closest existing match</span> {{ importRow.candidate_name }}
         </div>
-        <div class="review-row"><span class="label-sm">Spec</span> {{ importRow.raw_json.spec_label }} ({{ importRow.raw_json.numeric_value }}{{ importRow.raw_json.unit }})</div>
-        <div class="review-row"><span class="label-sm">Price</span> ${{ importRow.raw_json.price_usd }} — tier {{ importRow.raw_json.tier_kit_size || 1 }}-kit</div>
+
+        <div class="review-row"><span class="label-sm">Name</span> <input v-model="importRow.raw_json.canonical_name" /></div>
+        <div class="review-row"><span class="label-sm">Vendor SKU / Cat No.</span> <input v-model="importRow.raw_json.vendor_sku" placeholder="—" /></div>
+        <div class="review-row">
+          <span class="label-sm">Spec</span>
+          <input v-model.number="importRow.raw_json.numeric_value" type="number" step="any" style="width:80px" />
+          <input v-model="importRow.raw_json.unit" style="width:55px" />
+          <span class="text-muted text-sm">label</span>
+          <input v-model="importRow.raw_json.spec_label" style="width:110px" />
+        </div>
+        <div class="review-row">
+          <span class="label-sm">Price / tier</span>
+          $<input v-model.number="importRow.raw_json.price_usd" type="number" step="any" style="width:80px" />
+          — tier <input v-model.number="importRow.raw_json.tier_kit_size" type="number" min="1" style="width:55px" />-kit
+        </div>
+        <div class="review-row">
+          <label class="toggle-label"><input type="checkbox" v-model="importRow.raw_json.non_standard_kit" /> Non-standard kit size</label>
+        </div>
 
         <div class="review-actions">
           <label v-if="importRow.candidate_product_id" class="toggle-label">
@@ -76,8 +91,15 @@ function matchTypeLabel(t) {
 
 async function approveImport() {
   const productId = mapToCandidate.value ? importRow.value.candidate_product_id : null
+  const r = importRow.value.raw_json
+  const body = {
+    canonical_name: r.canonical_name, spec_label: r.spec_label, numeric_value: r.numeric_value,
+    unit: r.unit, price_usd: r.price_usd, tier_kit_size: r.tier_kit_size,
+    vendor_sku: r.vendor_sku, non_standard_kit: r.non_standard_kit,
+  }
+  if (productId) body.product_id = productId
   try {
-    await post(`/api/vendors/pending-imports/${importRow.value.id}/approve`, productId ? { product_id: productId } : {})
+    await post(`/api/vendors/pending-imports/${importRow.value.id}/approve`, body)
   } catch (err) {
     alert(err.message)
     return

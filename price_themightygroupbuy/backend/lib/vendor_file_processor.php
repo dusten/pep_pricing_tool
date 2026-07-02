@@ -91,6 +91,7 @@ function processVendorFile(array $file, string $model): array {
         // overwriting or losing the genuine tier-1 price). Column is a plain
         // TINYINT UNSIGNED — just floor/ceiling it to that range.
         $tierSize    = min(255, max(1, (int)($p['tier_kit_size'] ?? 1)));
+        $vendorSku   = trim((string)($p['vendor_sku'] ?? '')) ?: null;
         $nonStandard = !empty($p['non_standard_kit']);
 
         $productId = findExactProductMatch($pdo, $name);
@@ -123,7 +124,7 @@ function processVendorFile(array $file, string $model): array {
             continue;
         }
 
-        commitPriceRow($pdo, (int)$file['vendor_id'], $productId, (int)$specId, $price, $value, $kitCount, $tierSize, $nonStandard, (int)$file['id']);
+        commitPriceRow($pdo, (int)$file['vendor_id'], $productId, (int)$specId, $price, $value, $kitCount, $tierSize, $nonStandard, (int)$file['id'], $vendorSku);
         $imported++;
     }
 

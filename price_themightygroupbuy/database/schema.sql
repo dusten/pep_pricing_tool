@@ -259,7 +259,8 @@ CREATE TABLE IF NOT EXISTS pc_prices (
   price_usd        DECIMAL(10,2) NOT NULL,
   price_per_unit   DECIMAL(12,6) NOT NULL,   -- = price_usd / specifications.numeric_value; computed in PHP
   kit_vial_count   TINYINT UNSIGNED NOT NULL DEFAULT 10,
-  tier_kit_size    TINYINT UNSIGNED NOT NULL DEFAULT 1,  -- 1/10/100-kit tiered pricing column this row came from
+  tier_kit_size    TINYINT UNSIGNED NOT NULL DEFAULT 1,  -- minimum kit qty for this tiered-pricing column; vendor-defined, not fixed to 1/10/100
+  vendor_sku       VARCHAR(50) NULL,                     -- vendor's own catalog code for this row, e.g. "TR5", "NJ100"
   non_standard_kit BOOLEAN NOT NULL DEFAULT FALSE,
   source_file_id   INT UNSIGNED NULL,
   is_active        BOOLEAN NOT NULL DEFAULT TRUE,

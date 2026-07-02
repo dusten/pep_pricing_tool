@@ -5,7 +5,10 @@ require_once dirname(__DIR__, 2) . '/helpers.php';
 require_once dirname(__DIR__, 2) . '/lib/price_import.php';
 
 // GET  /vendors/pending-imports              — next pending row (single-card queue)
-// POST /vendors/pending-imports/{id}/approve — body: { product_id? } (existing product to map onto; omit to create new from raw_json's canonical_name)
+// POST /vendors/pending-imports/{id}/approve — body: { product_id?, canonical_name?, spec_label?,
+//   numeric_value?, unit?, price_usd?, kit_vial_count?, tier_kit_size?, vendor_sku?, non_standard_kit? }
+//   — product_id: existing product to map onto, omit to create/match by canonical_name.
+//   — everything else: admin edits from the review card; omit a key to keep the extracted value.
 // POST /vendors/pending-imports/{id}/reject
 method('GET', 'POST');
 $admin  = requireAdmin();
@@ -54,19 +57,25 @@ if ($action === 'reject') {
     jsonResponse(['message' => 'Rejected.']);
 }
 
-// approve
-$raw          = json_decode($row['raw_json'], true);
-$name         = trim((string)($raw['canonical_name'] ?? ''));
-$label        = trim((string)($raw['spec_label'] ?? ''));
-$value        = (float)($raw['numeric_value'] ?? 0);
-$price        = (float)($raw['price_usd'] ?? 0);
-$unit         = (string)($raw['unit'] ?? 'mg');
-$kitCount     = (int)($raw['kit_vial_count'] ?? 10);
+// approve — body may include edited values (admin corrected something in the
+// review card before approving); anything not sent falls back to what was
+// originally extracted.
+$raw  = json_decode($row['raw_json'], true);
+$body = input();
+$field = fn(string $key, $default) => array_key_exists($key, $body) ? $body[$key] : ($raw[$key] ?? $default);
+
+$name         = trim((string)$field('canonical_name', ''));
+$label        = trim((string)$field('spec_label', ''));
+$value        = (float)$field('numeric_value', 0);
+$price        = (float)$field('price_usd', 0);
+$unit         = (string)$field('unit', 'mg');
+$kitCount     = (int)$field('kit_vial_count', 10);
 // See vendor_file_processor.php — tier breakpoints are vendor-defined, not
 // fixed to 1/10/100; clamp to the TINYINT UNSIGNED column range only.
-$tierSize     = min(255, max(1, (int)($raw['tier_kit_size'] ?? 1)));
-$nonStandard  = !empty($raw['non_standard_kit']);
-$mappedProduct = (int)(input()['product_id'] ?? 0) ?: null;
+$tierSize     = min(255, max(1, (int)$field('tier_kit_size', 1)));
+$vendorSku    = trim((string)$field('vendor_sku', '')) ?: null;
+$nonStandard  = !empty($field('non_standard_kit', false));
+$mappedProduct = (int)($body['product_id'] ?? 0) ?: null;
 
 if (!$name || !$label || $value <= 0 || $price <= 0) {
     jsonResponse(['error' => 'This pending row no longer has valid data to commit.'], 422);
@@ -84,7 +93,7 @@ try {
     if (!$productId) $productId = findExactProductMatch($pdo, $name) ?? createProduct($pdo, $name);
 
     $specId = findOrCreateSpec($pdo, $productId, $label, $value, $unit);
-    commitPriceRow($pdo, (int)$row['vendor_id'], $productId, $specId, $price, $value, $kitCount, $tierSize, $nonStandard, (int)$row['vendor_file_id']);
+    commitPriceRow($pdo, (int)$row['vendor_id'], $productId, $specId, $price, $value, $kitCount, $tierSize, $nonStandard, (int)$row['vendor_file_id'], $vendorSku);
 
     $pdo->prepare('UPDATE pc_pending_imports SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?')
         ->execute(['approved', $admin['id'], $id]);
