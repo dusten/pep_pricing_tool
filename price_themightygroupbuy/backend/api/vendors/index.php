@@ -37,7 +37,7 @@ $pdo = db();
 $pdo->beginTransaction();
 
 $stmt = $pdo->prepare(
-    'INSERT INTO pc_vendors (display_name, contact_name, email, whatsapp, discord, telegram, website, shipping_price, notes)
+    'INSERT INTO pc_vendors (display_name, contact_name, email, whatsapp, discord, telegram, website, shipping_note, notes)
      VALUES (?,?,?,?,?,?,?,?,?)'
 );
 $stmt->execute([
@@ -48,7 +48,7 @@ $stmt->execute([
     trim($d['discord'] ?? '') ?: null,
     trim($d['telegram'] ?? '') ?: null,
     trim($d['website'] ?? '') ?: null,
-    isset($d['shipping_price']) && $d['shipping_price'] !== '' ? (float)$d['shipping_price'] : null,
+    trim($d['shipping_note'] ?? '') ?: null,
     trim($d['notes'] ?? '') ?: null,
 ]);
 $id = (int)$pdo->lastInsertId();

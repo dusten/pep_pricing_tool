@@ -67,7 +67,7 @@ no markdown fences.
 Extract whatever of these fields you can find (omit keys you can't determine):
 {
   "display_name": "", "contact_name": "", "email": "", "whatsapp": "", "discord": "",
-  "telegram": "", "website": "", "phones": ["..."], "shipping_price": 0,
+  "telegram": "", "website": "", "phones": ["..."], "shipping_note": "carrier/timeframe/cost details as free text, verbatim if multi-line",
   "payment_methods": ["usdt_sol|usdc_sol|usdt_trc20|usdc_trc20|usdt_erc20|usdc_erc20|btc|eth|sol|paypal|wise|alipay|alibaba|wire|western_union|zelle|cashapp|credit_card, ...pick matching ones only"]
 }
 PROMPT;

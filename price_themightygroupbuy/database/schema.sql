@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS pc_vendors (
   discord        VARCHAR(100) NULL,
   telegram       VARCHAR(100) NULL,
   website        VARCHAR(300) NULL,
-  shipping_price DECIMAL(8,2) NULL,
+  shipping_note  TEXT         NULL,
   notes          TEXT         NULL,
   is_active      BOOLEAN      NOT NULL DEFAULT TRUE,
   is_verified    BOOLEAN      NOT NULL DEFAULT FALSE,  -- manual admin toggle, not auto-computed

@@ -35,15 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 $d       = input();
 $fields  = [];
 $vals    = [];
-foreach (['display_name', 'contact_name', 'email', 'whatsapp', 'discord', 'telegram', 'website', 'notes'] as $f) {
+foreach (['display_name', 'contact_name', 'email', 'whatsapp', 'discord', 'telegram', 'website', 'shipping_note', 'notes'] as $f) {
     if (array_key_exists($f, $d)) {
         $fields[] = "$f = ?";
         $vals[]   = trim((string)$d[$f]) ?: null;
     }
-}
-if (array_key_exists('shipping_price', $d)) {
-    $fields[] = 'shipping_price = ?';
-    $vals[]   = $d['shipping_price'] !== '' && $d['shipping_price'] !== null ? (float)$d['shipping_price'] : null;
 }
 if (array_key_exists('is_active', $d)) {
     $fields[] = 'is_active = ?';

@@ -25,7 +25,13 @@
         <input v-model="form.discord" placeholder="Discord" />
         <input v-model="form.telegram" placeholder="Telegram" />
         <input v-model="form.website" placeholder="Website" />
-        <input v-model="form.shipping_price" type="number" step="0.01" placeholder="Shipping price ($)" />
+      </div>
+
+      <div class="field-row">
+        <textarea v-model="form.shipping_note" placeholder="Shipping (carrier, timeframe, cost tiers — free text)" rows="3" class="note-box"></textarea>
+      </div>
+      <div class="field-row">
+        <textarea v-model="form.notes" placeholder="Notes (payment addresses, anything else worth keeping)" rows="3" class="note-box"></textarea>
       </div>
 
       <div class="field-row">
@@ -136,12 +142,12 @@ Website:
 Phone Number(s):
 Payment Methods (list all that apply — USDT/USDC Solana, USDT/USDC Tron, USDT/USDC ERC20,
   BTC, ETH, SOL, PayPal, Wise, Alipay, Alibaba, Wire Transfer, Western Union, Zelle, CashApp, Credit Card):
-Shipping Price:`
+Shipping Note (carrier, timeframe, cost tiers):`
 
 function emptyForm() {
   return {
     display_name: '', contact_name: '', email: '', whatsapp: '', discord: '', telegram: '',
-    website: '', shipping_price: '', is_verified: false, phones: [], payment_methods: [],
+    website: '', shipping_note: '', notes: '', is_verified: false, phones: [], payment_methods: [],
   }
 }
 
@@ -177,7 +183,7 @@ async function onSelectVendor() {
   Object.assign(form, {
     display_name: v.display_name || '', contact_name: v.contact_name || '', email: v.email || '',
     whatsapp: v.whatsapp || '', discord: v.discord || '', telegram: v.telegram || '',
-    website: v.website || '', shipping_price: v.shipping_price ?? '', is_verified: v.is_verified,
+    website: v.website || '', shipping_note: v.shipping_note || '', notes: v.notes || '', is_verified: v.is_verified,
     phones: v.phones || [], payment_methods: v.payment_methods || [],
   })
   files.value = v.files || []
@@ -209,7 +215,8 @@ async function parseIntake() {
     }
     if (f.phones?.length) form.phones = f.phones
     if (f.payment_methods?.length) form.payment_methods = f.payment_methods
-    if (f.shipping_price) form.shipping_price = f.shipping_price
+    if (f.shipping_note) form.shipping_note = f.shipping_note
+    if (f.notes_append) form.notes = form.notes ? `${form.notes}\n${f.notes_append}` : f.notes_append
     parseNote.value = res.used_ai_fallback ? 'Parsed via AI fallback — review carefully before saving.' : 'Parsed. Review before saving.'
   } catch (err) {
     parseNote.value = 'Could not parse that reply: ' + err.message
@@ -226,7 +233,7 @@ async function save() {
     alert('Vendor name is required — click "Parse reply" first, or fill in Vendor Name manually.')
     return
   }
-  const body = { ...form, shipping_price: form.shipping_price === '' ? null : form.shipping_price }
+  const body = { ...form }
   if (selectedVendorId.value) {
     await put(`/api/vendors/${selectedVendorId.value}`, body)
   } else {
@@ -263,6 +270,7 @@ async function upload(event) {
 .field-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
 .field-row input, .field-row select { flex: 1; min-width: 140px; }
 .paste-box { width: 100%; font-family: inherit; }
+.note-box { width: 100%; font-family: inherit; resize: vertical; }
 .label-sm { font-size: 11px; text-transform: uppercase; color: var(--text-secondary); margin-right: 8px; }
 .verified-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .verified-toggle input { width: auto; }
