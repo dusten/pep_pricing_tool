@@ -22,7 +22,8 @@
     <table class="admin-table">
       <thead><tr><th>Name</th><th>Category</th><th>Aliases</th><th>Vendors</th><th>Merge into</th><th></th></tr></thead>
       <tbody>
-        <tr v-for="p in products" :key="p.id">
+        <template v-for="p in products" :key="p.id">
+        <tr>
           <td>
             <input v-if="editingId === p.id" v-model="editForm.canonical_name" />
             <template v-else>{{ p.canonical_name }}</template>
@@ -59,6 +60,20 @@
             <button v-else class="btn btn-ghost btn-sm" @click="startEdit(p)">Edit</button>
           </td>
         </tr>
+        <tr v-if="editingId === p.id" class="specs-row">
+          <td colspan="6">
+            <div class="label-sm">Versions / specs — move one onto a different product if it doesn't actually belong here (e.g. a blend wrongly filed under a single-compound product)</div>
+            <div v-if="!specsFor(p).length" class="text-muted text-sm">No specs yet.</div>
+            <span v-for="s in specsFor(p)" :key="s.id" class="chip spec-chip">
+              {{ s.spec_label }}
+              <select @change="moveSpec(s, $event.target.value); $event.target.value=''">
+                <option value="">Move to…</option>
+                <option v-for="o in products.filter(o => o.id !== p.id)" :key="o.id" :value="o.id">{{ o.canonical_name }}</option>
+              </select>
+            </span>
+          </td>
+        </tr>
+        </template>
       </tbody>
     </table>
   </div>
@@ -86,6 +101,7 @@ async function load() {
 onMounted(load)
 
 function aliasesFor(p) { return detail[p.id]?.aliases || [] }
+function specsFor(p) { return detail[p.id]?.specifications || [] }
 
 async function create() {
   if (!form.canonical_name.trim()) return
@@ -107,6 +123,17 @@ async function saveEdit(p) {
   if (!editForm.canonical_name.trim()) return
   await put(`/api/products/${p.id}`, { canonical_name: editForm.canonical_name, category: editForm.category })
   editingId.value = null
+  await load()
+}
+
+async function moveSpec(spec, targetProductId) {
+  if (!targetProductId) return
+  try {
+    await post(`/api/products/specifications/${spec.id}/move`, { product_id: targetProductId })
+  } catch (err) {
+    alert(err.message)
+    return
+  }
   await load()
 }
 
@@ -138,4 +165,7 @@ async function merge(loser, winnerId) {
 .chip { display: inline-flex; align-items: center; gap: 3px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; font-size: 11.5px; margin: 0 4px 4px 0; }
 .chip-x { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 0; }
 .actions { display: flex; gap: 4px; white-space: nowrap; }
+.specs-row td { background: var(--surface-alt); }
+.specs-row .label-sm { color: var(--text-muted); font-size: 11px; text-transform: uppercase; margin-bottom: 8px; }
+.spec-chip select { border: none; background: none; font-size: 11px; color: var(--text-secondary); padding: 0 0 0 4px; }
 </style>

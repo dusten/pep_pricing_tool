@@ -164,6 +164,7 @@ $DYNAMIC = [
     'products/(\d+)'                    => ['products/show.php',     'id'],
     'products/(\d+)/aliases'            => ['products/aliases.php',  'id'],
     'products/(\d+)/aliases/(\d+)'      => ['products/aliases.php',  'id', 'aliasId'],
+    'products/specifications/(\d+)/move' => ['products/spec_move.php', 'id'],
     'products/(\d+)/merge'              => ['products/merge.php',    'id'],
     'admin/users/(\d+)'                 => ['admin/users_show.php',    'id'],
     'admin/users/(\d+)/referrals'       => ['admin/user_referrals.php','id'],
