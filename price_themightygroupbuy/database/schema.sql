@@ -226,7 +226,7 @@ CREATE TABLE IF NOT EXISTS pc_vendor_payment_methods (
   vendor_id INT UNSIGNED NOT NULL,
   method    ENUM('usdt_sol','usdc_sol','usdt_trc20','usdc_trc20','usdt_erc20','usdc_erc20',
                   'btc','eth','sol','paypal','wise','alipay','alibaba','wire','western_union',
-                  'zelle','cashapp','credit_card') NOT NULL,
+                  'zelle','cashapp','credit_card','remitly') NOT NULL,
   FOREIGN KEY (vendor_id) REFERENCES pc_vendors(id) ON DELETE CASCADE,
   UNIQUE KEY (vendor_id, method)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
