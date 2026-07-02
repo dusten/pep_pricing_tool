@@ -95,6 +95,22 @@
           </tbody>
         </table>
       </div>
+
+      <div v-if="selectedVendorId && prices.length" class="file-repo">
+        <span class="label-sm">Price list ({{ prices.length }})</span>
+        <table class="admin-table">
+          <thead><tr><th>Product</th><th>Spec</th><th>Tier</th><th>Price</th><th>Vendor SKU / Cat No.</th></tr></thead>
+          <tbody>
+            <tr v-for="p in prices" :key="p.id">
+              <td class="text-sm">{{ p.canonical_name }}</td>
+              <td class="text-sm">{{ p.spec_label }}</td>
+              <td>{{ p.tier_kit_size }}-kit</td>
+              <td>${{ p.price_usd }}</td>
+              <td class="text-muted text-sm">{{ p.vendor_sku || '—' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <table class="admin-table">
@@ -169,6 +185,7 @@ const copyNote           = ref('')
 const uploadCategory     = ref('price_list')
 const fileInput          = ref(null)
 const files              = ref([])
+const prices              = ref([])
 
 async function load() {
   const res = await get('/api/vendors')
@@ -182,6 +199,7 @@ function startNew() {
   pasteText.value = ''
   parseNote.value = ''
   files.value = []
+  prices.value = []
 }
 
 async function onSelectVendor() {
@@ -194,6 +212,7 @@ async function onSelectVendor() {
     phones: v.phones || [], payment_methods: v.payment_methods || [],
   })
   files.value = v.files || []
+  prices.value = v.prices || []
   pasteText.value = ''
   parseNote.value = ''
 }

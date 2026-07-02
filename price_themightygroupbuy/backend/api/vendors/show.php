@@ -17,6 +17,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $files = db()->prepare('SELECT * FROM pc_vendor_files WHERE vendor_id = ? ORDER BY uploaded_at DESC');
     $files->execute([$id]);
     $vendor['files']        = $files->fetchAll();
+
+    // vendor_sku lives here (pc_prices), not on pc_products — it's per
+    // vendor+spec+tier, e.g. AOD9604 5mg is "5AD" but 10mg is "10AD" for the
+    // same vendor. No admin view listed individual price rows before this.
+    $prices = db()->prepare(
+        'SELECT pr.id, p.canonical_name, s.spec_label, pr.tier_kit_size, pr.price_usd, pr.vendor_sku
+         FROM pc_prices pr
+         JOIN pc_products p ON p.id = pr.product_id
+         JOIN pc_specifications s ON s.id = pr.specification_id
+         WHERE pr.vendor_id = ? AND pr.is_active = 1
+         ORDER BY p.canonical_name, s.spec_label, pr.tier_kit_size'
+    );
+    $prices->execute([$id]);
+    $vendor['prices']       = $prices->fetchAll();
+
     $vendor['is_active']    = (bool)$vendor['is_active'];
     $vendor['is_verified']  = (bool)$vendor['is_verified'];
     $vendor                 = array_merge($vendor, loadVendorPhonesAndPaymentMethods(db(), $id));
