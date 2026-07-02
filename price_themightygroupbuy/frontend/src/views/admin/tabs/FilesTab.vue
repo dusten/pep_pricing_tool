@@ -34,7 +34,7 @@
         </div>
         <div class="view-body">
           <img v-if="viewing.file_type === 'image'" :src="viewUrl" />
-          <iframe v-else-if="viewing.file_type === 'pdf'" :src="viewUrl"></iframe>
+          <iframe v-else-if="viewing.file_type === 'pdf'" :src="viewUrl + '#view=FitH'"></iframe>
           <pre v-else-if="viewText !== null" class="view-text">{{ viewText }}</pre>
           <p v-else class="text-muted">No inline preview for {{ viewing.file_type }} files — use Download.</p>
         </div>
