@@ -31,8 +31,8 @@ if (mb_strlen($name) < 2) jsonResponse(['error' => 'Canonical name is required.'
 $category = in_array($d['category'] ?? '', ['glp1','peptide','hormone','blend','consumable','other'], true)
     ? $d['category'] : 'peptide';
 
-$stmt = db()->prepare('INSERT INTO pc_products (canonical_name, abbreviation, category, notes) VALUES (?,?,?,?)');
-$stmt->execute([$name, trim($d['abbreviation'] ?? '') ?: null, $category, trim($d['notes'] ?? '') ?: null]);
+$stmt = db()->prepare('INSERT INTO pc_products (canonical_name, category, notes) VALUES (?,?,?)');
+$stmt->execute([$name, $category, trim($d['notes'] ?? '') ?: null]);
 $id = (int)db()->lastInsertId();
 cacheBust('admin_products');
 logAdminAction((int)$admin['id'], 'create_product', ['product_id' => $id, 'canonical_name' => $name]);

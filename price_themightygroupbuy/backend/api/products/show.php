@@ -30,10 +30,6 @@ if (array_key_exists('canonical_name', $d) && mb_strlen(trim($d['canonical_name'
     $fields[] = 'canonical_name = ?';
     $vals[]   = trim($d['canonical_name']);
 }
-if (array_key_exists('abbreviation', $d)) {
-    $fields[] = 'abbreviation = ?';
-    $vals[]   = trim((string)$d['abbreviation']) ?: null;
-}
 if (array_key_exists('category', $d) && in_array($d['category'], ['glp1','peptide','hormone','blend','consumable','other'], true)) {
     $fields[] = 'category = ?';
     $vals[]   = $d['category'];

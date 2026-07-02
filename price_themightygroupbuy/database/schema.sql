@@ -172,7 +172,6 @@ CREATE TABLE IF NOT EXISTS pc_app_settings (
 CREATE TABLE IF NOT EXISTS pc_products (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   canonical_name VARCHAR(200) NOT NULL UNIQUE,
-  abbreviation   VARCHAR(50)  NULL,
   category       ENUM('glp1','peptide','hormone','blend','consumable','other') NOT NULL DEFAULT 'peptide',
   notes          TEXT NULL,
   created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
