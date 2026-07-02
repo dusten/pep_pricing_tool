@@ -178,7 +178,11 @@ async function merge(loser, winnerId) {
 .add-form { margin-bottom: 16px; }
 .field-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+/* Only Name/Category/Aliases need to anchor to the top when Aliases wraps
+   onto multiple lines — Vendors/Merge/Edit read better vertically centered
+   in the row rather than pinned to the top with dead space underneath. */
+.admin-table td:nth-child(-n+3) { vertical-align: top; }
 .admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 .chip { display: inline-flex; align-items: center; gap: 3px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; font-size: 11.5px; margin: 0 4px 4px 0; }
 .chip-x { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 0; }
