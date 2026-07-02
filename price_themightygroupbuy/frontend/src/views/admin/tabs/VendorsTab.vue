@@ -28,10 +28,10 @@
       </div>
 
       <div class="field-row">
-        <textarea v-model="form.shipping_note" placeholder="Shipping (carrier, timeframe, cost tiers — free text)" rows="3" class="note-box"></textarea>
+        <textarea v-model="form.shipping_note" placeholder="Shipping (carrier, timeframe, cost tiers — free text)" rows="8" class="note-box"></textarea>
       </div>
       <div class="field-row">
-        <textarea v-model="form.notes" placeholder="Notes (payment addresses, anything else worth keeping)" rows="3" class="note-box"></textarea>
+        <textarea v-model="form.notes" placeholder="Notes (payment addresses, anything else worth keeping)" rows="6" class="note-box"></textarea>
       </div>
 
       <div class="field-row">
