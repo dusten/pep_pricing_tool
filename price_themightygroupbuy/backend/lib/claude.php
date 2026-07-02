@@ -83,7 +83,12 @@ function callClaudeMessages(string $systemPrompt, array $userContent, string $mo
 
     $payload = json_encode([
         'model'      => $model,
-        'max_tokens' => 16000,
+        // ponytail: 48000 covers a real 149-row tiered file (~450 output rows
+        // once tiers expand) with headroom; a genuinely bigger vendor file
+        // could still truncate (stop_reason: max_tokens) — if that starts
+        // happening, worth revisiting whether tiers should collapse to one
+        // output row with 3 price fields instead of 3 separate rows.
+        'max_tokens' => 48000,
         // This is deterministic extraction/parsing, not reasoning — Sonnet 5
         // runs adaptive thinking by default when 'thinking' is omitted (unlike
         // Opus 4.7/4.8, where omitting means no thinking), silently burning
@@ -104,7 +109,7 @@ function callClaudeMessages(string $systemPrompt, array $userContent, string $mo
         CURLOPT_POST           => true,
         CURLOPT_POSTFIELDS     => $payload,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => 180,
+        CURLOPT_TIMEOUT        => 400,
         CURLOPT_HTTPHEADER     => [
             'Content-Type: application/json',
             'x-api-key: ' . ANTHROPIC_API_KEY,
