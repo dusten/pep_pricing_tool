@@ -88,9 +88,8 @@ const stats = ref({ vendors: null, products: null, prices: null })
 onMounted(async () => {
   quota.fetch()
   try {
-    // ponytail: /api/stats endpoint in Phase 2; placeholder zeroes for now
-    stats.value = { vendors: '—', products: '—', prices: '—' }
-  } catch { /* */ }
+    stats.value = await get('/api/stats')
+  } catch { /* leave the '—' placeholders */ }
 })
 
 const pct = computed(() => {

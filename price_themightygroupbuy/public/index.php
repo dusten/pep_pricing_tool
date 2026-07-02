@@ -114,6 +114,7 @@ $ROUTES = [
     'me/sessions/revoke-all' => 'me/sessions_revoke_all.php',
     'auth/verify-email-change' => 'auth/verify_email_change.php',
     'app-settings'         => 'app_settings.php',
+    'stats'                => 'stats.php',
     'feedback'             => 'feedback.php',
     'perf'                 => 'perf.php',
     'vendors'                 => 'vendors/index.php',
