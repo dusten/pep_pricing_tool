@@ -219,7 +219,13 @@ async function parseIntake() {
 }
 
 async function save() {
-  if (!form.display_name.trim()) return
+  if (!form.display_name.trim() && pasteText.value.trim()) {
+    await parseIntake()
+  }
+  if (!form.display_name.trim()) {
+    alert('Vendor name is required — click "Parse reply" first, or fill in Vendor Name manually.')
+    return
+  }
   const body = { ...form, shipping_price: form.shipping_price === '' ? null : form.shipping_price }
   if (selectedVendorId.value) {
     await put(`/api/vendors/${selectedVendorId.value}`, body)

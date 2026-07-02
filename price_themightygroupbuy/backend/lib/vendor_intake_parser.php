@@ -67,7 +67,11 @@ function parseVendorIntakeText(string $text): array {
     $lines  = preg_split('/\r\n|\r|\n/', $text);
 
     foreach ($lines as $line) {
-        if (!preg_match('/^([\w \/\(\)\-]+):\s*(.*)$/u', trim($line), $m)) continue;
+        // Label class includes ',' because the Payment Methods template line
+        // embeds a comma-separated hint in parentheses before its own colon
+        // (e.g. "Payment Methods (USDT/USDC Solana, ..., Credit Card): PayPal, Zelle") —
+        // without it the whole line fails to match at all, not just the value.
+        if (!preg_match('/^([\w \/\(\)\-,]+):\s*(.*)$/u', trim($line), $m)) continue;
         $label = normalizeIntakeLabel($m[1]);
         $value = trim($m[2]);
         if ($value === '' || !isset(VENDOR_INTAKE_LABELS[$label])) continue;
