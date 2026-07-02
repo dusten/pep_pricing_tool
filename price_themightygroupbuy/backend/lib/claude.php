@@ -83,7 +83,13 @@ function callClaudeMessages(string $systemPrompt, array $userContent, string $mo
 
     $payload = json_encode([
         'model'      => $model,
-        'max_tokens' => 8000,
+        'max_tokens' => 16000,
+        // This is deterministic extraction/parsing, not reasoning — Sonnet 5
+        // runs adaptive thinking by default when 'thinking' is omitted (unlike
+        // Opus 4.7/4.8, where omitting means no thinking), silently burning
+        // the max_tokens budget on unrequested thinking tokens instead of the
+        // actual JSON output. Disable it explicitly.
+        'thinking'   => ['type' => 'disabled'],
         'system'     => $systemPrompt,
         'messages'   => [['role' => 'user', 'content' => $userContent]],
     ]);
@@ -93,7 +99,7 @@ function callClaudeMessages(string $systemPrompt, array $userContent, string $mo
         CURLOPT_POST           => true,
         CURLOPT_POSTFIELDS     => $payload,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT        => 120,
+        CURLOPT_TIMEOUT        => 180,
         CURLOPT_HTTPHEADER     => [
             'Content-Type: application/json',
             'x-api-key: ' . ANTHROPIC_API_KEY,
@@ -109,8 +115,14 @@ function callClaudeMessages(string $systemPrompt, array $userContent, string $mo
     }
 
     $decoded = json_decode($result, true);
-    $text    = $decoded['content'][0]['text'] ?? '';
-    $text    = trim(preg_replace('/^```(?:json)?|```$/m', '', $text));
+    // content[] can carry a thinking block before the text block — index [0]
+    // isn't reliably the text block even with thinking disabled (a refusal or
+    // future block types could shift it). Find the actual text block instead.
+    $text = '';
+    foreach (($decoded['content'] ?? []) as $block) {
+        if (($block['type'] ?? '') === 'text') { $text = $block['text']; break; }
+    }
+    $text = trim(preg_replace('/^```(?:json)?|```$/m', '', $text));
 
     $parsed = json_decode($text, true);
     if (!is_array($parsed)) {
