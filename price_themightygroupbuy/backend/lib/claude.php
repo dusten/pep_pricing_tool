@@ -129,6 +129,17 @@ function callClaudeMessages(string $systemPrompt, array $userContent, string $mo
     }
     $text = trim(preg_replace('/^```(?:json)?|```$/m', '', $text));
 
+    // Despite "no preamble" in the system prompt, Claude occasionally adds a
+    // sentence before the JSON anyway — seen in practice on a large (149-row
+    // tiered) extraction, not on smaller ones. Extract the outermost {...}
+    // rather than trust the whole response body is pure JSON; harmless no-op
+    // when the response already starts with '{'.
+    $start = strpos($text, '{');
+    $end   = strrpos($text, '}');
+    if ($start !== false && $end !== false && $end > $start) {
+        $text = substr($text, $start, $end - $start + 1);
+    }
+
     $parsed = json_decode($text, true);
     if (!is_array($parsed)) {
         throw new RuntimeException('Claude response was not valid JSON: ' . substr($text, 0, 300));
