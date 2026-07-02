@@ -18,7 +18,7 @@
             <button class="btn btn-ghost btn-sm" :disabled="f.processing_status === 'processing'" @click="process(f)">
               {{ f.processing_status === 'processing' ? 'Processing…' : 'Process' }}
             </button>
-            <button class="btn btn-ghost btn-sm" @click="viewFile(f)">View</button>
+            <button v-if="f.file_type !== 'zip'" class="btn btn-ghost btn-sm" @click="viewFile(f)">View</button>
             <button class="btn btn-ghost btn-sm" @click="downloadFile(f)">Download</button>
             <button class="btn btn-ghost btn-sm" @click="remove(f)">Delete</button>
           </td>
@@ -172,8 +172,12 @@ function closeView() {
   display: flex; align-items: center; justify-content: space-between;
   padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
 }
-.view-body { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 12px; }
+.view-body { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 12px; position: relative; }
 .view-body img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.view-body iframe { width: 100%; height: 100%; border: none; }
+/* A flex item's height:100% doesn't reliably resolve against align-items:center
+   (which opts it out of stretch) — the iframe fell back to its intrinsic
+   ~150px default instead of filling the card. Absolute positioning against
+   .view-body's own box sidesteps the flex percentage-height ambiguity entirely. */
+.view-body iframe { position: absolute; inset: 0; border: none; }
 .view-text { align-self: stretch; white-space: pre-wrap; font-size: 12px; font-family: monospace; padding: 8px; }
 </style>
