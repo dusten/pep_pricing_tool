@@ -18,28 +18,52 @@
             <button class="btn btn-ghost btn-sm" :disabled="f.processing_status === 'processing'" @click="process(f)">
               {{ f.processing_status === 'processing' ? 'Processing…' : 'Process' }}
             </button>
-            <a class="btn btn-ghost btn-sm" :href="`/api/files/${f.id}/download`" target="_blank">Download</a>
+            <button class="btn btn-ghost btn-sm" @click="viewFile(f)">View</button>
+            <button class="btn btn-ghost btn-sm" @click="downloadFile(f)">Download</button>
             <button class="btn btn-ghost btn-sm" @click="remove(f)">Delete</button>
           </td>
         </tr>
       </tbody>
     </table>
+
+    <div v-if="viewing" class="view-backdrop" @click.self="closeView">
+      <div class="view-card">
+        <div class="view-header">
+          <span class="text-sm">{{ viewing.original_filename }}</span>
+          <button class="btn btn-ghost btn-sm" @click="closeView">✕ Close</button>
+        </div>
+        <div class="view-body">
+          <img v-if="viewing.file_type === 'image'" :src="viewUrl" />
+          <iframe v-else-if="viewing.file_type === 'pdf'" :src="viewUrl"></iframe>
+          <pre v-else-if="viewText !== null" class="view-text">{{ viewText }}</pre>
+          <p v-else class="text-muted">No inline preview for {{ viewing.file_type }} files — use Download.</p>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { get, post, del } from '@/utils/api.js'
 
 const files = ref([])
 const batchRunning = ref(false)
 const pendingCount = computed(() => files.value.filter(f => f.processing_status === 'pending').length)
 
+const viewing  = ref(null)
+const viewUrl  = ref(null)
+const viewText = ref(null)
+
 async function load() {
   const res = await get('/api/admin/files')
   files.value = res.files
 }
 onMounted(load)
+
+function onKeydown(e) { if (e.key === 'Escape' && viewing.value) closeView() }
+onMounted(() => document.addEventListener('keydown', onKeydown))
+onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 function statusBadge(status) {
   return { complete: 'badge-pro', failed: 'badge-free', processing: 'badge-advanced', pending: 'badge-free' }[status] || 'badge-free'
@@ -78,6 +102,54 @@ async function remove(f) {
   await del(`/api/files/${f.id}`)
   await load()
 }
+
+// /api/files/{id}/download requires the same Bearer auth as every other
+// endpoint — a plain <a href>/<img src> can't send that header, so both
+// this and the old Download link (silently a 401 the whole time) need an
+// authenticated fetch first, then work from the resulting blob.
+async function fetchFileBlob(f) {
+  const token = localStorage.getItem('pc_token')
+  const res = await fetch(`/api/files/${f.id}/download`, { headers: { Authorization: 'Bearer ' + token } })
+  if (!res.ok) throw new Error('Could not load the file.')
+  return res.blob()
+}
+
+async function downloadFile(f) {
+  try {
+    const blob = await fetchFileBlob(f)
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = f.original_filename
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    alert(err.message)
+  }
+}
+
+async function viewFile(f) {
+  try {
+    const blob = await fetchFileBlob(f)
+    if (viewUrl.value) URL.revokeObjectURL(viewUrl.value)
+    viewText.value = null
+    if (f.file_type === 'image' || f.file_type === 'pdf') {
+      viewUrl.value = URL.createObjectURL(blob)
+    } else if (f.file_type === 'csv') {
+      viewText.value = await blob.text()
+    }
+    viewing.value = f
+  } catch (err) {
+    alert(err.message)
+  }
+}
+
+function closeView() {
+  if (viewUrl.value) URL.revokeObjectURL(viewUrl.value)
+  viewing.value  = null
+  viewUrl.value  = null
+  viewText.value = null
+}
 </script>
 
 <style scoped>
@@ -87,4 +159,21 @@ async function remove(f) {
 .admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 .notes-cell { max-width: 260px; }
 .actions { display: flex; gap: 4px; white-space: nowrap; }
+
+.view-backdrop {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.view-card {
+  background: var(--surface); border-radius: 8px; width: min(90vw, 900px); height: min(85vh, 900px);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.view-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.view-body { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 12px; }
+.view-body img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.view-body iframe { width: 100%; height: 100%; border: none; }
+.view-text { align-self: stretch; white-space: pre-wrap; font-size: 12px; font-family: monospace; padding: 8px; }
 </style>
