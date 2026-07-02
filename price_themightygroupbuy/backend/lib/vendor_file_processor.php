@@ -30,10 +30,11 @@ function processVendorFile(array $file, string $model): array {
     $pdfBase64 = null;
     $plainText = null;
     $image     = null;
+    $sheetNote = null;
     if ($file['file_type'] === 'pdf') {
         $pdfBase64 = base64_encode((string)file_get_contents($fullPath));
     } elseif ($file['file_type'] === 'xlsx') {
-        $plainText = xlsxToText($fullPath);
+        $plainText = xlsxToText($fullPath, $sheetNote);
     } elseif ($file['file_type'] === 'image') {
         // Vendors often send a phone screenshot of a spreadsheet instead of a
         // real file — Claude reads the table straight out of the image, no
@@ -48,6 +49,7 @@ function processVendorFile(array $file, string $model): array {
 
     $result   = callClaudeExtraction(buildExtractionSystemPrompt(), $pdfBase64, $plainText, $model, $image);
     $warnings = $result['warnings'] ?? [];
+    if ($sheetNote) array_unshift($warnings, $sheetNote);
     $contact  = $result['contact'] ?? [];
 
     $pdo = db();

@@ -76,19 +76,39 @@ function matchTypeLabel(t) {
 
 async function approveImport() {
   const productId = mapToCandidate.value ? importRow.value.candidate_product_id : null
-  await post(`/api/vendors/pending-imports/${importRow.value.id}/approve`, productId ? { product_id: productId } : {})
+  try {
+    await post(`/api/vendors/pending-imports/${importRow.value.id}/approve`, productId ? { product_id: productId } : {})
+  } catch (err) {
+    alert(err.message)
+    return
+  }
   await loadImport()
 }
 async function rejectImport() {
-  await post(`/api/vendors/pending-imports/${importRow.value.id}/reject`, {})
+  try {
+    await post(`/api/vendors/pending-imports/${importRow.value.id}/reject`, {})
+  } catch (err) {
+    alert(err.message)
+    return
+  }
   await loadImport()
 }
 async function approveCoa() {
-  await post(`/api/admin/coa-queue/${coaRow.value.id}/approve`, {})
+  try {
+    await post(`/api/admin/coa-queue/${coaRow.value.id}/approve`, {})
+  } catch (err) {
+    alert(err.message)
+    return
+  }
   await loadCoa()
 }
 async function rejectCoa() {
-  await post(`/api/admin/coa-queue/${coaRow.value.id}/reject`, {})
+  try {
+    await post(`/api/admin/coa-queue/${coaRow.value.id}/reject`, {})
+  } catch (err) {
+    alert(err.message)
+    return
+  }
   await loadCoa()
 }
 

@@ -13,8 +13,8 @@ declare(strict_types=1);
  * saved — the strongest signal of vendor intent); fall back to the first
  * non-hidden sheet; fall back to the first sheet if everything is hidden.
  */
-function xlsxPickSheetFile(ZipArchive $zip): string {
-    $fallback    = 'xl/worksheets/sheet1.xml';
+function xlsxPickSheetFile(ZipArchive $zip): array {
+    $fallback = ['file' => 'xl/worksheets/sheet1.xml', 'note' => null];
     $workbookXml = $zip->getFromName('xl/workbook.xml');
     $relsXml     = $zip->getFromName('xl/_rels/workbook.xml.rels');
     if ($workbookXml === false || $relsXml === false) return $fallback;
@@ -23,21 +23,34 @@ function xlsxPickSheetFile(ZipArchive $zip): string {
     $sheets = [];
     foreach ($wb->sheets->sheet ?? [] as $s) {
         $rid      = (string)($s->attributes('http://schemas.openxmlformats.org/officeDocument/2006/relationships')['id'] ?? '');
-        $sheets[] = ['state' => (string)($s['state'] ?? ''), 'rid' => $rid];
+        $sheets[] = ['name' => (string)($s['name'] ?? ''), 'state' => (string)($s['state'] ?? ''), 'rid' => $rid];
     }
     if (!$sheets) return $fallback;
 
-    $activeTab = (int)($wb->bookViews->workbookView['activeTab'] ?? 0);
-    $pick      = $sheets[$activeTab] ?? $sheets[0];
+    $activeTab   = (int)($wb->bookViews->workbookView['activeTab'] ?? 0);
+    $initialPick = $sheets[$activeTab] ?? $sheets[0];
+    $pick        = $initialPick;
     if (in_array($pick['state'], ['hidden', 'veryHidden'], true)) {
         foreach ($sheets as $s) {
             if (!in_array($s['state'], ['hidden', 'veryHidden'], true)) { $pick = $s; break; }
         }
     }
 
+    // Surface this rather than silently trust the pick — a hidden sheet or a
+    // second visible sheet both mean there was data a human should double
+    // check, exactly the shape of file that produced completely wrong
+    // extracted pricing before this function existed.
+    $visibleCount = count(array_filter($sheets, fn($s) => !in_array($s['state'], ['hidden', 'veryHidden'], true)));
+    $note = null;
+    if ($pick !== $initialPick) {
+        $note = "'{$initialPick['name']}' is hidden in this workbook — read the visible sheet '{$pick['name']}' instead.";
+    } elseif (count($sheets) > 1) {
+        $note = "This file has " . count($sheets) . " sheets (" . $visibleCount . " visible) — only '{$pick['name']}' was read. Verify no pricing was left on another tab.";
+    }
+
     $rels = simplexml_load_string($relsXml);
     foreach ($rels->Relationship as $rel) {
-        if ((string)$rel['Id'] === $pick['rid']) return 'xl/' . (string)$rel['Target'];
+        if ((string)$rel['Id'] === $pick['rid']) return ['file' => 'xl/' . (string)$rel['Target'], 'note' => $note];
     }
     return $fallback;
 }
@@ -49,13 +62,13 @@ function xlsxPickSheetFile(ZipArchive $zip): string {
  * ponytail: one sheet only, no styles/merged cells — good enough for
  * feeding a vendor price list to Claude as plain text.
  */
-function xlsxToText(string $path): string {
+function xlsxToText(string $path, ?string &$sheetNote = null): string {
     $zip = new ZipArchive();
     if ($zip->open($path) !== true) {
         throw new RuntimeException('Could not open XLSX file.');
     }
 
-    $sheetFile = xlsxPickSheetFile($zip);
+    ['file' => $sheetFile, 'note' => $sheetNote] = xlsxPickSheetFile($zip);
 
     $shared = [];
     $sharedXml = $zip->getFromName('xl/sharedStrings.xml');

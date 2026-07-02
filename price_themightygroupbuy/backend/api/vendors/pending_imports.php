@@ -73,7 +73,13 @@ if (!$name || !$label || $value <= 0 || $price <= 0) {
 $pdo->beginTransaction();
 try {
     $productId = $mappedProduct ?: (int)($row['candidate_product_id'] ?? 0) ?: null;
-    if (!$productId) $productId = createProduct($pdo, $name);
+    // candidate_product_id was computed at file-processing time, before this
+    // review session started — it can't know about a product an earlier
+    // approval in the same batch just created (e.g. NAD+ 100mg approved,
+    // then NAD+ 500mg's stale candidate is still null). Re-check for an
+    // exact name match right now rather than trusting the stale value, or
+    // this throws on pc_products.canonical_name's UNIQUE constraint.
+    if (!$productId) $productId = findExactProductMatch($pdo, $name) ?? createProduct($pdo, $name);
 
     $specId = findOrCreateSpec($pdo, $productId, $label, $value, $unit);
     commitPriceRow($pdo, (int)$row['vendor_id'], $productId, $specId, $price, $value, $kitCount, $tierSize, $nonStandard, (int)$row['vendor_file_id']);
