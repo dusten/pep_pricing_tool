@@ -31,9 +31,11 @@ You are a peptide vendor price list parser. Extract all products and prices from
 attached content and return ONLY a valid JSON object — no preamble, no markdown fences.
 
 Rules:
-1. Tiered pricing (1-kit / 10-kit / 100-kit columns): emit ONE row per tier column present,
-   each with its own tier_kit_size (1, 10, or 100) and its own price_usd for that tier.
-   Do not collapse to just the 1-kit price.
+1. Tiered/quantity-break pricing (e.g. "1-kit / 10-kit / 100-kit" or "≥1kit / ≥10kits /
+   ≥50kits" columns — breakpoints vary by vendor, don't assume 1/10/100): emit ONE row per
+   tier column present, each with its own tier_kit_size set to that column's minimum kit
+   quantity as a plain integer, and its own price_usd for that tier. Do not collapse to
+   just the lowest tier's price.
 2. USD only. If only RMB/CNY is present, convert at 7.2.
 3. Skip entries marked X, —, or blank price.
 4. Non-standard kit sizes (1, 5, 6, 11, 12 vials): set non_standard_kit=true, include a warning, still include the row.

@@ -62,7 +62,9 @@ $value        = (float)($raw['numeric_value'] ?? 0);
 $price        = (float)($raw['price_usd'] ?? 0);
 $unit         = (string)($raw['unit'] ?? 'mg');
 $kitCount     = (int)($raw['kit_vial_count'] ?? 10);
-$tierSize     = in_array((int)($raw['tier_kit_size'] ?? 1), [1, 10, 100], true) ? (int)($raw['tier_kit_size'] ?? 1) : 1;
+// See vendor_file_processor.php — tier breakpoints are vendor-defined, not
+// fixed to 1/10/100; clamp to the TINYINT UNSIGNED column range only.
+$tierSize     = min(255, max(1, (int)($raw['tier_kit_size'] ?? 1)));
 $nonStandard  = !empty($raw['non_standard_kit']);
 $mappedProduct = (int)(input()['product_id'] ?? 0) ?: null;
 

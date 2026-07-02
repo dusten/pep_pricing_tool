@@ -84,7 +84,13 @@ function processVendorFile(array $file, string $model): array {
 
         $unit        = (string)($p['unit'] ?? 'mg');
         $kitCount    = (int)($p['kit_vial_count'] ?? 10);
-        $tierSize    = in_array((int)($p['tier_kit_size'] ?? 1), [1, 10, 100], true) ? (int)($p['tier_kit_size'] ?? 1) : 1;
+        // Vendors set their own tier breakpoints (1/10/100 is common but not
+        // universal — a real file used 1/10/50); clamping to a fixed list
+        // silently corrupted data (a real ≥50kits price got forced onto the
+        // tier-1 slot, colliding with pc_prices' UNIQUE key and either
+        // overwriting or losing the genuine tier-1 price). Column is a plain
+        // TINYINT UNSIGNED — just floor/ceiling it to that range.
+        $tierSize    = min(255, max(1, (int)($p['tier_kit_size'] ?? 1)));
         $nonStandard = !empty($p['non_standard_kit']);
 
         $productId = findExactProductMatch($pdo, $name);
