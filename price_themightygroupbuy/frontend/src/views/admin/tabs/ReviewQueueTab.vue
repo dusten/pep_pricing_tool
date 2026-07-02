@@ -7,7 +7,6 @@
 
     <!-- Pending price-import review (single-card, approve/reject, auto-advance) -->
     <div v-if="mode === 'imports'">
-      <p v-if="approveMsg" class="text-sm text-success approve-msg">{{ approveMsg }}</p>
       <div v-if="!importRow" class="card" style="text-align:center;padding:32px;color:var(--text-secondary)">
         Nothing pending review.
       </div>
@@ -48,6 +47,7 @@
           <button class="btn btn-ghost btn-sm" @click="rejectImport">Reject</button>
         </div>
       </div>
+      <p v-if="approveMsg" class="text-sm text-success approve-msg">{{ approveMsg }}</p>
     </div>
 
     <!-- COA submission review (single-card, approve/reject, auto-advance) -->
@@ -164,5 +164,5 @@ onMounted(loadImport)
 .toggle-label input { width: auto; }
 .hint { margin: 10px 0; }
 .needs-review { border-color: var(--warning) !important; background: var(--warning-bg); }
-.approve-msg { margin-bottom: 12px; }
+.approve-msg { margin-top: 12px; }
 </style>
