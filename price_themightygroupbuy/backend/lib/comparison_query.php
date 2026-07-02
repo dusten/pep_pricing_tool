@@ -20,7 +20,7 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
     $sql = "SELECT pr.vendor_id, v.display_name AS vendor_name, v.is_verified,
                    pr.product_id, p.canonical_name, p.category,
                    pr.specification_id, s.spec_label, s.numeric_value, s.unit,
-                   pr.price_usd, pr.price_per_unit, pr.kit_vial_count, pr.non_standard_kit, pr.source_file_id
+                   pr.price_usd, pr.price_per_unit, pr.kit_vial_count, pr.non_standard_kit, pr.source_file_id, pr.vendor_sku
             FROM pc_prices pr
             JOIN pc_products p       ON p.id = pr.product_id
             JOIN pc_specifications s ON s.id = pr.specification_id
@@ -54,6 +54,7 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
             'kit_vial_count'   => (int)$r['kit_vial_count'],
             'non_standard_kit' => (bool)$r['non_standard_kit'],
             'source_file_id'   => $r['source_file_id'] !== null ? (int)$r['source_file_id'] : null,
+            'vendor_sku'       => $r['vendor_sku'],
         ];
     }
 

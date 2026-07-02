@@ -8,7 +8,7 @@
                 @click="category = c.value">{{ c.label }}</button>
       </div>
       <div class="filter-row">
-        <input v-model="search" type="text" placeholder="Search product…" class="search-input" />
+        <input v-model="search" type="text" placeholder="Search product or Cat No.…" class="search-input" />
         <label class="toggle-label">
           <input type="checkbox" v-model="multiOnly" />
           Only rows with multiple vendors
@@ -17,6 +17,7 @@
           <input type="checkbox" v-model="verifiedOnly" />
           Verified vendors only
         </label>
+        <RouterLink to="/settings?feedback_type=product" class="feedback-pill">Product feedback</RouterLink>
       </div>
       <div v-if="comparison.vendors.length" class="vendor-checks">
         <label v-for="v in comparison.vendors" :key="v.id" class="vendor-check">
@@ -70,7 +71,7 @@
               <td class="sticky-col col-spec">{{ row.spec }}</td>
               <template v-for="v in vendorColumns" :key="v.id">
                 <template v-if="row.byVendor[v.id]">
-                  <td :class="{ lowest: row.byVendor[v.id].is_lowest }">
+                  <td :class="{ lowest: row.byVendor[v.id].is_lowest }" :title="row.byVendor[v.id].vendor_sku ? `Cat No.: ${row.byVendor[v.id].vendor_sku}` : ''">
                     ${{ row.byVendor[v.id].price.toFixed(2) }}
                     <span v-if="row.byVendor[v.id].non_standard_kit" class="warn-icon"
                           :title="`Listed as ${row.byVendor[v.id].kit_vial_count}-vial kit — \$/unit may not be comparable.`">⚠</span>
@@ -130,7 +131,7 @@ watch([category, multiOnly, verifiedOnly, selectedVendors], runSearch, { deep: t
 const filteredRows = computed(() => {
   const q = search.value.trim().toLowerCase()
   return comparison.rows
-    .filter(r => !q || r.product.toLowerCase().includes(q))
+    .filter(r => !q || r.product.toLowerCase().includes(q) || r.vendors.some(v => v.vendor_sku?.toLowerCase().includes(q)))
     .map(r => ({ ...r, byVendor: Object.fromEntries(r.vendors.map(v => [v.vendor_id, v])) }))
 })
 
@@ -159,6 +160,11 @@ const vendorColumns = computed(() => {
 .search-input { max-width: 260px; }
 .toggle-label { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
 .toggle-label input { width: auto; }
+.feedback-pill {
+  margin-left: auto; padding: 6px 14px; border-radius: 99px; border: 1.5px solid var(--border);
+  font-size: 12.5px; font-weight: 500; color: var(--text-secondary); text-decoration: none; transition: all var(--transition);
+}
+.feedback-pill:hover { border-color: var(--accent); color: var(--accent); }
 
 .vendor-checks { display: flex; gap: 14px; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid var(--border); }
 .vendor-check { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--text-secondary); }

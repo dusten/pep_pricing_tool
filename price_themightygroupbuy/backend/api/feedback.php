@@ -7,7 +7,7 @@ method('POST');
 $user = requireAuth();
 $d    = input();
 
-$type    = in_array($d['type'] ?? '', ['general','ui_ux','feature','bug','performance'], true) ? $d['type'] : 'general';
+$type    = in_array($d['type'] ?? '', ['general','ui_ux','feature','bug','performance','product'], true) ? $d['type'] : 'general';
 $message = trim($d['message'] ?? '');
 $url     = trim($d['url'] ?? '');
 

@@ -171,7 +171,7 @@
       </div>
 
       <!-- Feedback -->
-      <div class="card">
+      <div class="card" ref="feedbackCard">
         <div class="card-header-icon">
           <span class="icon-badge">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
@@ -217,13 +217,14 @@
 
 <script setup>
 import { h, ref, reactive, computed, onMounted } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { useRouter, useRoute, RouterLink } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import { useAuthStore } from '@/stores/auth.js'
 import { get, post, patch, del } from '@/utils/api.js'
 
 const auth   = useAuthStore()
 const router = useRouter()
+const route  = useRoute()
 
 const icon = (path) => () =>
   h('svg', { width: 16, height: 16, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.75 }, path)
@@ -360,10 +361,12 @@ const feedbackTypes = [
   { value: 'feature',     label: 'Feature',      icon: icon([h('path', { d: 'M12 2l1.9 4.9L19 8l-4.9 1.9L12 15l-1.9-5.1L5 8l5.1-1.1z' }), h('path', { d: 'M19 15l.9 2.4L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.6z' })]) },
   { value: 'bug',         label: 'Bug',          icon: icon([h('rect', { x: 7, y: 8, width: 10, height: 11, rx: 5 }), h('path', { d: 'M7 12H3M21 12h-4M12 3v3M9 5l1.5 2M15 5l-1.5 2M4 7l3 2.5M20 7l-3 2.5' })]) },
   { value: 'performance', label: 'Performance',  icon: icon([h('path', { d: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z' }), h('path', { d: 'M12 6v6l4 2' })]) },
+  { value: 'product',     label: 'Product',      icon: icon([h('path', { d: 'M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L3 3v6.59a2 2 0 0 0 .59 1.41l9.59 9.59a2 2 0 0 0 2.82 0l4.59-4.59a2 2 0 0 0 0-2.82z' }), h('circle', { cx: 7.5, cy: 7.5, r: 1.5 })]) },
 ]
 const feedback        = reactive({ type: 'general', message: '' })
 const feedbackSaving  = ref(false)
 const feedbackMsg     = ref('')
+const feedbackCard    = ref(null)
 async function submitFeedback() {
   feedbackSaving.value = true; feedbackMsg.value = ''
   try {
@@ -372,6 +375,17 @@ async function submitFeedback() {
     feedback.message = ''
   } catch { /* inline error not critical here */ } finally { feedbackSaving.value = false }
 }
+
+// Deep link from other pages, e.g. Comparison's "Product feedback" pill
+// (/settings?feedback_type=product) — pre-select the category and scroll
+// the card into view so it's not just silently pre-filled off-screen.
+onMounted(() => {
+  const t = route.query.feedback_type
+  if (feedbackTypes.some(ft => ft.value === t)) {
+    feedback.type = t
+    feedbackCard.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+})
 
 // ── Account deletion ─────────────────────────────────────────────
 const showDelete    = ref(false)
