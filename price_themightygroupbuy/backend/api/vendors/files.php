@@ -31,9 +31,9 @@ $category = in_array($_POST['category'] ?? '', ['price_list', 'coa', 'other'], t
 
 $original = $_FILES['file']['name'];
 $ext      = strtolower(pathinfo($original, PATHINFO_EXTENSION));
-$typeMap  = ['pdf' => 'pdf', 'xlsx' => 'xlsx', 'csv' => 'csv'];
+$typeMap  = ['pdf' => 'pdf', 'xlsx' => 'xlsx', 'csv' => 'csv', 'jpg' => 'image', 'jpeg' => 'image', 'png' => 'image'];
 if (!isset($typeMap[$ext])) {
-    jsonResponse(['error' => 'Only PDF, XLSX, and CSV files are supported.'], 422);
+    jsonResponse(['error' => 'Only PDF, XLSX, CSV, JPG, and PNG files are supported.'], 422);
 }
 
 $dir = dirname(__DIR__, 2) . "/storage/vendor_files/$vendorId";

@@ -137,14 +137,19 @@ function callClaudeMessages(string $systemPrompt, array $userContent, string $mo
 }
 
 /**
- * Calls the Anthropic Messages API with either a base64 PDF document block
- * or plain extracted text (csv/xlsx), and returns the decoded JSON payload.
+ * Calls the Anthropic Messages API with a base64 PDF document block, a base64
+ * image block (phone screenshot of a price list), or plain extracted text
+ * (csv/xlsx) — exactly one of $pdfBase64/$image/$plainText should be set.
+ * Returns the decoded JSON payload.
  */
-function callClaudeExtraction(string $systemPrompt, ?string $pdfBase64, ?string $plainText, string $model = CLAUDE_MODEL_DEFAULT): array {
+function callClaudeExtraction(string $systemPrompt, ?string $pdfBase64, ?string $plainText, string $model = CLAUDE_MODEL_DEFAULT, ?array $image = null): array {
     $userContent = [];
     if ($pdfBase64 !== null) {
         $userContent[] = ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => $pdfBase64]];
         $userContent[] = ['type' => 'text', 'text' => 'Please extract all pricing data from this vendor price list.'];
+    } elseif ($image !== null) {
+        $userContent[] = ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $image['media_type'], 'data' => $image['base64']]];
+        $userContent[] = ['type' => 'text', 'text' => 'Please extract all pricing data from this vendor price list image.'];
     } else {
         $userContent[] = ['type' => 'text', 'text' => "Vendor price list (extracted text):\n\n{$plainText}\n\nPlease extract all pricing data from this vendor price list."];
     }

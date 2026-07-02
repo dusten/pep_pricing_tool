@@ -29,15 +29,24 @@ function processVendorFile(array $file, string $model): array {
 
     $pdfBase64 = null;
     $plainText = null;
+    $image     = null;
     if ($file['file_type'] === 'pdf') {
         $pdfBase64 = base64_encode((string)file_get_contents($fullPath));
     } elseif ($file['file_type'] === 'xlsx') {
         $plainText = xlsxToText($fullPath);
+    } elseif ($file['file_type'] === 'image') {
+        // Vendors often send a phone screenshot of a spreadsheet instead of a
+        // real file — Claude reads the table straight out of the image, no
+        // OCR step needed. media_type keyed off the stored extension, since
+        // upload already restricted this to jpg/jpeg/png.
+        $ext       = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+        $mediaType = ['jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg', 'png' => 'image/png'][$ext] ?? 'image/jpeg';
+        $image     = ['base64' => base64_encode((string)file_get_contents($fullPath)), 'media_type' => $mediaType];
     } else {
         $plainText = (string)file_get_contents($fullPath);
     }
 
-    $result   = callClaudeExtraction(buildExtractionSystemPrompt(), $pdfBase64, $plainText, $model);
+    $result   = callClaudeExtraction(buildExtractionSystemPrompt(), $pdfBase64, $plainText, $model, $image);
     $warnings = $result['warnings'] ?? [];
     $contact  = $result['contact'] ?? [];
 

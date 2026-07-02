@@ -78,7 +78,7 @@
           <option value="coa">COA</option>
           <option value="other">Other</option>
         </select>
-        <input type="file" ref="fileInput" accept=".pdf,.xlsx,.csv" @change="upload" />
+        <input type="file" ref="fileInput" accept=".pdf,.xlsx,.csv,.jpg,.jpeg,.png" @change="upload" />
       </div>
 
       <div v-if="selectedVendorId && files.length" class="file-repo">
