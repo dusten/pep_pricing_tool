@@ -177,7 +177,10 @@ function closeView() {
 /* A flex item's height:100% doesn't reliably resolve against align-items:center
    (which opts it out of stretch) — the iframe fell back to its intrinsic
    ~150px default instead of filling the card. Absolute positioning against
-   .view-body's own box sidesteps the flex percentage-height ambiguity entirely. */
-.view-body iframe { position: absolute; inset: 0; border: none; }
+   .view-body's own box sidesteps the flex percentage-height ambiguity — but
+   iframe is a *replaced* element, so inset:0 alone still isn't enough; it
+   keeps its own intrinsic 300x150 default unless width/height are also set
+   explicitly (unlike a plain div, which would auto-size from the insets). */
+.view-body iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
 .view-text { align-self: stretch; white-space: pre-wrap; font-size: 12px; font-family: monospace; padding: 8px; }
 </style>
