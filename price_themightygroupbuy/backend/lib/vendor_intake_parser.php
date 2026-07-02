@@ -92,7 +92,17 @@ function parseVendorIntakeText(string $text): array {
 }
 
 function matchPaymentMethods(string $value): array {
-    $value   = strtolower($value);
+    $value = strtolower($value);
+    // Our own template's hint (and most vendor replies copying it) writes
+    // "USDT/USDC <chain>" as one combined mention — the chain name sits
+    // right after USDC, so a plain substring check on "usdt <chain>" never
+    // matches. Expand it to "usdt <chain> usdc <chain>" first so both
+    // tickers are visible to the per-keyword checks below.
+    $value = preg_replace_callback(
+        '/\b(usdt|usdc)\s*\/\s*(usdt|usdc)\s+(solana|tron|trc20|erc20)\b/',
+        fn($m) => "$m[1] $m[3] $m[2] $m[3]",
+        $value
+    );
     $matched = [];
     foreach (VENDOR_PAYMENT_KEYWORDS as $method => $keywords) {
         foreach ($keywords as $kw) {
