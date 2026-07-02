@@ -203,9 +203,11 @@ function startNew() {
   prices.value = []
 }
 
-async function onSelectVendor() {
-  if (!selectedVendorId.value) { startNew(); return }
-  const v = await get(`/api/vendors/${selectedVendorId.value}`)
+/** Loads a vendor's data into the form. Shared by onSelectVendor (dropdown pick) and the
+ * phone-match path in parseIntake (which deliberately does NOT clear pasteText afterward —
+ * the whole point there is leaving the pasted reply visible next to the loaded vendor for review). */
+async function loadVendorIntoForm(id) {
+  const v = await get(`/api/vendors/${id}`)
   Object.assign(form, {
     display_name: v.display_name || '', contact_name: v.contact_name || '', email: v.email || '',
     whatsapp: v.whatsapp || '', discord: v.discord || '', telegram: v.telegram || '',
@@ -214,6 +216,11 @@ async function onSelectVendor() {
   })
   files.value = v.files || []
   prices.value = v.prices || []
+}
+
+async function onSelectVendor() {
+  if (!selectedVendorId.value) { startNew(); return }
+  await loadVendorIntoForm(selectedVendorId.value)
   pasteText.value = ''
   parseNote.value = ''
 }
@@ -236,6 +243,16 @@ async function parseIntake() {
   parseNote.value = ''
   try {
     const res = await post('/api/vendors/parse-intake', { text: pasteText.value })
+
+    // Only relevant while creating new — an admin already editing a known
+    // vendor and pasting an update shouldn't get yanked to a different one.
+    if (!selectedVendorId.value && res.matched_vendor) {
+      selectedVendorId.value = res.matched_vendor.id
+      await loadVendorIntoForm(res.matched_vendor.id)
+      parseNote.value = `This phone number matches existing vendor "${res.matched_vendor.display_name}" — loaded for editing instead of creating a duplicate. Pasted text kept below; click "Parse reply" again to apply it onto this vendor.`
+      return
+    }
+
     const f = res.fields
     for (const key of ['display_name', 'contact_name', 'email', 'whatsapp', 'discord', 'telegram', 'website']) {
       if (f[key]) form[key] = f[key]

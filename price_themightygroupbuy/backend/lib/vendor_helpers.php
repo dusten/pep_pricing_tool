@@ -44,6 +44,32 @@ function updateVendorScalarFields(PDO $pdo, int $vendorId, array $d): void {
     $pdo->prepare('UPDATE pc_vendors SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);
 }
 
+/**
+ * Last-10-digits comparison rather than exact string match — vendor phone
+ * numbers get pasted in wildly different formats ("+1 555-123-4567" vs
+ * "15551234567" vs "(555) 123-4567"), and this vendor base skews
+ * international (varying country-code prefixes), so trailing-digit
+ * comparison is the more robust match than a normalized-but-exact string.
+ */
+function normalizePhoneForMatch(string $phone): string {
+    $digits = preg_replace('/\D+/', '', $phone) ?? '';
+    return substr($digits, -10);
+}
+
+/** Finds an existing vendor by phone number (last-10-digit match) — used to catch a vendor being re-added under a different name. Returns null if no phone in $phones matches, or if $phones normalize to nothing usable. */
+function findVendorByPhone(PDO $pdo, array $phones): ?array {
+    $targets = array_filter(array_map('normalizePhoneForMatch', $phones), fn($p) => strlen($p) >= 7);
+    if (!$targets) return null;
+
+    $rows = $pdo->query('SELECT vp.phone, v.id, v.display_name FROM pc_vendor_phones vp JOIN pc_vendors v ON v.id = vp.vendor_id')->fetchAll();
+    foreach ($rows as $row) {
+        if (in_array(normalizePhoneForMatch($row['phone']), $targets, true)) {
+            return ['id' => (int)$row['id'], 'display_name' => $row['display_name']];
+        }
+    }
+    return null;
+}
+
 /** Fetches a vendor's phone numbers and payment methods for a show/detail response. */
 function loadVendorPhonesAndPaymentMethods(PDO $pdo, int $vendorId): array {
     $phones = $pdo->prepare('SELECT phone FROM pc_vendor_phones WHERE vendor_id = ? ORDER BY id');

@@ -4,6 +4,7 @@ require_once dirname(__DIR__, 2) . '/config.php';
 require_once dirname(__DIR__, 2) . '/helpers.php';
 require_once dirname(__DIR__, 2) . '/lib/vendor_intake_parser.php';
 require_once dirname(__DIR__, 2) . '/lib/claude.php';
+require_once dirname(__DIR__, 2) . '/lib/vendor_helpers.php';
 
 // POST /vendors/parse-intake  body: { text }
 // Regex-first parse of the pasted vendor reply; falls back to Claude only
@@ -30,4 +31,13 @@ if (vendorIntakeResolvedCount($fields) < 2) {
     }
 }
 
-jsonResponse(['fields' => $fields, 'used_ai_fallback' => $usedFallback]);
+// Catches a vendor being re-added under a different name — a phone match is
+// a much stronger identity signal than the name-collision check the create
+// endpoint already does, since vendors change display names but rarely
+// their contact number.
+$matchedVendor = null;
+if (!empty($fields['phones'])) {
+    $matchedVendor = findVendorByPhone(db(), $fields['phones']);
+}
+
+jsonResponse(['fields' => $fields, 'used_ai_fallback' => $usedFallback, 'matched_vendor' => $matchedVendor]);
