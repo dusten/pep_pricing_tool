@@ -72,87 +72,98 @@ function processVendorFile(array $file, string $model): array {
     $pdo = db();
     $pdo->beginTransaction();
 
-    // Fill in any missing vendor contact fields from the extracted document.
-    if ($contact) {
-        $fillable = [];
-        $vals     = [];
-        foreach (['contact_name' => 'name', 'email' => 'email', 'whatsapp' => 'whatsapp', 'website' => 'website'] as $col => $key) {
-            if (!empty($contact[$key])) { $fillable[] = "$col = COALESCE($col, ?)"; $vals[] = $contact[$key]; }
+    // Everything in here must roll back cleanly on any exception (a price
+    // value overflowing DECIMAL(10,2), a vendor_sku over VARCHAR(50), any DB
+    // constraint hit) — otherwise the caller's own "mark as failed" update
+    // rides on this same still-open transaction and gets silently discarded
+    // right along with it when the request ends, leaving the file stuck at
+    // processing_status='processing' forever with no error ever recorded.
+    try {
+        // Fill in any missing vendor contact fields from the extracted document.
+        if ($contact) {
+            $fillable = [];
+            $vals     = [];
+            foreach (['contact_name' => 'name', 'email' => 'email', 'whatsapp' => 'whatsapp', 'website' => 'website'] as $col => $key) {
+                if (!empty($contact[$key])) { $fillable[] = "$col = COALESCE($col, ?)"; $vals[] = $contact[$key]; }
+            }
+            if ($fillable) {
+                $vals[] = $file['vendor_id'];
+                $pdo->prepare('UPDATE pc_vendors SET ' . implode(', ', $fillable) . ' WHERE id = ?')->execute($vals);
+            }
         }
-        if ($fillable) {
-            $vals[] = $file['vendor_id'];
-            $pdo->prepare('UPDATE pc_vendors SET ' . implode(', ', $fillable) . ' WHERE id = ?')->execute($vals);
+
+        $insertPending = $pdo->prepare(
+            'INSERT INTO pc_pending_imports (vendor_file_id, vendor_id, raw_json, match_type, candidate_product_id)
+             VALUES (?,?,?,?,?)'
+        );
+
+        $imported = 0;
+        $pending  = 0;
+        foreach ($result['prices'] as $p) {
+            $name  = trim((string)($p['canonical_name'] ?? ''));
+            $label = trim((string)($p['spec_label'] ?? ''));
+            $value = (float)($p['numeric_value'] ?? 0);
+            $price = (float)($p['price_usd'] ?? 0);
+            if (!$name || !$label || $value <= 0 || $price <= 0) continue;
+
+            $unit        = (string)($p['unit'] ?? 'mg');
+            $kitCount    = (int)($p['kit_vial_count'] ?? 10);
+            // Vendors set their own tier breakpoints (1/10/100 is common but not
+            // universal — a real file used 1/10/50); clamping to a fixed list
+            // silently corrupted data (a real ≥50kits price got forced onto the
+            // tier-1 slot, colliding with pc_prices' UNIQUE key and either
+            // overwriting or losing the genuine tier-1 price). Column is a plain
+            // TINYINT UNSIGNED — just floor/ceiling it to that range.
+            $tierSize    = min(255, max(1, (int)($p['tier_kit_size'] ?? 1)));
+            $vendorSku   = trim((string)($p['vendor_sku'] ?? '')) ?: null;
+            $nonStandard = !empty($p['non_standard_kit']);
+
+            $productId = findExactProductMatch($pdo, $name);
+
+            if ($productId === null) {
+                // No exact product match — brand-new product, or a close-but-not-exact name.
+                $candidate  = findFuzzyProductCandidate($pdo, $name);
+                $matchType  = $candidate ? 'name_mismatch' : 'new_product';
+                $insertPending->execute([
+                    $file['id'], $file['vendor_id'],
+                    json_encode($p + ['tier_kit_size' => $tierSize]),
+                    $matchType, $candidate['id'] ?? null,
+                ]);
+                $pending++;
+                continue;
+            }
+
+            $findSpec = $pdo->prepare('SELECT id FROM pc_specifications WHERE product_id = ? AND spec_label = ?');
+            $findSpec->execute([$productId, $label]);
+            $specId = $findSpec->fetchColumn();
+
+            if (!$specId) {
+                // Existing product, but this spec doesn't exist on it yet — review before adding.
+                $insertPending->execute([
+                    $file['id'], $file['vendor_id'],
+                    json_encode($p + ['tier_kit_size' => $tierSize]),
+                    'new_spec', $productId,
+                ]);
+                $pending++;
+                continue;
+            }
+
+            commitPriceRow($pdo, (int)$file['vendor_id'], $productId, (int)$specId, $price, $value, $kitCount, $tierSize, $nonStandard, (int)$file['id'], $vendorSku);
+            $imported++;
         }
+
+        $notes = $warnings ? implode(' | ', $warnings) : null;
+        if ($pending > 0) {
+            $notes = trim(($notes ? "$notes | " : '') . "$pending row(s) awaiting review in the pending imports queue.");
+        }
+        $pdo->prepare('UPDATE pc_vendor_files SET processing_status = ?, processing_notes = ?, processed_at = NOW() WHERE id = ?')
+            ->execute(['complete', $notes, $file['id']]);
+        $pdo->prepare("UPDATE pc_vendor_files SET is_current = 1 WHERE id = ? AND category = 'price_list'")->execute([$file['id']]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
     }
-
-    $insertPending = $pdo->prepare(
-        'INSERT INTO pc_pending_imports (vendor_file_id, vendor_id, raw_json, match_type, candidate_product_id)
-         VALUES (?,?,?,?,?)'
-    );
-
-    $imported = 0;
-    $pending  = 0;
-    foreach ($result['prices'] as $p) {
-        $name  = trim((string)($p['canonical_name'] ?? ''));
-        $label = trim((string)($p['spec_label'] ?? ''));
-        $value = (float)($p['numeric_value'] ?? 0);
-        $price = (float)($p['price_usd'] ?? 0);
-        if (!$name || !$label || $value <= 0 || $price <= 0) continue;
-
-        $unit        = (string)($p['unit'] ?? 'mg');
-        $kitCount    = (int)($p['kit_vial_count'] ?? 10);
-        // Vendors set their own tier breakpoints (1/10/100 is common but not
-        // universal — a real file used 1/10/50); clamping to a fixed list
-        // silently corrupted data (a real ≥50kits price got forced onto the
-        // tier-1 slot, colliding with pc_prices' UNIQUE key and either
-        // overwriting or losing the genuine tier-1 price). Column is a plain
-        // TINYINT UNSIGNED — just floor/ceiling it to that range.
-        $tierSize    = min(255, max(1, (int)($p['tier_kit_size'] ?? 1)));
-        $vendorSku   = trim((string)($p['vendor_sku'] ?? '')) ?: null;
-        $nonStandard = !empty($p['non_standard_kit']);
-
-        $productId = findExactProductMatch($pdo, $name);
-
-        if ($productId === null) {
-            // No exact product match — brand-new product, or a close-but-not-exact name.
-            $candidate  = findFuzzyProductCandidate($pdo, $name);
-            $matchType  = $candidate ? 'name_mismatch' : 'new_product';
-            $insertPending->execute([
-                $file['id'], $file['vendor_id'],
-                json_encode($p + ['tier_kit_size' => $tierSize]),
-                $matchType, $candidate['id'] ?? null,
-            ]);
-            $pending++;
-            continue;
-        }
-
-        $findSpec = $pdo->prepare('SELECT id FROM pc_specifications WHERE product_id = ? AND spec_label = ?');
-        $findSpec->execute([$productId, $label]);
-        $specId = $findSpec->fetchColumn();
-
-        if (!$specId) {
-            // Existing product, but this spec doesn't exist on it yet — review before adding.
-            $insertPending->execute([
-                $file['id'], $file['vendor_id'],
-                json_encode($p + ['tier_kit_size' => $tierSize]),
-                'new_spec', $productId,
-            ]);
-            $pending++;
-            continue;
-        }
-
-        commitPriceRow($pdo, (int)$file['vendor_id'], $productId, (int)$specId, $price, $value, $kitCount, $tierSize, $nonStandard, (int)$file['id'], $vendorSku);
-        $imported++;
-    }
-
-    $notes = $warnings ? implode(' | ', $warnings) : null;
-    if ($pending > 0) {
-        $notes = trim(($notes ? "$notes | " : '') . "$pending row(s) awaiting review in the pending imports queue.");
-    }
-    $pdo->prepare('UPDATE pc_vendor_files SET processing_status = ?, processing_notes = ?, processed_at = NOW() WHERE id = ?')
-        ->execute(['complete', $notes, $file['id']]);
-    $pdo->prepare("UPDATE pc_vendor_files SET is_current = 1 WHERE id = ? AND category = 'price_list'")->execute([$file['id']]);
-    $pdo->commit();
 
     // The main price-writing path — touches pc_prices/pc_products/pc_specifications
     // and the vendor's price_count/last_upload, so all three cached views go stale.
