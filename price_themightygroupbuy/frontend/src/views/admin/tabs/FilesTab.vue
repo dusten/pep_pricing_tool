@@ -55,13 +55,16 @@ import * as pdfjsLib from 'pdfjs-dist'
 // URLs — confirmed against this exact feature after three CSS-level fixes
 // all failed to make it fill the card. Rendering with pdf.js to a plain
 // <canvas> sidesteps the native viewer entirely; we fully control sizing.
-// ?v=1: the worker's own URL never changes between deploys (Vite hashes on
-// file content, and only the Apache MIME-type config changed, not this file)
-// — so a cache anywhere between origin and browser that stored the earlier
-// (wrong Content-Type: text/plain) response for this exact URL keeps
-// serving it, immune to hard-refreshing since it's not really about the
-// browser's own cache. A query string forces a genuinely new cache key.
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString() + '?v=1'
+//
+// Pinned to 4.10.38, not latest: 5.x/6.x's internal "fingerprints" computation
+// calls the native Uint8Array.prototype.toHex() directly with no feature
+// detection (confirmed in both the normal and "legacy" builds of 6.1.200) —
+// a JS engine method that only landed in Chromium 140+, so it throws
+// "toHex is not a function" on any older browser. 4.10.38 still uses a
+// feature-detected toHexUtil() wrapper for the same computation (falls back
+// to a manual implementation when the native method isn't available) —
+// confirmed via mozilla/pdf.js's own bug tracker, not assumed.
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
 
 const files = ref([])
 const batchRunning = ref(false)
