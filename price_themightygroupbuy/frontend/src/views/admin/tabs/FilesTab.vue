@@ -55,7 +55,13 @@ import * as pdfjsLib from 'pdfjs-dist'
 // URLs — confirmed against this exact feature after three CSS-level fixes
 // all failed to make it fill the card. Rendering with pdf.js to a plain
 // <canvas> sidesteps the native viewer entirely; we fully control sizing.
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
+// ?v=1: the worker's own URL never changes between deploys (Vite hashes on
+// file content, and only the Apache MIME-type config changed, not this file)
+// — so a cache anywhere between origin and browser that stored the earlier
+// (wrong Content-Type: text/plain) response for this exact URL keeps
+// serving it, immune to hard-refreshing since it's not really about the
+// browser's own cache. A query string forces a genuinely new cache key.
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString() + '?v=1'
 
 const files = ref([])
 const batchRunning = ref(false)
