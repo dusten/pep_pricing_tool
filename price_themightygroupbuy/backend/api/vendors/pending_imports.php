@@ -16,6 +16,8 @@ $id     = isset($PARAMS['id']) ? (int)$PARAMS['id'] : null;
 $action = $PARAMS['action'] ?? null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $remaining = (int)db()->query("SELECT COUNT(*) FROM pc_pending_imports WHERE status = 'pending'")->fetchColumn();
+
     $stmt = db()->prepare(
         "SELECT pi.*, v.display_name AS vendor_name, vf.original_filename,
                 cp.canonical_name AS candidate_name
@@ -29,12 +31,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     );
     $stmt->execute();
     $row = $stmt->fetch();
-    if (!$row) jsonResponse(['done' => true]);
+    if (!$row) jsonResponse(['done' => true, 'remaining' => 0]);
 
     $row['id']                   = (int)$row['id'];
     $row['vendor_id']            = (int)$row['vendor_id'];
     $row['candidate_product_id'] = $row['candidate_product_id'] !== null ? (int)$row['candidate_product_id'] : null;
     $row['raw_json']             = json_decode($row['raw_json'], true);
+    $row['remaining']            = $remaining;
     jsonResponse($row);
 }
 
@@ -103,7 +106,52 @@ try {
     jsonResponse(['error' => 'Approve failed.', 'message' => $e->getMessage()], 500);
 }
 
+// Other vendors' pending rows for this exact same product+spec already had
+// that identity confirmed by the approval just committed above — re-reviewing
+// the identical canonical_name/spec match for every other vendor selling it
+// is redundant. Auto-approve those, each using its OWN already-extracted
+// price/SKU/kit-count/tier (never copied from the row just approved — only
+// the product+spec match is reused, never the vendor-specific numbers).
+// "Same product+spec" is a read-only check against the exact rules
+// findExactProductMatch()/findOrCreateSpec() already use elsewhere, not a
+// separate ad-hoc string comparison — and read-only deliberately, so
+// non-matches can't side-effect a stray spec row into existence.
+$autoApproved = 0;
+$others = $pdo->prepare("SELECT * FROM pc_pending_imports WHERE status = 'pending' AND vendor_id != ? AND id != ?");
+$others->execute([(int)$row['vendor_id'], $id]);
+$specCheck = $pdo->prepare('SELECT id FROM pc_specifications WHERE product_id = ? AND spec_label = ?');
+foreach ($others->fetchAll() as $other) {
+    $o      = json_decode($other['raw_json'], true);
+    $oName  = trim((string)($o['canonical_name'] ?? ''));
+    $oLabel = trim((string)($o['spec_label'] ?? ''));
+    $oValue = (float)($o['numeric_value'] ?? 0);
+    $oPrice = (float)($o['price_usd'] ?? 0);
+    if (!$oName || !$oLabel || $oValue <= 0 || $oPrice <= 0) continue;
+    if (findExactProductMatch($pdo, $oName) !== $productId) continue;
+
+    $specCheck->execute([$productId, $oLabel]);
+    if ((int)$specCheck->fetchColumn() !== $specId) continue;
+
+    $pdo->beginTransaction();
+    try {
+        commitPriceRow(
+            $pdo, (int)$other['vendor_id'], $productId, $specId,
+            $oPrice, $oValue, (int)($o['kit_vial_count'] ?? 10),
+            min(255, max(1, (int)($o['tier_kit_size'] ?? 1))),
+            !empty($o['non_standard_kit']), (int)$other['vendor_file_id'],
+            trim((string)($o['vendor_sku'] ?? '')) ?: null
+        );
+        $pdo->prepare('UPDATE pc_pending_imports SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?')
+            ->execute(['approved', $admin['id'], $other['id']]);
+        $pdo->commit();
+        $autoApproved++;
+        logAdminAction((int)$admin['id'], 'auto_approve_matching_vendor', ['pending_import_id' => (int)$other['id'], 'triggered_by' => $id]);
+    } catch (Throwable $e) {
+        $pdo->rollBack(); // leave this one pending rather than lose it silently
+    }
+}
+
 cacheBust('pricing_data');
 cacheBust('admin_products');
 logAdminAction((int)$admin['id'], 'approve_pending_import', ['pending_import_id' => $id, 'product_id' => $productId]);
-jsonResponse(['message' => 'Approved and committed.']);
+jsonResponse(['message' => 'Approved and committed.', 'auto_approved_matches' => $autoApproved]);

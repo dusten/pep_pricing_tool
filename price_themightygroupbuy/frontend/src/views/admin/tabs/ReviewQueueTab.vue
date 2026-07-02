@@ -7,10 +7,12 @@
 
     <!-- Pending price-import review (single-card, approve/reject, auto-advance) -->
     <div v-if="mode === 'imports'">
+      <p v-if="approveMsg" class="text-sm text-success approve-msg">{{ approveMsg }}</p>
       <div v-if="!importRow" class="card" style="text-align:center;padding:32px;color:var(--text-secondary)">
         Nothing pending review.
       </div>
       <div v-else class="card review-card">
+        <div class="review-row"><span class="label-sm">Remaining</span> {{ importRow.remaining }} pending</div>
         <div class="review-row"><span class="label-sm">Vendor</span> {{ importRow.vendor_name }}</div>
         <div class="review-row"><span class="label-sm">Source file</span> {{ importRow.original_filename }}</div>
         <div class="review-row"><span class="label-sm">Reason</span> <span class="badge">{{ matchTypeLabel(importRow.match_type) }}</span></div>
@@ -18,18 +20,20 @@
           <span class="label-sm">Closest existing match</span> {{ importRow.candidate_name }}
         </div>
 
-        <div class="review-row"><span class="label-sm">Name</span> <input v-model="importRow.raw_json.canonical_name" /></div>
-        <div class="review-row"><span class="label-sm">Vendor SKU / Cat No.</span> <input v-model="importRow.raw_json.vendor_sku" placeholder="—" /></div>
+        <p class="text-muted text-sm hint">Values below are exactly what Claude extracted. A red border means it came back empty — everything else only needs a look, not an edit.</p>
+
+        <div class="review-row"><span class="label-sm">Name</span> <input :class="{ 'needs-review': !importRow.raw_json.canonical_name }" v-model="importRow.raw_json.canonical_name" /></div>
+        <div class="review-row"><span class="label-sm">Vendor SKU / Cat No.</span> <input v-model="importRow.raw_json.vendor_sku" placeholder="— (vendor may not use one)" /></div>
         <div class="review-row">
           <span class="label-sm">Spec</span>
-          <input v-model.number="importRow.raw_json.numeric_value" type="number" step="any" style="width:80px" />
-          <input v-model="importRow.raw_json.unit" style="width:55px" />
+          <input :class="{ 'needs-review': !importRow.raw_json.numeric_value }" v-model.number="importRow.raw_json.numeric_value" type="number" step="any" style="width:80px" />
+          <input :class="{ 'needs-review': !importRow.raw_json.unit }" v-model="importRow.raw_json.unit" style="width:55px" />
           <span class="text-muted text-sm">label</span>
-          <input v-model="importRow.raw_json.spec_label" style="width:110px" />
+          <input :class="{ 'needs-review': !importRow.raw_json.spec_label }" v-model="importRow.raw_json.spec_label" style="width:110px" />
         </div>
         <div class="review-row">
           <span class="label-sm">Price / tier</span>
-          $<input v-model.number="importRow.raw_json.price_usd" type="number" step="any" style="width:80px" />
+          $<input :class="{ 'needs-review': !importRow.raw_json.price_usd }" v-model.number="importRow.raw_json.price_usd" type="number" step="any" style="width:80px" />
           — tier <input v-model.number="importRow.raw_json.tier_kit_size" type="number" min="1" style="width:55px" />-kit
         </div>
         <div class="review-row">
@@ -74,6 +78,7 @@ const mode          = ref('imports')
 const importRow      = ref(null)
 const coaRow          = ref(null)
 const mapToCandidate  = ref(true)
+const approveMsg      = ref('')
 
 async function loadImport() {
   const res = await get('/api/vendors/pending-imports')
@@ -99,7 +104,11 @@ async function approveImport() {
   }
   if (productId) body.product_id = productId
   try {
-    await post(`/api/vendors/pending-imports/${importRow.value.id}/approve`, body)
+    const res = await post(`/api/vendors/pending-imports/${importRow.value.id}/approve`, body)
+    if (res.auto_approved_matches) {
+      approveMsg.value = `Also auto-approved ${res.auto_approved_matches} other vendor(s) with the exact same item.`
+      setTimeout(() => { approveMsg.value = '' }, 6000)
+    }
   } catch (err) {
     alert(err.message)
     return
@@ -153,4 +162,7 @@ onMounted(loadImport)
 .review-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
 .toggle-label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); }
 .toggle-label input { width: auto; }
+.hint { margin: 10px 0; }
+.needs-review { border-color: var(--warning) !important; background: var(--warning-bg); }
+.approve-msg { margin-bottom: 12px; }
 </style>
