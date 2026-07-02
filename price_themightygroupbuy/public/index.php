@@ -119,6 +119,7 @@ $ROUTES = [
     'vendors'                 => 'vendors/index.php',
     'vendors/parse-intake'    => 'vendors/parse_intake.php',
     'vendors/pending-imports' => 'vendors/pending_imports.php',
+    'files/process-all'      => 'files/process_all.php',
     'coa/submit'              => 'coa/submit.php',
     'coa/vendor-products'     => 'coa/vendor_products.php',
     'admin/coa-queue'         => 'admin/coa_queue.php',

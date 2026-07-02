@@ -1,5 +1,10 @@
 <template>
   <div>
+    <div class="toolbar">
+      <button class="btn btn-accent btn-sm" :disabled="!pendingCount || batchRunning" @click="processAll">
+        {{ batchRunning ? 'Processing…' : `Process All Pending (${pendingCount})` }}
+      </button>
+    </div>
     <table class="admin-table">
       <thead><tr><th>Vendor</th><th>File</th><th>Type</th><th>Status</th><th>Notes</th><th></th></tr></thead>
       <tbody>
@@ -23,10 +28,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { get, post, del } from '@/utils/api.js'
 
 const files = ref([])
+const batchRunning = ref(false)
+const pendingCount = computed(() => files.value.filter(f => f.processing_status === 'pending').length)
 
 async function load() {
   const res = await get('/api/admin/files')
@@ -36,6 +43,23 @@ onMounted(load)
 
 function statusBadge(status) {
   return { complete: 'badge-pro', failed: 'badge-free', processing: 'badge-advanced', pending: 'badge-free' }[status] || 'badge-free'
+}
+
+async function processAll() {
+  batchRunning.value = true
+  try {
+    const res = await post('/api/files/process-all', {})
+    const imported = res.results.reduce((sum, r) => sum + (r.imported || 0), 0)
+    const pending = res.results.reduce((sum, r) => sum + (r.pending || 0), 0)
+    const failed = res.results.filter(r => r.error).length
+    const queued = res.results.filter(r => r.queued).length
+    alert(`${res.message}\n${imported} price row(s) imported, ${pending} sent to review, ${failed} failed, ${queued} queued for background processing.`)
+  } catch (err) {
+    alert(err.message)
+  } finally {
+    batchRunning.value = false
+    await load()
+  }
 }
 
 async function process(f) {
@@ -57,6 +81,7 @@ async function remove(f) {
 </script>
 
 <style scoped>
+.toolbar { margin-bottom: 14px; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
 .admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }

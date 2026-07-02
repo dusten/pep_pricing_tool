@@ -90,7 +90,12 @@ function callClaudeMessages(string $systemPrompt, array $userContent, string $mo
         // the max_tokens budget on unrequested thinking tokens instead of the
         // actual JSON output. Disable it explicitly.
         'thinking'   => ['type' => 'disabled'],
-        'system'     => $systemPrompt,
+        // The system prompt (product catalog + rules) is byte-identical across
+        // every file processed until the catalog changes — cache it so a batch
+        // of files processed back-to-back only pays full price on the first one.
+        'system'     => [
+            ['type' => 'text', 'text' => $systemPrompt, 'cache_control' => ['type' => 'ephemeral']],
+        ],
         'messages'   => [['role' => 'user', 'content' => $userContent]],
     ]);
 

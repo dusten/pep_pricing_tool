@@ -12,6 +12,11 @@ $admin = requireAdmin();
 $id    = (int)($PARAMS['id'] ?? 0);
 $model = (input()['model'] ?? '') === 'opus' ? CLAUDE_MODEL_HARD : CLAUDE_MODEL_DEFAULT;
 
+// 99-tmgb.ini sets max_execution_time=30, well under callClaudeMessages()'s
+// own 180s curl timeout — PHP would kill a slow extraction before curl ever
+// got the chance to. Extend past the curl timeout for this request only.
+set_time_limit(200);
+
 $stmt = db()->prepare('SELECT * FROM pc_vendor_files WHERE id = ? LIMIT 1');
 $stmt->execute([$id]);
 $file = $stmt->fetch();
