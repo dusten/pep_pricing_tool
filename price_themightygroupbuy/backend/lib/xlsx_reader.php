@@ -18,8 +18,14 @@ function xlsxToText(string $path): string {
     $sharedXml = $zip->getFromName('xl/sharedStrings.xml');
     if ($sharedXml !== false) {
         $doc = simplexml_load_string($sharedXml);
+        // xl/sharedStrings.xml declares a default xmlns (xmlns="...spreadsheetml...")
+        // on <sst>, which XPath's unprefixed './/t' never matches — every shared
+        // string silently resolved to '' (rows/cells kept working since those use
+        // plain property access, not xpath, so only text columns vanished).
+        // strip_tags() on the raw node XML sidesteps namespaces entirely and also
+        // naturally concatenates multi-run rich text (<r><t>...</t></r> pairs).
         foreach ($doc->si as $si) {
-            $shared[] = trim(implode('', array_map('strval', $si->xpath('.//t') ?: [])));
+            $shared[] = trim(strip_tags($si->asXML()));
         }
     }
 
