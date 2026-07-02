@@ -34,7 +34,9 @@
         </div>
         <div class="view-body">
           <img v-if="viewing.file_type === 'image'" :src="viewUrl" />
-          <iframe v-else-if="viewing.file_type === 'pdf'" :src="viewUrl + '#view=FitH'" width="900" height="700"></iframe>
+          <div v-else-if="viewing.file_type === 'pdf'" ref="pdfContainer" class="pdf-pages">
+            <canvas v-for="p in pdfPageCount" :key="p" :ref="el => setPdfCanvasRef(el, p - 1)"></canvas>
+          </div>
           <pre v-else-if="viewText !== null" class="view-text">{{ viewText }}</pre>
           <p v-else class="text-muted">No inline preview for {{ viewing.file_type }} files — use Download.</p>
         </div>
@@ -44,8 +46,16 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { get, post, del } from '@/utils/api.js'
+import * as pdfjsLib from 'pdfjs-dist'
+
+// Chrome's native PDF viewer (what an <iframe src="blob:..."> would use) has
+// a long-documented history of sizing/resize bugs specifically with blob
+// URLs — confirmed against this exact feature after three CSS-level fixes
+// all failed to make it fill the card. Rendering with pdf.js to a plain
+// <canvas> sidesteps the native viewer entirely; we fully control sizing.
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
 
 const files = ref([])
 const batchRunning = ref(false)
@@ -54,6 +64,33 @@ const pendingCount = computed(() => files.value.filter(f => f.processing_status 
 const viewing  = ref(null)
 const viewUrl  = ref(null)
 const viewText = ref(null)
+const pdfPageCount = ref(0)
+const pdfContainer = ref(null)
+let pdfDoc = null
+let pdfCanvasEls = []
+
+function setPdfCanvasRef(el, index) {
+  if (el) pdfCanvasEls[index] = el
+}
+
+async function renderPdf(blob) {
+  const arrayBuffer = await blob.arrayBuffer()
+  pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise
+  pdfCanvasEls = []
+  pdfPageCount.value = pdfDoc.numPages
+  await nextTick() // let Vue create the container + one canvas per page first
+
+  const containerWidth = (pdfContainer.value?.clientWidth || 860) - 24 // minus .pdf-pages' own padding
+  for (let i = 1; i <= pdfDoc.numPages; i++) {
+    const page = await pdfDoc.getPage(i)
+    const scale = containerWidth / page.getViewport({ scale: 1 }).width
+    const viewport = page.getViewport({ scale })
+    const canvas = pdfCanvasEls[i - 1]
+    canvas.width = viewport.width
+    canvas.height = viewport.height
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise
+  }
+}
 
 async function load() {
   const res = await get('/api/admin/files')
@@ -132,13 +169,16 @@ async function viewFile(f) {
   try {
     const blob = await fetchFileBlob(f)
     if (viewUrl.value) URL.revokeObjectURL(viewUrl.value)
-    viewText.value = null
-    if (f.file_type === 'image' || f.file_type === 'pdf') {
+    viewUrl.value      = null
+    viewText.value     = null
+    pdfPageCount.value = 0
+    if (f.file_type === 'image') {
       viewUrl.value = URL.createObjectURL(blob)
     } else if (f.file_type === 'csv') {
       viewText.value = await blob.text()
     }
     viewing.value = f
+    if (f.file_type === 'pdf') await renderPdf(blob)
   } catch (err) {
     alert(err.message)
   }
@@ -146,6 +186,9 @@ async function viewFile(f) {
 
 function closeView() {
   if (viewUrl.value) URL.revokeObjectURL(viewUrl.value)
+  if (pdfDoc) { pdfDoc.destroy(); pdfDoc = null }
+  pdfCanvasEls = []
+  pdfPageCount.value = 0
   viewing.value  = null
   viewUrl.value  = null
   viewText.value = null
@@ -174,13 +217,16 @@ function closeView() {
 }
 .view-body { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 12px; position: relative; }
 .view-body img { max-width: 100%; max-height: 100%; object-fit: contain; }
-/* A flex item's height:100% doesn't reliably resolve against align-items:center
-   (which opts it out of stretch) — the iframe fell back to its intrinsic
-   ~150px default instead of filling the card. Absolute positioning against
-   .view-body's own box sidesteps the flex percentage-height ambiguity — but
-   iframe is a *replaced* element, so inset:0 alone still isn't enough; it
-   keeps its own intrinsic 300x150 default unless width/height are also set
-   explicitly (unlike a plain div, which would auto-size from the insets). */
-.view-body iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; }
+/* Same fill technique proven correct for the old iframe attempt (position:
+   absolute + inset:0 against .view-body's own relatively-positioned box) —
+   reused here since it empirically worked (1:1 fill ratio measured); the
+   part that never worked was the native PDF viewer's own internal
+   rendering, not this box-sizing approach, which is why PDF now renders via
+   pdf.js canvases instead rather than yet another CSS attempt. */
+.pdf-pages {
+  position: absolute; inset: 0; overflow: auto; padding: 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.pdf-pages canvas { max-width: 100%; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
 .view-text { align-self: stretch; white-space: pre-wrap; font-size: 12px; font-family: monospace; padding: 8px; }
 </style>

@@ -19,11 +19,12 @@ set_exception_handler(function (Throwable $e): void {
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
 header('Referrer-Policy: strict-origin-when-cross-origin');
-// img-src/frame-src need blob: on top of 'self' — the admin file preview
-// fetches a file with auth, then renders it from a blob: object URL (a
-// plain <img src>/<iframe src> can't carry the Bearer header this app's
-// endpoints require), which default-src 'self' alone doesn't allow.
-header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; img-src 'self' blob:; frame-src 'self' blob:;");
+// img-src needs blob: on top of 'self' — the admin file preview fetches an
+// image with auth, then renders it from a blob: object URL (a plain
+// <img src> can't carry the Bearer header this app's endpoints require),
+// which default-src 'self' alone doesn't allow. PDFs render via pdf.js
+// canvas now, not an iframe, so frame-src never needed the same relaxation.
+header("Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; img-src 'self' blob:;");
 
 // ── CORS ──────────────────────────────────────────────────────────
 // Allowlist built from the app's own configured origin(s) — never a wildcard.
