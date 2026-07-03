@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
          JOIN pc_products p ON p.id = pr.product_id
          JOIN pc_specifications s ON s.id = pr.specification_id
          WHERE pr.vendor_id = ? AND pr.is_active = 1
-         ORDER BY p.canonical_name, s.spec_label, pr.tier_kit_size'
+         ORDER BY p.canonical_name, s.numeric_value, pr.tier_kit_size'
     );
     $prices->execute([$id]);
     $vendor['prices']       = $prices->fetchAll();
