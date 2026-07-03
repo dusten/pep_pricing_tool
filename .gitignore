@@ -1,4 +1,6 @@
-Obsidian_pep_pricing_tool/
+# Obsidian vault is tracked (project source of truth); only editor state is ignored
+Obsidian_pep_pricing_tool/.obsidian/
+Obsidian_pep_pricing_tool/.trash/
 node_modules/
 backend/lib/fpdi/
 backend/lib/font/
