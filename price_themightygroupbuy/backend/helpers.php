@@ -27,6 +27,20 @@ function input(): array {
     return $parsed;
 }
 
+// ── Pricing ──────────────────────────────────────────────────────
+
+/**
+ * $/unit for a price row. A "kit" is $kitCount vials sold together for one
+ * $price, so the per-unit cost divides by total content: kitCount * numericValue.
+ * Single source of truth — every write path (import, price edit, spec edit)
+ * routes through here so the formula can't drift. Guards a zero denominator
+ * (a malformed spec/kit from extraction) instead of throwing DivisionByZeroError.
+ */
+function pricePerUnit(float $price, int $kitCount, float $numericValue): float {
+    $denom = max(1, $kitCount) * $numericValue;
+    return $denom > 0 ? round($price / $denom, 6) : 0.0;
+}
+
 // ── Tokens ───────────────────────────────────────────────────────
 
 function generateToken(int $bytes = 32): string {

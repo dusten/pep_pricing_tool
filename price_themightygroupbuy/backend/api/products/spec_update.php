@@ -36,11 +36,12 @@ try {
     $vals[] = $id;
     $pdo->prepare('UPDATE pc_specifications SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);
 
-    // price_per_unit (= price_usd / numeric_value) is computed at write-time
-    // in PHP, not a generated column — changing the mg amount here would
+    // price_per_unit (= price_usd / (kit_vial_count * numeric_value)) is computed
+    // at write-time, not a generated column — changing the mg amount here would
     // silently strand every price row's $/unit on the old value otherwise.
+    // Mirrors pricePerUnit() in PHP; GREATEST(kit_vial_count,1) guards a zero kit.
     if (array_key_exists('numeric_value', $d)) {
-        $pdo->prepare('UPDATE pc_prices SET price_per_unit = ROUND(price_usd / ?, 6) WHERE specification_id = ?')
+        $pdo->prepare('UPDATE pc_prices SET price_per_unit = ROUND(price_usd / (GREATEST(kit_vial_count, 1) * ?), 6) WHERE specification_id = ?')
             ->execute([(float)$d['numeric_value'], $id]);
     }
     $pdo->commit();

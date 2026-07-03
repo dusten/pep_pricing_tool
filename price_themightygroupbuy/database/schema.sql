@@ -256,7 +256,7 @@ CREATE TABLE IF NOT EXISTS pc_prices (
   product_id       INT UNSIGNED NOT NULL,
   specification_id INT UNSIGNED NOT NULL,
   price_usd        DECIMAL(10,2) NOT NULL,
-  price_per_unit   DECIMAL(12,6) NOT NULL,   -- = price_usd / specifications.numeric_value; computed in PHP
+  price_per_unit   DECIMAL(12,6) NOT NULL,   -- = price_usd / (kit_vial_count * specifications.numeric_value); computed in PHP via pricePerUnit()
   kit_vial_count   TINYINT UNSIGNED NOT NULL DEFAULT 10,
   tier_kit_size    TINYINT UNSIGNED NOT NULL DEFAULT 1,  -- minimum kit qty for this tiered-pricing column; vendor-defined, not fixed to 1/10/100
   vendor_sku       VARCHAR(50) NULL,                     -- vendor's own catalog code for this row, e.g. "TR5", "NJ100"

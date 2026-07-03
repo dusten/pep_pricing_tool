@@ -76,7 +76,7 @@ function commitPriceRow(
            kit_vial_count = VALUES(kit_vial_count), vendor_sku = VALUES(vendor_sku), non_standard_kit = VALUES(non_standard_kit),
            source_file_id = VALUES(source_file_id), is_active = 1, created_at = NOW()'
     )->execute([
-        $vendorId, $productId, $specId, $price, round($price / $numericValue, 6),
+        $vendorId, $productId, $specId, $price, pricePerUnit($price, $kitCount, $numericValue),
         $kitCount, $tierKitSize, $vendorSku ?: null, $nonStandard ? 1 : 0, $sourceFileId,
     ]);
 }

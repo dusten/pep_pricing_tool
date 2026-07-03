@@ -5,6 +5,9 @@
         <option value="">Select a vendor…</option>
         <option v-for="v in vendors" :key="v.id" :value="v.id">{{ v.display_name }}</option>
       </select>
+      <button v-if="selectedVendorId" :disabled="recalcing" @click="recalc" title="Recompute $/unit for every price line using the current price, vials/kit and spec — fixes rows imported before the kit-count fix">
+        {{ recalcing ? 'Recalculating…' : 'Recalculate $/unit' }}
+      </button>
     </div>
 
     <div v-if="!selectedVendorId" class="card" style="text-align:center;padding:32px;color:var(--text-secondary)">
@@ -36,11 +39,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { get, put } from '@/utils/api.js'
+import { get, put, post } from '@/utils/api.js'
 
 const vendors          = ref([])
 const selectedVendorId  = ref('')
 const prices            = ref([])
+const recalcing         = ref(false)
 
 async function loadVendors() {
   const res = await get('/api/vendors')
@@ -63,11 +67,23 @@ async function save(pr) {
   }
 }
 
+async function recalc() {
+  recalcing.value = true
+  try {
+    const res = await post(`/api/vendors/${selectedVendorId.value}/recalc-prices`)
+    alert(res.message)
+  } catch (err) {
+    alert(err.message)
+  } finally {
+    recalcing.value = false
+  }
+}
+
 onMounted(loadVendors)
 </script>
 
 <style scoped>
-.toolbar { margin-bottom: 14px; }
+.toolbar { margin-bottom: 14px; display: flex; gap: 10px; align-items: center; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
 .admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }

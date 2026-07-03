@@ -24,17 +24,27 @@ $d      = input();
 $fields = [];
 $vals   = [];
 
+$newPrice = null;
 if (array_key_exists('price_usd', $d) && (float)$d['price_usd'] > 0) {
     $newPrice = (float)$d['price_usd'];
     $fields[] = 'price_usd = ?';
     $vals[]   = $newPrice;
-    // price_per_unit is computed at write-time, not a generated column.
-    $fields[] = 'price_per_unit = ?';
-    $vals[]   = round($newPrice / (float)$price['numeric_value'], 6);
 }
+$newKit = null;
 if (array_key_exists('kit_vial_count', $d) && (int)$d['kit_vial_count'] >= 1 && (int)$d['kit_vial_count'] <= 255) {
+    $newKit = (int)$d['kit_vial_count'];
     $fields[] = 'kit_vial_count = ?';
-    $vals[]   = (int)$d['kit_vial_count'];
+    $vals[]   = $newKit;
+}
+// price_per_unit is computed at write-time (not a generated column) and depends
+// on both price and kit_vial_count — recompute if either one changed.
+if ($newPrice !== null || $newKit !== null) {
+    $fields[] = 'price_per_unit = ?';
+    $vals[]   = pricePerUnit(
+        $newPrice ?? (float)$price['price_usd'],
+        $newKit   ?? (int)$price['kit_vial_count'],
+        (float)$price['numeric_value']
+    );
 }
 if (array_key_exists('tier_kit_size', $d) && (int)$d['tier_kit_size'] >= 1 && (int)$d['tier_kit_size'] <= 255) {
     $fields[] = 'tier_kit_size = ?';
