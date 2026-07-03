@@ -90,9 +90,15 @@ try {
     // candidate_product_id was computed at file-processing time, before this
     // review session started — it can't know about a product an earlier
     // approval in the same batch just created (e.g. NAD+ 100mg approved,
-    // then NAD+ 500mg's stale candidate is still null). Re-check for an
-    // exact name match right now rather than trusting the stale value, or
-    // this throws on pc_products.canonical_name's UNIQUE constraint.
+    // then NAD+ 500mg's stale candidate is still null), and it can't know if
+    // that product was since merged away (products/merge.php deletes the
+    // loser). Confirm the id still exists before trusting it, or this trips
+    // pc_specifications' FK constraint instead of pc_products' UNIQUE one.
+    if ($productId) {
+        $exists = $pdo->prepare('SELECT 1 FROM pc_products WHERE id = ?');
+        $exists->execute([$productId]);
+        if (!$exists->fetchColumn()) $productId = null;
+    }
     if (!$productId) $productId = findExactProductMatch($pdo, $name) ?? createProduct($pdo, $name);
 
     $specId = findOrCreateSpec($pdo, $productId, $label, $value, $unit);
