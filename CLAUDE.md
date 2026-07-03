@@ -47,8 +47,9 @@ source of truth: `Obsidian_pep_pricing_tool/wiki/entities/phase-roadmap.md` → 
 not here. Item numbers there are stable references (retire an item by striking it, not
 renumbering).
 
-Caveat: the wiki is local-only (gitignored), so the backlog is **not** in this repo — a
-fresh clone or a cloud agent without this machine's vault won't have it.
+The wiki vault is tracked in this repo (`Obsidian_pep_pricing_tool/`, only `.obsidian/`
+editor state is ignored), so the backlog travels with a clone and is available to cloud
+agents — edit it there and commit like any other file.
 
 ## Wiki / Knowledge Base
 

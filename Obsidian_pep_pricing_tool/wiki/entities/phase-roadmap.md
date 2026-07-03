@@ -44,8 +44,8 @@ Built:
 > **This is the canonical project backlog.** `CLAUDE.md` points here — add, re-prioritize,
 > and mark items done *here*, not there. Item numbers are stable references (commit messages,
 > memory, and analyses cite "#2", "#10", etc.), so retire an item by striking it, not renumbering.
-> The wiki is local-only (gitignored), so this list is **not** in the pushed repo — this machine's
-> vault is the only copy.
+> The wiki vault is tracked in git (only `.obsidian/` editor state is ignored), so this list
+> travels with the repo — version-controlled, backed up, and available to fresh clones and cloud agents.
 
 1. ~~**Spec sorting**~~ — **RESOLVED 2026-07-03** (see Resolved below).
 2. **`price_per_unit` kit-vial-count factor — write-path fix shipped 2026-07-03; one-time all-vendors backfill still pending.** All three write paths (`price_import.php`, `prices/update.php`, `products/spec_update.php`) compute $/mg through a shared `pricePerUnit()` helper in `helpers.php` = `price_usd / (kit_vial_count * numeric_value)`, zero-denominator guarded; `prices/update.php` also recomputes when `kit_vial_count` alone changes. An admin per-vendor **Recalculate $/unit** button (`POST /vendors/{id}/recalc-prices`) is live on the Inventory tab. **Remaining:** every price row written before the fix still holds the old inflated $/unit until its vendor is recalculated, or run once: `UPDATE pc_prices pr JOIN pc_specifications s ON s.id = pr.specification_id SET pr.price_per_unit = ROUND(pr.price_usd / (GREATEST(pr.kit_vial_count,1) * s.numeric_value), 6) WHERE s.numeric_value > 0`. (User is handling the backfill.) See [[wiki/analyses/2026-07-03-blueprint-vs-actual]].
