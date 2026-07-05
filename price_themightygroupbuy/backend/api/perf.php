@@ -4,7 +4,9 @@ require_once dirname(__DIR__, 1) . '/config.php';
 require_once dirname(__DIR__, 1) . '/helpers.php';
 
 method('POST');
-// Perf logging is best-effort; don't require auth (logged-out pageviews matter too)
+// Perf logging is best-effort; don't require auth (logged-out pageviews matter too),
+// but it's the one public write endpoint every other one rate-limits — cap it too.
+rateLimit('perf_' . ($_SERVER['REMOTE_ADDR'] ?? ''), 60, 300);
 $authHeader = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
 $userId     = null;
 if (preg_match('/^Bearer\s+(\S+)$/i', $authHeader, $m)) {

@@ -28,13 +28,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 $d    = input();
 $name = trim($d['canonical_name'] ?? '');
 if (mb_strlen($name) < 2) jsonResponse(['error' => 'Canonical name is required.'], 422);
-$category = in_array($d['category'] ?? '', ['glp1','peptide','hormone','blend','consumable','other'], true)
-    ? $d['category'] : 'peptide';
 
-$stmt = db()->prepare('INSERT INTO pc_products (canonical_name, category, notes) VALUES (?,?,?)');
-$stmt->execute([$name, $category, trim($d['notes'] ?? '') ?: null]);
+$stmt = db()->prepare('INSERT INTO pc_products (canonical_name, notes) VALUES (?,?)');
+$stmt->execute([$name, trim($d['notes'] ?? '') ?: null]);
 $id = (int)db()->lastInsertId();
+
+$classificationIds = array_values(array_unique(array_map('intval', (array)($d['classification_ids'] ?? []))));
+if ($classificationIds) {
+    $inClause = implode(',', array_fill(0, count($classificationIds), '?'));
+    $ins = db()->prepare("INSERT IGNORE INTO pc_product_classifications (product_id, classification_id) SELECT ?, id FROM pc_classifications WHERE id IN ($inClause)");
+    $ins->execute([$id, ...$classificationIds]);
+}
+
 cacheBust('admin_products');
+cacheBust('pricing_data');
 logAdminAction((int)$admin['id'], 'create_product', ['product_id' => $id, 'canonical_name' => $name]);
 
 jsonResponse(['id' => $id], 201);

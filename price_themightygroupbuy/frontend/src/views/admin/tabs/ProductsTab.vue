@@ -7,20 +7,21 @@
     <div v-if="showAdd" class="card add-form">
       <div class="field-row">
         <input v-model="form.canonical_name" placeholder="Canonical name *" />
-        <select v-model="form.category">
-          <option value="peptide">Peptide</option>
-          <option value="glp1">GLP-1</option>
-          <option value="hormone">Hormone</option>
-          <option value="blend">Blend</option>
-          <option value="consumable">Consumable</option>
-          <option value="other">Other</option>
+      </div>
+      <div class="field-row">
+        <span v-for="cid in form.classification_ids" :key="cid" class="chip">
+          {{ classificationName(cid) }} <button class="chip-x" @click="form.classification_ids = form.classification_ids.filter(id => id !== cid)">×</button>
+        </span>
+        <select @change="form.classification_ids.push(+$event.target.value); $event.target.value=''">
+          <option value="">+ classification…</option>
+          <option v-for="c in classifications.filter(c => !form.classification_ids.includes(c.id))" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
       </div>
       <button class="btn btn-primary btn-sm" @click="create">Create</button>
     </div>
 
     <table class="admin-table">
-      <thead><tr><th>Name</th><th>Category</th><th>Aliases</th><th>Vendors</th><th>Merge into</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Classifications</th><th>Aliases</th><th>Vendors</th><th>Merge into</th><th></th></tr></thead>
       <tbody>
         <template v-for="p in products" :key="p.id">
         <tr>
@@ -29,15 +30,19 @@
             <template v-else>{{ p.canonical_name }}</template>
           </td>
           <td>
-            <select v-if="editingId === p.id" v-model="editForm.category">
-              <option value="peptide">Peptide</option>
-              <option value="glp1">GLP-1</option>
-              <option value="hormone">Hormone</option>
-              <option value="blend">Blend</option>
-              <option value="consumable">Consumable</option>
-              <option value="other">Other</option>
-            </select>
-            <template v-else>{{ p.category }}</template>
+            <template v-if="editingId === p.id">
+              <span v-for="cid in editForm.classification_ids" :key="cid" class="chip">
+                {{ classificationName(cid) }} <button class="chip-x" @click="editForm.classification_ids = editForm.classification_ids.filter(id => id !== cid)">×</button>
+              </span>
+              <select @change="editForm.classification_ids.push(+$event.target.value); $event.target.value=''">
+                <option value="">+ classification…</option>
+                <option v-for="c in classifications.filter(c => !editForm.classification_ids.includes(c.id))" :key="c.id" :value="c.id">{{ c.name }}</option>
+              </select>
+              <button class="btn btn-ghost btn-sm" @click="addNewClassification">+ new tag</button>
+            </template>
+            <template v-else>
+              <span v-for="c in classificationsFor(p)" :key="c.id" class="chip">{{ c.name }}</span>
+            </template>
           </td>
           <td>
             <span v-for="a in aliasesFor(p)" :key="a.id" class="chip">
@@ -73,9 +78,13 @@
                 <option value="other">other</option>
               </select>
               <input v-model="s.spec_label" style="width:130px" placeholder="label" @change="saveSpec(s)" />
-              <select @change="moveSpec(s, $event.target.value); $event.target.value=''">
+              <select style="width:160px" @change="moveSpec(s, $event.target.value); $event.target.value=''">
                 <option value="">Move to…</option>
                 <option v-for="o in products.filter(o => o.id !== p.id)" :key="o.id" :value="o.id">{{ o.canonical_name }}</option>
+              </select>
+              <select style="width:160px" @change="mergeSpec(s, $event.target.value); $event.target.value=''">
+                <option value="">Merge into…</option>
+                <option v-for="o in specsFor(p).filter(o => o.id !== s.id)" :key="o.id" :value="o.id">{{ o.spec_label }}</option>
               </select>
               <span class="text-muted text-sm">{{ s.prices?.length || 0 }} active vendor price(s)</span>
             </div>
@@ -92,11 +101,12 @@ import { ref, reactive, onMounted } from 'vue'
 import { get, post, put, del } from '@/utils/api.js'
 
 const products = ref([])
-const detail   = reactive({}) // productId -> { aliases }
+const detail   = reactive({}) // productId -> { aliases, classifications, specifications }
+const classifications = ref([]) // all available tags, for the pickers
 const showAdd  = ref(false)
-const form     = reactive({ canonical_name: '', category: 'peptide' })
+const form     = reactive({ canonical_name: '', classification_ids: [] })
 const editingId = ref(null)
-const editForm   = reactive({ canonical_name: '', category: '' })
+const editForm   = reactive({ canonical_name: '', classification_ids: [] })
 
 async function load() {
   const res = await get('/api/products')
@@ -106,15 +116,30 @@ async function load() {
     detail[p.id] = d
   }
 }
-onMounted(load)
+async function loadClassifications() {
+  const res = await get('/api/classifications')
+  classifications.value = res.classifications
+}
+onMounted(() => { load(); loadClassifications() })
 
 function aliasesFor(p) { return detail[p.id]?.aliases || [] }
 function specsFor(p) { return detail[p.id]?.specifications || [] }
+function classificationsFor(p) { return detail[p.id]?.classifications || [] }
+function classificationName(id) { return classifications.value.find(c => c.id === id)?.name || '…' }
+
+async function addNewClassification() {
+  const name = prompt('New classification name:')
+  if (!name) return
+  const res = await post('/api/classifications', { name })
+  await loadClassifications()
+  editForm.classification_ids.push(res.id)
+}
 
 async function create() {
   if (!form.canonical_name.trim()) return
   await post('/api/products', { ...form })
   form.canonical_name = ''
+  form.classification_ids = []
   showAdd.value = false
   await load()
 }
@@ -122,14 +147,14 @@ async function create() {
 function startEdit(p) {
   editingId.value = p.id
   editForm.canonical_name = p.canonical_name
-  editForm.category = p.category
+  editForm.classification_ids = classificationsFor(p).map(c => c.id)
 }
 function cancelEdit() {
   editingId.value = null
 }
 async function saveEdit(p) {
   if (!editForm.canonical_name.trim()) return
-  await put(`/api/products/${p.id}`, { canonical_name: editForm.canonical_name, category: editForm.category })
+  await put(`/api/products/${p.id}`, { canonical_name: editForm.canonical_name, classification_ids: editForm.classification_ids })
   editingId.value = null
   await load()
 }
@@ -148,6 +173,18 @@ async function moveSpec(spec, targetProductId) {
   if (!targetProductId) return
   try {
     await post(`/api/products/specifications/${spec.id}/move`, { product_id: targetProductId })
+  } catch (err) {
+    alert(err.message)
+    return
+  }
+  await load()
+}
+
+async function mergeSpec(spec, targetSpecId) {
+  if (!targetSpecId) return
+  if (!confirm(`Merge "${spec.spec_label}" into the selected spec? This cannot be undone.`)) return
+  try {
+    await post(`/api/products/specifications/${spec.id}/merge`, { into: targetSpecId })
   } catch (err) {
     alert(err.message)
     return
@@ -179,14 +216,15 @@ async function merge(loser, winnerId) {
 .field-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
-/* Only Name/Category/Aliases need to anchor to the top when Aliases wraps
+/* Only Name/Classifications/Aliases need to anchor to the top when Aliases wraps
    onto multiple lines — Vendors/Merge/Edit read better vertically centered
    in the row rather than pinned to the top with dead space underneath. */
 .admin-table td:nth-child(-n+3) { vertical-align: top; }
 .admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 .chip { display: inline-flex; align-items: center; gap: 3px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; font-size: 11.5px; margin: 0 4px 4px 0; }
 .chip-x { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 0; }
-.actions { display: flex; gap: 4px; white-space: nowrap; }
+.actions { white-space: nowrap; }
+.actions button + button { margin-left: 4px; }
 .specs-row td { background: var(--surface-alt); }
 .specs-row .label-sm { color: var(--text-muted); font-size: 11px; text-transform: uppercase; margin-bottom: 8px; }
 .spec-block { display: flex; align-items: center; gap: 6px; padding: 4px 0; }

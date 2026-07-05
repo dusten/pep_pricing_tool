@@ -13,13 +13,17 @@
           <td class="text-sm">{{ f.original_filename }}</td>
           <td>{{ f.file_type }}</td>
           <td><span :class="['badge', statusBadge(f.processing_status)]">{{ f.processing_status }}</span></td>
-          <td class="text-muted text-sm notes-cell">{{ f.processing_notes || '—' }}</td>
+          <td class="text-muted text-sm notes-cell">
+            <button v-if="f.processing_notes" class="notes-btn" @click="notesFile = f">{{ truncateNotes(f.processing_notes) }}</button>
+            <span v-else>—</span>
+          </td>
           <td class="actions">
             <button class="btn btn-ghost btn-sm" :disabled="f.processing_status === 'processing'" @click="process(f)">
               {{ f.processing_status === 'processing' ? 'Processing…' : 'Process' }}
             </button>
             <button v-if="f.file_type !== 'zip'" class="btn btn-ghost btn-sm" @click="viewFile(f)">View</button>
             <button class="btn btn-ghost btn-sm" @click="downloadFile(f)">Download</button>
+            <button class="btn btn-ghost btn-sm" @click="openManual(f)">Manual JSON</button>
             <button class="btn btn-ghost btn-sm" @click="remove(f)">Delete</button>
           </td>
         </tr>
@@ -39,6 +43,37 @@
           </div>
           <pre v-else-if="viewText !== null" class="view-text">{{ viewText }}</pre>
           <p v-else class="text-muted">No inline preview for {{ viewing.file_type }} files — use Download.</p>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="manualFile" class="view-backdrop" @click.self="manualFile = null">
+      <div class="view-card manual-card">
+        <div class="view-header">
+          <span class="text-sm">Manual JSON — {{ manualFile.original_filename }}</span>
+          <button class="btn btn-ghost btn-sm" @click="manualFile = null">✕ Close</button>
+        </div>
+        <div class="view-body manual-body">
+          <p class="text-muted text-sm">Paste an extraction result from another tool (Grok, hand-corrected JSON, etc.) — same shape as Claude's own output: an object with a <code>prices</code> array. This commits through the exact same logic a real "Process" click uses, without calling Claude.</p>
+          <textarea v-model="manualJson" class="manual-textarea" placeholder='{"contact": {}, "warnings": [], "prices": [{"canonical_name":"","spec_label":"","numeric_value":0,"unit":"mg","price_usd":0,"kit_vial_count":10,"tier_kit_size":1,"vendor_sku":"","non_standard_kit":false,"is_raw_material":false}]}'></textarea>
+          <div class="manual-actions">
+            <button class="btn btn-primary btn-sm" :disabled="!manualJson.trim() || manualSubmitting" @click="submitManual">
+              {{ manualSubmitting ? 'Submitting…' : 'Submit' }}
+            </button>
+            <span v-if="manualNote" class="text-sm">{{ manualNote }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="notesFile" class="view-backdrop" @click.self="notesFile = null">
+      <div class="view-card notes-card">
+        <div class="view-header">
+          <span class="text-sm">Notes — {{ notesFile.original_filename }}</span>
+          <button class="btn btn-ghost btn-sm" @click="notesFile = null">✕ Close</button>
+        </div>
+        <div class="view-body">
+          <pre class="view-text">{{ notesFile.processing_notes }}</pre>
         </div>
       </div>
     </div>
@@ -112,7 +147,7 @@ onMounted(() => document.addEventListener('keydown', onKeydown))
 onUnmounted(() => document.removeEventListener('keydown', onKeydown))
 
 function statusBadge(status) {
-  return { complete: 'badge-pro', failed: 'badge-free', processing: 'badge-advanced', pending: 'badge-free' }[status] || 'badge-free'
+  return { complete: 'badge-pro', failed: 'badge-free', processing: 'badge-advanced', pending: 'badge-free', skipped_duplicate: 'badge-pro' }[status] || 'badge-free'
 }
 
 async function processAll() {
@@ -143,6 +178,35 @@ async function process(f) {
     await load()
   }
 }
+const manualFile       = ref(null)
+const manualJson       = ref('')
+const manualSubmitting = ref(false)
+const manualNote       = ref('')
+
+const notesFile = ref(null)
+function truncateNotes(notes) {
+  return notes.length > 255 ? notes.slice(0, 255) + '…' : notes
+}
+
+function openManual(f) {
+  manualFile.value = f
+  manualJson.value = ''
+  manualNote.value = ''
+}
+async function submitManual() {
+  manualSubmitting.value = true
+  manualNote.value = ''
+  try {
+    const res = await post(`/api/files/${manualFile.value.id}/manual-process`, { json: manualJson.value })
+    manualNote.value = res.message
+    await load()
+  } catch (err) {
+    manualNote.value = err.message
+  } finally {
+    manualSubmitting.value = false
+  }
+}
+
 async function remove(f) {
   if (!confirm(`Remove the record for "${f.original_filename}"? The stored file stays on disk.`)) return
   await del(`/api/files/${f.id}`)
@@ -210,7 +274,14 @@ function closeView() {
 .admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
 .admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 .notes-cell { max-width: 260px; }
-.actions { display: flex; gap: 4px; white-space: nowrap; }
+.notes-btn {
+  background: none; border: none; padding: 0; font: inherit; color: inherit; text-align: left;
+  cursor: pointer; text-decoration: underline; text-decoration-color: transparent; white-space: normal;
+}
+.notes-btn:hover { text-decoration-color: currentColor; }
+.notes-card { height: min(70vh, 500px); }
+.actions { white-space: nowrap; }
+.actions button + button { margin-left: 4px; }
 
 .view-backdrop {
   position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6);
@@ -238,4 +309,9 @@ function closeView() {
 }
 .pdf-pages canvas { max-width: 100%; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
 .view-text { align-self: stretch; white-space: pre-wrap; font-size: 12px; font-family: monospace; padding: 8px; }
+
+.manual-card { height: min(85vh, 700px); }
+.manual-body { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 10px; }
+.manual-textarea { flex: 1; font-family: monospace; font-size: 12px; resize: none; min-height: 300px; }
+.manual-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 </style>

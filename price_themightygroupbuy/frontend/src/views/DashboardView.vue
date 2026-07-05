@@ -15,6 +15,38 @@
         </RouterLink>
       </div>
 
+      <!-- Shopping cart -->
+      <div class="card cart-card">
+        <div class="cart-card-header">
+          <h3>Shopping cart</h3>
+          <RouterLink to="/cart" class="btn btn-ghost btn-sm">Open cart</RouterLink>
+        </div>
+        <p v-if="!cart.items.length" class="text-muted text-sm" style="margin:0">
+          Your cart is empty. Add items from <RouterLink to="/comparison">Comparison</RouterLink>.
+        </p>
+        <p v-else-if="cart.cheapestFullCoverage" style="margin:0;font-size:13.5px">
+          {{ cart.items.length }} item{{ cart.items.length !== 1 ? 's' : '' }} — cheapest is
+          <strong>{{ cart.cheapestFullCoverage.vendor_name }}</strong> at
+          <strong>${{ cart.cheapestFullCoverage.total_usd.toFixed(2) }}</strong>
+        </p>
+        <p v-else style="margin:0;font-size:13.5px;color:var(--text-secondary)">
+          {{ cart.items.length }} item{{ cart.items.length !== 1 ? 's' : '' }} — no single vendor carries everything yet.
+        </p>
+      </div>
+
+      <!-- Buy This Stack -->
+      <div v-if="stacks.length" class="card">
+        <h3 style="margin:0 0 10px;font-size:14px">Buy This Stack</h3>
+        <div v-for="s in stacks" :key="s.id" class="stack-row">
+          <div>
+            <strong>{{ s.name }}</strong>
+            <span class="text-muted text-sm">{{ s.item_count }} item{{ s.item_count !== 1 ? 's' : '' }}</span>
+            <p v-if="s.description" class="text-muted text-sm" style="margin:2px 0 0">{{ s.description }}</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" @click="addStackToCart(s.id)">Add to cart</button>
+        </div>
+      </div>
+
       <!-- Quota card (free tier only) -->
       <div v-if="quota.isFree && quota.data" class="quota-card card">
         <div class="quota-header">
@@ -78,19 +110,32 @@ import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import { useAuthStore }  from '@/stores/auth.js'
 import { useQuotaStore } from '@/stores/quota.js'
-import { get } from '@/utils/api.js'
+import { useCartStore }  from '@/stores/cart.js'
+import { get, post } from '@/utils/api.js'
 
 const auth  = useAuthStore()
 const quota = useQuotaStore()
+const cart  = useCartStore()
 
-const stats = ref({ vendors: null, products: null, prices: null })
+const stats  = ref({ vendors: null, products: null, prices: null })
+const stacks = ref([])
 
 onMounted(async () => {
   quota.fetch()
+  cart.load()
   try {
     stats.value = await get('/api/stats')
   } catch { /* leave the '—' placeholders */ }
+  try {
+    stacks.value = (await get('/api/stacks')).stacks
+  } catch { /* best effort */ }
 })
+
+async function addStackToCart(stackId) {
+  const res = await post(`/api/cart/add-stack/${stackId}`)
+  cart.items   = res.items
+  cart.vendors = res.vendors
+}
 
 const pct = computed(() => {
   if (!quota.data || !quota.limit.value) return 0
@@ -124,6 +169,12 @@ const resetsIn = computed(() => {
 
 .quota-card h3  { margin: 0; font-size: 14px; }
 .quota-header   { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+
+.cart-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cart-card-header h3 { margin: 0; font-size: 14px; }
+
+.stack-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+.stack-row:last-child { border-bottom: none; }
 
 .meter-bar { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; }
 .meter-fill { height: 100%; border-radius: 99px; transition: width .4s; }

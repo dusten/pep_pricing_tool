@@ -119,19 +119,28 @@ sync_files() {
 
 # ── Post-deploy smoke check ────────────────────────────────────
 # Confirms the deploy actually landed, not just that rsync/ssh exited 0.
-# TODO(backlog): replace the app-settings check with a real /api/health
-# endpoint that also exercises DB writes, Memcached, and email config —
-# see CLAUDE.md backlog item 3.
+# /api/health exercises DB, Memcached, and mail config directly instead of
+# just proving the homepage/API respond.
 smoke_check() {
   echo "▶ Smoke check…"
-  local home_code api_code
+  local home_code health_body
   home_code=$(curl -s -o /dev/null -w '%{http_code}' "https://$REMOTE_HOST/")
-  api_code=$(curl -s -o /dev/null -w '%{http_code}' "https://$REMOTE_HOST/api/app-settings")
+  health_body=$(curl -s "https://$REMOTE_HOST/api/health")
 
-  if [[ "$home_code" == "200" && "$api_code" == "200" ]]; then
-    echo "✓ Smoke check passed (homepage $home_code, api $api_code)"
+  local db_status mc_status email_status
+  db_status=$(grep -o '"db":"[a-z]*"'        <<< "$health_body" | cut -d'"' -f4)
+  mc_status=$(grep -o '"memcached":"[a-z]*"' <<< "$health_body" | cut -d'"' -f4)
+  email_status=$(grep -o '"email":"[a-z]*"' <<< "$health_body" | cut -d'"' -f4)
+
+  echo "  homepage:  $([[ "$home_code" == "200" ]] && echo "✓ $home_code" || echo "✗ $home_code")"
+  echo "  db:        $([[ "$db_status" == "ok" ]] && echo "✓" || echo "✗ ${db_status:-no response}")"
+  echo "  memcached: $([[ "$mc_status" == "ok" ]] && echo "✓" || echo "✗ ${mc_status:-no response}")"
+  echo "  email:     $([[ "$email_status" == "ok" ]] && echo "✓" || echo "✗ ${email_status:-no response}")"
+
+  if [[ "$home_code" == "200" && "$db_status" == "ok" && "$mc_status" == "ok" && "$email_status" == "ok" ]]; then
+    echo "✓ Smoke check passed"
   else
-    echo "✗ Smoke check FAILED (homepage $home_code, api $api_code) — deploy may not have landed cleanly" >&2
+    echo "✗ Smoke check FAILED — deploy may not have landed cleanly" >&2
     exit 1
   fi
 }

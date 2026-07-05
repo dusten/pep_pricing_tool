@@ -36,8 +36,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
     unset($spec);
 
+    $classifications = db()->prepare(
+        'SELECT c.id, c.name FROM pc_classifications c
+         JOIN pc_product_classifications pc ON pc.classification_id = c.id
+         WHERE pc.product_id = ? ORDER BY c.name'
+    );
+    $classifications->execute([$id]);
+
     $product['aliases']       = $aliases->fetchAll();
     $product['specifications'] = $specRows;
+    $product['classifications'] = $classifications->fetchAll();
     jsonResponse($product);
 }
 
@@ -49,10 +57,6 @@ if (array_key_exists('canonical_name', $d) && mb_strlen(trim($d['canonical_name'
     $fields[] = 'canonical_name = ?';
     $vals[]   = trim($d['canonical_name']);
 }
-if (array_key_exists('category', $d) && in_array($d['category'], ['glp1','peptide','hormone','blend','consumable','other'], true)) {
-    $fields[] = 'category = ?';
-    $vals[]   = $d['category'];
-}
 if (array_key_exists('notes', $d)) {
     $fields[] = 'notes = ?';
     $vals[]   = trim((string)$d['notes']) ?: null;
@@ -60,8 +64,24 @@ if (array_key_exists('notes', $d)) {
 if ($fields) {
     $vals[] = $id;
     db()->prepare('UPDATE pc_products SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);
+}
+
+// classification_ids is a full replace-all, same pattern as aliases — the
+// caller always sends the complete desired set, not a diff.
+if (array_key_exists('classification_ids', $d)) {
+    $classificationIds = array_values(array_unique(array_map('intval', (array)$d['classification_ids'])));
+    db()->prepare('DELETE FROM pc_product_classifications WHERE product_id = ?')->execute([$id]);
+    if ($classificationIds) {
+        $inClause = implode(',', array_fill(0, count($classificationIds), '?'));
+        $ins = db()->prepare("INSERT IGNORE INTO pc_product_classifications (product_id, classification_id) SELECT ?, id FROM pc_classifications WHERE id IN ($inClause)");
+        $ins->execute([$id, ...$classificationIds]);
+    }
+    $fields[] = 'classification_ids'; // for the audit-log field list below
+}
+
+if ($fields) {
     cacheBust('admin_products');
-    cacheBust('pricing_data'); // canonical_name/category feed comparison results
+    cacheBust('pricing_data'); // canonical_name/classifications feed comparison results
     logAdminAction((int)$admin['id'], 'update_product', ['product_id' => $id, 'fields' => array_keys($d)]);
 }
 

@@ -7,7 +7,11 @@ const USER_KEY  = 'pc_user'
 
 export const useAuthStore = defineStore('auth', () => {
   const token = ref(localStorage.getItem(TOKEN_KEY))
-  const user  = ref(JSON.parse(localStorage.getItem(USER_KEY) || 'null'))
+  // A corrupted/invalid stored value (not just absent) must not hard-crash
+  // the whole app on load — treat it as logged-out instead.
+  let storedUser = null
+  try { storedUser = JSON.parse(localStorage.getItem(USER_KEY) || 'null') } catch { /* corrupted, treat as logged out */ }
+  const user = ref(storedUser)
 
   // Wire token getter into the API utility
   setTokenGetter(() => token.value)

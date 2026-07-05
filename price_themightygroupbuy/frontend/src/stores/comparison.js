@@ -6,6 +6,8 @@ export const useComparisonStore = defineStore('comparison', () => {
   const rows       = ref([])
   const vendors     = ref([])
   const products    = ref([])
+  const classifications = ref([])
+  const tiers       = ref([])
   const loading     = ref(false)
   const error       = ref(null)
   const quotaBlocked = ref(null) // { message, resets_at } when free-tier limit hit
@@ -16,19 +18,28 @@ export const useComparisonStore = defineStore('comparison', () => {
       const res = await get('/api/comparison/filters')
       vendors.value  = res.vendors
       products.value = res.products
+      classifications.value = res.classifications
+      tiers.value = res.tiers
     } catch { /* best effort */ }
+  }
+
+  function buildParams(filters) {
+    const params = new URLSearchParams()
+    ;(filters.vendors  || []).forEach(v => params.append('vendors[]', v))
+    ;(filters.products || []).forEach(p => params.append('products[]', p))
+    ;(filters.classificationIds || []).forEach(c => params.append('classification_ids[]', c))
+    if (filters.multiOnly)       params.set('multi_only', '1')
+    if (filters.verifiedOnly)    params.set('verified_only', '1')
+    if (filters.rawMaterialOnly) params.set('raw_material_only', '1')
+    if (filters.tier)            params.set('tier', filters.tier)
+    return params
   }
 
   async function search(filters) {
     loading.value     = true
     error.value        = null
     quotaBlocked.value = null
-    const params = new URLSearchParams()
-    ;(filters.vendors  || []).forEach(v => params.append('vendors[]', v))
-    ;(filters.products || []).forEach(p => params.append('products[]', p))
-    if (filters.category)     params.set('category', filters.category)
-    if (filters.multiOnly)    params.set('multi_only', '1')
-    if (filters.verifiedOnly) params.set('verified_only', '1')
+    const params = buildParams(filters)
 
     try {
       const res = await get(`/api/comparison?${params.toString()}`)
@@ -45,5 +56,5 @@ export const useComparisonStore = defineStore('comparison', () => {
     }
   }
 
-  return { rows, vendors, products, loading, error, quotaBlocked, loadFilters, search }
+  return { rows, vendors, products, classifications, tiers, loading, error, quotaBlocked, loadFilters, search, buildParams }
 })

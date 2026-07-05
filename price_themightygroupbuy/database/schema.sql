@@ -172,7 +172,6 @@ CREATE TABLE IF NOT EXISTS pc_app_settings (
 CREATE TABLE IF NOT EXISTS pc_products (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   canonical_name VARCHAR(200) NOT NULL UNIQUE,
-  category       ENUM('glp1','peptide','hormone','blend','consumable','other') NOT NULL DEFAULT 'peptide',
   notes          TEXT NULL,
   created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -185,15 +184,66 @@ CREATE TABLE IF NOT EXISTS pc_product_aliases (
   FOREIGN KEY (product_id) REFERENCES pc_products(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Multi-select therapeutic/use-case tags (backlog #16) — replaces the
+-- single-select pc_products.category enum (dropped; see migration 017).
+CREATE TABLE IF NOT EXISTS pc_classifications (
+  id   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL UNIQUE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pc_product_classifications (
+  product_id        INT UNSIGNED NOT NULL,
+  classification_id INT UNSIGNED NOT NULL,
+  PRIMARY KEY (product_id, classification_id),
+  FOREIGN KEY (product_id)        REFERENCES pc_products(id)        ON DELETE CASCADE,
+  FOREIGN KEY (classification_id) REFERENCES pc_classifications(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS pc_specifications (
-  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  product_id    INT UNSIGNED NOT NULL,
-  spec_label    VARCHAR(50)  NOT NULL,        -- display string e.g. "5mg"
-  numeric_value DECIMAL(10,4) NOT NULL,       -- normalized value (mcg→mg, g→mg)
-  unit          ENUM('mg','iu','ml','other') NOT NULL,
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  product_id      INT UNSIGNED NOT NULL,
+  spec_label      VARCHAR(50)  NOT NULL,        -- display string e.g. "5mg"
+  numeric_value   DECIMAL(10,4) NOT NULL,       -- normalized value (mcg→mg, g→mg)
+  unit            ENUM('mg','iu','ml','other') NOT NULL,
+  is_raw_material BOOLEAN NOT NULL DEFAULT FALSE, -- true for bulk/raw powder specs (e.g. "1g") vs a finished vial dose — lives on the spec, not a product-level classification, since one product can have both forms
   UNIQUE KEY (product_id, spec_label),
   FOREIGN KEY (product_id) REFERENCES pc_products(id) ON DELETE CASCADE,
   INDEX (product_id, numeric_value)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Shopping cart (backlog #16, phase 2) — one row per (user, product, spec),
+-- presence not quantity; v1 is "1 kit of this spec" only.
+CREATE TABLE IF NOT EXISTS pc_cart_items (
+  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id           INT UNSIGNED NOT NULL,
+  product_id        INT UNSIGNED NOT NULL,
+  specification_id  INT UNSIGNED NOT NULL,
+  added_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_cart_item (user_id, product_id, specification_id),
+  FOREIGN KEY (user_id)          REFERENCES pc_users(id)          ON DELETE CASCADE,
+  FOREIGN KEY (product_id)       REFERENCES pc_products(id)       ON DELETE CASCADE,
+  FOREIGN KEY (specification_id) REFERENCES pc_specifications(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- "Buy This Stack" (backlog #16, phase 3) — admin-curated bundles that
+-- bulk-add their components to a user's cart in one click.
+CREATE TABLE IF NOT EXISTS pc_stacks (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name        VARCHAR(150) NOT NULL,
+  description TEXT NULL,
+  is_active   BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS pc_stack_items (
+  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  stack_id          INT UNSIGNED NOT NULL,
+  product_id        INT UNSIGNED NOT NULL,
+  specification_id  INT UNSIGNED NOT NULL,
+  UNIQUE KEY uq_stack_item (stack_id, product_id, specification_id),
+  FOREIGN KEY (stack_id)          REFERENCES pc_stacks(id)          ON DELETE CASCADE,
+  FOREIGN KEY (product_id)        REFERENCES pc_products(id)        ON DELETE CASCADE,
+  FOREIGN KEY (specification_id)  REFERENCES pc_specifications(id)  ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pc_vendors (
@@ -239,15 +289,40 @@ CREATE TABLE IF NOT EXISTS pc_vendor_files (
   file_type         ENUM('pdf','xlsx','csv','image','zip') NOT NULL,
   category          ENUM('price_list','coa','other') NOT NULL DEFAULT 'price_list',
   file_size_bytes   INT UNSIGNED NULL,
+  content_hash      CHAR(64) NULL,          -- SHA-256 of the raw file bytes, per-vendor dedup (backlog #14)
   uploaded_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   processed_at      DATETIME NULL,
-  processing_status ENUM('pending','processing','complete','failed') NOT NULL DEFAULT 'pending',
+  processing_status ENUM('pending','processing','complete','failed','skipped_duplicate') NOT NULL DEFAULT 'pending',
   processing_notes  TEXT NULL,
   is_current        BOOLEAN NOT NULL DEFAULT TRUE,
   FOREIGN KEY (vendor_id) REFERENCES pc_vendors(id) ON DELETE CASCADE,
   INDEX (vendor_id, is_current),
   INDEX (vendor_id, category),
-  INDEX (processing_status)
+  INDEX (processing_status),
+  INDEX (vendor_id, content_hash)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Full history of every raw Claude API call (backlog #24) — a JSON-parse
+-- failure (or just auditing what Claude actually said) never needs a fresh,
+-- costly API call again to inspect the output.
+CREATE TABLE IF NOT EXISTS pc_claude_call_log (
+  id                          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  vendor_file_id              INT UNSIGNED NULL,
+  call_type                   ENUM('extraction','vendor_contact_parse') NOT NULL,
+  model                       VARCHAR(50) NOT NULL,
+  http_status                 SMALLINT UNSIGNED NULL,
+  stop_reason                 VARCHAR(50) NULL,
+  input_tokens                INT UNSIGNED NULL,
+  output_tokens                INT UNSIGNED NULL,
+  cache_creation_input_tokens INT UNSIGNED NULL,
+  cache_read_input_tokens     INT UNSIGNED NULL,
+  raw_response_text           LONGTEXT NULL,
+  parsed_ok                   BOOLEAN NOT NULL DEFAULT FALSE,
+  error_message                TEXT NULL,
+  created_at                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (vendor_file_id) REFERENCES pc_vendor_files(id) ON DELETE SET NULL,
+  INDEX (vendor_file_id),
+  INDEX (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pc_prices (
@@ -257,8 +332,8 @@ CREATE TABLE IF NOT EXISTS pc_prices (
   specification_id INT UNSIGNED NOT NULL,
   price_usd        DECIMAL(10,2) NOT NULL,
   price_per_unit   DECIMAL(12,6) NOT NULL,   -- = price_usd / (kit_vial_count * specifications.numeric_value); computed in PHP via pricePerUnit()
-  kit_vial_count   TINYINT UNSIGNED NOT NULL DEFAULT 10,
-  tier_kit_size    TINYINT UNSIGNED NOT NULL DEFAULT 1,  -- minimum kit qty for this tiered-pricing column; vendor-defined, not fixed to 1/10/100
+  kit_vial_count   SMALLINT UNSIGNED NOT NULL DEFAULT 10,
+  tier_kit_size    SMALLINT UNSIGNED NOT NULL DEFAULT 1,  -- minimum kit qty for this tiered-pricing column; vendor-defined, not fixed to 1/10/100
   vendor_sku       VARCHAR(50) NULL,                     -- vendor's own catalog code for this row, e.g. "TR5", "NJ100"
   non_standard_kit BOOLEAN NOT NULL DEFAULT FALSE,
   source_file_id   INT UNSIGNED NULL,
@@ -269,6 +344,27 @@ CREATE TABLE IF NOT EXISTS pc_prices (
   FOREIGN KEY (product_id)       REFERENCES pc_products(id)      ON DELETE CASCADE,
   FOREIGN KEY (specification_id) REFERENCES pc_specifications(id) ON DELETE CASCADE,
   INDEX (product_id, specification_id, is_active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Append-only price-change ledger. No FKs on purpose — must survive a
+-- pc_prices row being cascade-deleted (spec merge/move) or a future vendor
+-- purge; IDs are denormalized and joined at read time instead.
+CREATE TABLE IF NOT EXISTS pc_price_history (
+  id                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  vendor_id          INT UNSIGNED NOT NULL,
+  product_id         INT UNSIGNED NOT NULL,
+  specification_id   INT UNSIGNED NOT NULL,
+  old_price_usd      DECIMAL(10,2) NULL,           -- NULL = brand-new price line, no prior value
+  old_price_per_unit DECIMAL(12,6) NULL,
+  old_kit_vial_count SMALLINT UNSIGNED NULL,
+  new_price_usd      DECIMAL(10,2) NOT NULL,
+  new_price_per_unit DECIMAL(12,6) NOT NULL,
+  new_kit_vial_count SMALLINT UNSIGNED NOT NULL,
+  source             ENUM('import','manual_edit') NOT NULL,
+  changed_by         INT UNSIGNED NULL,             -- admin id for manual_edit, NULL for import
+  changed_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX (vendor_id, product_id, specification_id, changed_at),
+  INDEX (changed_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pc_pending_imports (
@@ -398,11 +494,19 @@ INSERT IGNORE INTO pc_app_settings (`key`, value) VALUES
   ('annual_discount_months_free','2'),
   ('session_lifetime_days',      '30');
 
+INSERT IGNORE INTO pc_classifications (name) VALUES
+  ('Mitochondrial'), ('Weight Management'), ('Fat Loss'), ('Healing & Recovery'), ('Bioregulator'),
+  ('Growth Hormone'), ('Anti-Aging'), ('Skin & Hair'), ('Sleep & Recovery'), ('Sexual Health'),
+  ('Cognitive'), ('Cosmetic'), ('Neuroprotective'), ('Clinical'), ('Hormone Support'),
+  ('Antimicrobial'), ('Immune'), ('Growth Factors'), ('Stack'), ('Lab Supplies'),
+  ('GLP / Metabolic'), ('Repair / Healing'), ('Neuro / Mood'), ('Social / Sexual'), ('Longevity'),
+  ('GH Secretagogue (Non-HGH)'), ('Metabolic & Performance Support');
+
 -- Placeholder product so the schema ships with something to test against
-INSERT IGNORE INTO pc_products (id, canonical_name, category, notes) VALUES
-  (1, 'BPC-157',   'peptide', 'Body Protection Compound 157. Placeholder — update as needed.'),
-  (2, 'TB-500',    'peptide', 'Thymosin Beta 4 fragment. Placeholder — update as needed.'),
-  (3, 'Semaglutide','glp1',   'GLP-1 agonist. Placeholder — update as needed.');
+INSERT IGNORE INTO pc_products (id, canonical_name, notes) VALUES
+  (1, 'BPC-157',   'Body Protection Compound 157. Placeholder — update as needed.'),
+  (2, 'TB-500',    'Thymosin Beta 4 fragment. Placeholder — update as needed.'),
+  (3, 'Semaglutide','GLP-1 agonist. Placeholder — update as needed.');
 
 INSERT IGNORE INTO pc_specifications (product_id, spec_label, numeric_value, unit) VALUES
   (1, '2mg',   2.0000, 'mg'),

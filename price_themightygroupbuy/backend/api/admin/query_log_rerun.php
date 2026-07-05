@@ -23,9 +23,14 @@ $rows = runComparisonQuery(
     (array)($p['productIds'] ?? []),
     (array)($p['vendorIds']  ?? []),
     (array)($p['specIds']    ?? []),
-    $p['category'] ?? null,
+    // Older logged rows (pre-classification cutover) have `category`, not
+    // `classificationIds` — those replay with no classification filter
+    // rather than erroring; the original filter can't be reconstructed.
+    (array)($p['classificationIds'] ?? []),
     (bool)($p['multiOnly']   ?? false),
-    (bool)($p['verifiedOnly'] ?? false)
+    (bool)($p['verifiedOnly'] ?? false),
+    (int)($p['tierKitSize'] ?? 1),
+    (bool)($p['rawMaterialOnly'] ?? false)
 );
 $newDurationMs = (int)round((microtime(true) - $startedAt) * 1000);
 

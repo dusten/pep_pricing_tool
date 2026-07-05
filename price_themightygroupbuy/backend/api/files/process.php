@@ -36,9 +36,11 @@ if (vendorFileQualifiesForAsync($file)) {
 try {
     $result = processVendorFile($file, $model);
     logAdminAction((int)$admin['id'], 'process_vendor_file', [
-        'file_id' => $id, 'imported' => $result['imported'], 'pending' => $result['pending'], 'warnings' => count($result['warnings']),
+        'file_id' => $id, 'imported' => $result['imported'], 'unchanged' => $result['unchanged'],
+        'pending' => $result['pending'], 'warnings' => count($result['warnings']),
     ]);
     $msg = "Imported {$result['imported']} price rows.";
+    if ($result['unchanged'] > 0) $msg .= " ({$result['unchanged']} unchanged)";
     if ($result['pending'] > 0) $msg .= " {$result['pending']} row(s) sent to the review queue.";
     jsonResponse(['message' => $msg] + $result);
 } catch (Throwable $e) {

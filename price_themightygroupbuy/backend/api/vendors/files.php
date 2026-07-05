@@ -99,19 +99,51 @@ if ($category === 'price_list') {
     db()->prepare("UPDATE pc_vendor_files SET is_current = 0 WHERE vendor_id = ? AND category = 'price_list'")->execute([$vendorId]);
 }
 
-$processingStatus = $category === 'price_list' ? 'pending' : 'complete';
+// Backlog #14, layer 1 — a byte-identical re-upload of a price_list file
+// that was already successfully processed skips extraction outright. Scoped
+// per vendor and only to price_list (COA/other are never reprocessed, so a
+// hash check buys nothing there). Only matches a PRIOR file that was
+// actually handled ('complete'/'skipped_duplicate') — one still pending,
+// processing, or failed isn't "already handled," and the vendor may be
+// intentionally retrying.
+$contentHash = hash('sha256', (string)file_get_contents($storedPath));
+$duplicateOf = null;
+if ($category === 'price_list') {
+    $dup = db()->prepare(
+        "SELECT id, uploaded_at FROM pc_vendor_files
+         WHERE vendor_id = ? AND category = 'price_list' AND content_hash = ?
+           AND processing_status IN ('complete', 'skipped_duplicate')
+         ORDER BY uploaded_at DESC LIMIT 1"
+    );
+    $dup->execute([$vendorId, $contentHash]);
+    $duplicateOf = $dup->fetch() ?: null;
+}
+
+if ($duplicateOf) {
+    $processingStatus = 'skipped_duplicate';
+    $notes = "Duplicate of file #{$duplicateOf['id']}, uploaded {$duplicateOf['uploaded_at']} — already processed, extraction skipped.";
+} else {
+    $processingStatus = $category === 'price_list' ? 'pending' : 'complete';
+    $notes = null;
+}
+
 $stmt = db()->prepare(
-    'INSERT INTO pc_vendor_files (vendor_id, original_filename, stored_path, file_type, category, file_size_bytes, processing_status, processed_at)
-     VALUES (?,?,?,?,?,?,?,?)'
+    'INSERT INTO pc_vendor_files (vendor_id, original_filename, stored_path, file_type, category, file_size_bytes, content_hash, processing_status, processing_notes, processed_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?)'
 );
 $stmt->execute([
     $vendorId, $original, "vendor_files/$vendorId/$storedName", $typeMap[$ext], $category, (int)$_FILES['file']['size'],
-    $processingStatus, $category === 'price_list' ? null : date('Y-m-d H:i:s'),
+    $contentHash, $processingStatus, $notes,
+    ($processingStatus === 'pending') ? null : date('Y-m-d H:i:s'),
 ]);
 $fileId = (int)db()->lastInsertId();
 cacheBust('admin_vendors'); // last_upload changed
 
 logAdminAction((int)$admin['id'], 'upload_vendor_file', ['vendor_id' => $vendorId, 'file_id' => $fileId, 'filename' => $original, 'category' => $category]);
 
-$msg = $category === 'price_list' ? 'File uploaded. Trigger processing separately.' : 'File uploaded and cataloged.';
-jsonResponse(['id' => $fileId, 'message' => $msg], 201);
+if ($duplicateOf) {
+    $msg = "This file is identical to a previously processed upload (File #{$duplicateOf['id']}, uploaded {$duplicateOf['uploaded_at']}) — skipping extraction.";
+} else {
+    $msg = $category === 'price_list' ? 'File uploaded. Trigger processing separately.' : 'File uploaded and cataloged.';
+}
+jsonResponse(['id' => $fileId, 'message' => $msg, 'duplicate' => $duplicateOf !== null], 201);

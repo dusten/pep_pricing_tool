@@ -6,7 +6,7 @@ require_once dirname(__DIR__, 2) . '/lib/price_import.php';
 
 // GET  /vendors/pending-imports              — next pending row (single-card queue)
 // POST /vendors/pending-imports/{id}/approve — body: { product_id?, canonical_name?, spec_label?,
-//   numeric_value?, unit?, price_usd?, kit_vial_count?, tier_kit_size?, vendor_sku?, non_standard_kit? }
+//   numeric_value?, unit?, price_usd?, kit_vial_count?, tier_kit_size?, vendor_sku?, non_standard_kit?, is_raw_material? }
 //   — product_id: existing product to map onto, omit to create/match by canonical_name.
 //   — everything else: admin edits from the review card; omit a key to keep the extracted value.
 // POST /vendors/pending-imports/{id}/reject
@@ -74,10 +74,11 @@ $price        = (float)$field('price_usd', 0);
 $unit         = (string)$field('unit', 'mg');
 $kitCount     = (int)$field('kit_vial_count', 10);
 // See vendor_file_processor.php — tier breakpoints are vendor-defined, not
-// fixed to 1/10/100; clamp to the TINYINT UNSIGNED column range only.
-$tierSize     = min(255, max(1, (int)$field('tier_kit_size', 1)));
+// fixed to 1/10/100; clamp to the SMALLINT UNSIGNED column range only.
+$tierSize     = min(65535, max(1, (int)$field('tier_kit_size', 1)));
 $vendorSku    = trim((string)$field('vendor_sku', '')) ?: null;
 $nonStandard  = !empty($field('non_standard_kit', false));
+$isRawMaterial = !empty($field('is_raw_material', false));
 $mappedProduct = (int)($body['product_id'] ?? 0) ?: null;
 
 if (!$name || !$label || $value <= 0 || $price <= 0) {
@@ -101,7 +102,7 @@ try {
     }
     if (!$productId) $productId = findExactProductMatch($pdo, $name) ?? createProduct($pdo, $name);
 
-    $specId = findOrCreateSpec($pdo, $productId, $label, $value, $unit);
+    $specId = findOrCreateSpec($pdo, $productId, $label, $value, $unit, $isRawMaterial);
     commitPriceRow($pdo, (int)$row['vendor_id'], $productId, $specId, $price, $value, $kitCount, $tierSize, $nonStandard, (int)$row['vendor_file_id'], $vendorSku);
 
     $pdo->prepare('UPDATE pc_pending_imports SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?')
@@ -143,7 +144,7 @@ foreach ($others->fetchAll() as $other) {
         commitPriceRow(
             $pdo, (int)$other['vendor_id'], $productId, $specId,
             $oPrice, $oValue, (int)($o['kit_vial_count'] ?? 10),
-            min(255, max(1, (int)($o['tier_kit_size'] ?? 1))),
+            min(65535, max(1, (int)($o['tier_kit_size'] ?? 1))),
             !empty($o['non_standard_kit']), (int)$other['vendor_file_id'],
             trim((string)($o['vendor_sku'] ?? '')) ?: null
         );

@@ -42,6 +42,7 @@
         <option value="acknowledged">Acknowledged</option>
         <option value="resolved">Resolved</option>
       </select>
+      <button class="btn btn-ghost btn-sm" @click="exportSlowQueries">Export CSV</button>
     </div>
     <table v-if="slowQueries" class="admin-table">
       <thead><tr><th>Query</th><th>Time</th><th>Rows examined</th><th>Seen</th><th>Status</th><th></th></tr></thead>
@@ -163,6 +164,17 @@ async function setStatus(q, status) {
   await patch(`/api/admin/slow-queries/${q.id}`, { status })
   q.status = status
 }
+async function exportSlowQueries() {
+  const params = sqStatus.value ? `?status=${sqStatus.value}` : ''
+  const res = await fetch(`/api/admin/slow-queries/export${params}`, {
+    headers: { Authorization: 'Bearer ' + localStorage.getItem('pc_token') },
+  })
+  const blob = await res.blob()
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href = url; a.download = 'slow-queries.csv'; a.click()
+  URL.revokeObjectURL(url)
+}
 
 // ── Comparison query log ─────────────────────────────────────────
 const queries  = ref(null)
@@ -216,7 +228,8 @@ async function rerun(q) {
 .admin-table th, .admin-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
 .admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 .mono { font-family: var(--font-mono); max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-.sq-actions { display: flex; gap: 4px; flex-wrap: nowrap; }
+.sq-actions { white-space: nowrap; }
+.sq-actions button + button { margin-left: 4px; }
 .text-danger { color: var(--danger); font-weight: 700; }
 
 .rerun-result { margin-top: 12px; padding: 10px 14px; background: var(--surface-alt); border-radius: var(--radius); font-size: 13px; }

@@ -64,9 +64,24 @@ function processVendorFile(array $file, string $model): array {
         ];
     }
 
-    $result   = callClaudeExtraction(buildExtractionSystemPrompt(), $userContent, $model);
+    $result = callClaudeExtraction(buildExtractionSystemPrompt(), $userContent, $model, (int)$file['id']);
+    if ($sheetNote) {
+        $result['warnings'] = $result['warnings'] ?? [];
+        array_unshift($result['warnings'], $sheetNote);
+    }
+    return commitExtractionResult($file, $result);
+}
+
+/**
+ * Commits an already-extracted result (the {"contact":,"warnings":,"prices":}
+ * shape) — shared by the real Claude path above and the manual-paste path
+ * (backend/api/files/manual_process.php, for JSON produced by another tool
+ * like Grok, or hand-corrected). Exact same commit rules either way: exact
+ * product+spec matches upsert straight into pc_prices, anything new or
+ * mismatched is parked in pc_pending_imports for admin review.
+ */
+function commitExtractionResult(array $file, array $result): array {
     $warnings = $result['warnings'] ?? [];
-    if ($sheetNote) array_unshift($warnings, $sheetNote);
     $contact  = $result['contact'] ?? [];
 
     $pdo = db();
@@ -97,8 +112,9 @@ function processVendorFile(array $file, string $model): array {
              VALUES (?,?,?,?,?)'
         );
 
-        $imported = 0;
-        $pending  = 0;
+        $imported  = 0;
+        $unchanged = 0; // backlog #14, layer 2 — identical resubmits, not real changes
+        $pending   = 0;
         foreach ($result['prices'] as $p) {
             $name  = trim((string)($p['canonical_name'] ?? ''));
             $label = trim((string)($p['spec_label'] ?? ''));
@@ -113,8 +129,8 @@ function processVendorFile(array $file, string $model): array {
             // silently corrupted data (a real ≥50kits price got forced onto the
             // tier-1 slot, colliding with pc_prices' UNIQUE key and either
             // overwriting or losing the genuine tier-1 price). Column is a plain
-            // TINYINT UNSIGNED — just floor/ceiling it to that range.
-            $tierSize    = min(255, max(1, (int)($p['tier_kit_size'] ?? 1)));
+            // SMALLINT UNSIGNED — just floor/ceiling it to that range.
+            $tierSize    = min(65535, max(1, (int)($p['tier_kit_size'] ?? 1)));
             $vendorSku   = trim((string)($p['vendor_sku'] ?? '')) ?: null;
             $nonStandard = !empty($p['non_standard_kit']);
 
@@ -148,13 +164,16 @@ function processVendorFile(array $file, string $model): array {
                 continue;
             }
 
-            commitPriceRow($pdo, (int)$file['vendor_id'], $productId, (int)$specId, $price, $value, $kitCount, $tierSize, $nonStandard, (int)$file['id'], $vendorSku);
-            $imported++;
+            $changed = commitPriceRow($pdo, (int)$file['vendor_id'], $productId, (int)$specId, $price, $value, $kitCount, $tierSize, $nonStandard, (int)$file['id'], $vendorSku);
+            if ($changed) $imported++; else $unchanged++;
         }
 
         $notes = $warnings ? implode(' | ', $warnings) : null;
         if ($pending > 0) {
             $notes = trim(($notes ? "$notes | " : '') . "$pending row(s) awaiting review in the pending imports queue.");
+        }
+        if ($unchanged > 0) {
+            $notes = trim(($notes ? "$notes | " : '') . "$unchanged row(s) unchanged from the current price list.");
         }
         $pdo->prepare('UPDATE pc_vendor_files SET processing_status = ?, processing_notes = ?, processed_at = NOW() WHERE id = ?')
             ->execute(['complete', $notes, $file['id']]);
@@ -171,5 +190,5 @@ function processVendorFile(array $file, string $model): array {
     cacheBust('admin_vendors');
     cacheBust('admin_products');
 
-    return ['imported' => $imported, 'pending' => $pending, 'warnings' => $warnings];
+    return ['imported' => $imported, 'unchanged' => $unchanged, 'pending' => $pending, 'warnings' => $warnings];
 }

@@ -27,8 +27,11 @@ function buildExtractionSystemPrompt(): string {
     $watchNames    = implode(', ', VARIANT_COMPOUND_WATCH_NAMES);
 
     return <<<PROMPT
-You are a peptide vendor price list parser. Extract all products and prices from the
-attached content and return ONLY a valid JSON object — no preamble, no markdown fences.
+You are a vendor price list parser. Extract EVERY priced product from the attached
+content and return ONLY a valid JSON object — no preamble, no markdown fences. Vendors
+on this platform sell peptides primarily, but also steroids/hormones, vitamin/wellness
+blends, cosmetic products, lab supplies, and anything else they price — if the vendor
+lists a price for it, extract it. Do not omit a row just because it isn't a peptide.
 
 Rules:
 1. Tiered/quantity-break pricing (e.g. "1-kit / 10-kit / 100-kit" or "≥1kit / ≥10kits /
@@ -52,13 +55,22 @@ Rules:
 9. If the source has its own catalog code for this row (column header like "Cat No.",
    "Abbreviation", "SKU", "Model#", e.g. "TR5", "NJ100"), capture it verbatim as
    vendor_sku. Leave it "" if the source has no such column.
+10. Raw/bulk powder priced by weight, not a finished vial (column header like "$/G",
+    "price per gram", "bulk", "raw powder" — no kit/vial count given at all): emit one row
+    with spec_label="1g", numeric_value=1000, unit="mg", kit_vial_count=1, tier_kit_size=1,
+    price_usd=the given per-gram price, is_raw_material=true. If a source shows more than one
+    weight-break price (e.g. separate 1g/10g/100g rates), still extract every row exactly as
+    given but add a warning naming the product — multi-tier bulk pricing isn't fully modeled
+    yet, so it needs a human to decide the right rows rather than guessing here. Every other
+    row (finished vials/kits) gets is_raw_material=false.
 
 Return exactly this shape:
 {
   "contact": {"name": "", "email": "", "whatsapp": "", "website": ""},
   "warnings": ["..."],
   "prices": [{"canonical_name":"","is_new_product":false,"spec_label":"","numeric_value":0,"unit":"mg",
-              "price_usd":0,"kit_vial_count":10,"tier_kit_size":1,"vendor_sku":"","non_standard_kit":false}]
+              "price_usd":0,"kit_vial_count":10,"tier_kit_size":1,"vendor_sku":"","non_standard_kit":false,
+              "is_raw_material":false}]
 }
 PROMPT;
 }
@@ -83,17 +95,47 @@ PROMPT;
  * the response text. Shared by extraction and the vendor-contact-parse
  * fallback — the only difference between callers is systemPrompt/userContent.
  */
-function callClaudeMessages(string $systemPrompt, array $userContent, string $model = CLAUDE_MODEL_DEFAULT): array {
+/**
+ * Best-effort call log (backlog #24) — never let a logging failure break
+ * the actual extraction flow, so this swallows its own exceptions.
+ */
+function logClaudeCall(
+    ?int $vendorFileId, string $callType, string $model, ?int $httpStatus,
+    ?array $decoded, ?string $rawText, bool $parsedOk, ?string $errorMessage
+): void {
+    try {
+        $usage = $decoded['usage'] ?? [];
+        db()->prepare(
+            'INSERT INTO pc_claude_call_log
+               (vendor_file_id, call_type, model, http_status, stop_reason, input_tokens, output_tokens,
+                cache_creation_input_tokens, cache_read_input_tokens, raw_response_text, parsed_ok, error_message)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
+        )->execute([
+            $vendorFileId, $callType, $model, $httpStatus, $decoded['stop_reason'] ?? null,
+            $usage['input_tokens'] ?? null, $usage['output_tokens'] ?? null,
+            $usage['cache_creation_input_tokens'] ?? null, $usage['cache_read_input_tokens'] ?? null,
+            $rawText, $parsedOk ? 1 : 0, $errorMessage,
+        ]);
+    } catch (Throwable $e) {
+        error_log('[claude_call_log] failed to persist: ' . $e->getMessage());
+    }
+}
+
+function callClaudeMessages(
+    string $systemPrompt, array $userContent, string $model = CLAUDE_MODEL_DEFAULT,
+    string $callType = 'extraction', ?int $vendorFileId = null
+): array {
     if (!ANTHROPIC_API_KEY) throw new RuntimeException('ANTHROPIC_API_KEY is not configured.');
 
     $payload = json_encode([
         'model'      => $model,
-        // ponytail: 48000 covers a real 149-row tiered file (~450 output rows
-        // once tiers expand) with headroom; a genuinely bigger vendor file
-        // could still truncate (stop_reason: max_tokens) — if that starts
-        // happening, worth revisiting whether tiers should collapse to one
-        // output row with 3 price fields instead of 3 separate rows.
-        'max_tokens' => 48000,
+        // Confirmed truncating (stop_reason: max_tokens, output_tokens exactly
+        // 48000) on a real ~399-row file after the extraction prompt widened
+        // from peptides-only to every priced product — same file now emits
+        // more rows per response. Raised with headroom; if this starts
+        // truncating too, worth revisiting whether tiers should collapse to
+        // one output row with 3 price fields instead of 3 separate rows.
+        'max_tokens' => 64000,
         // This is deterministic extraction/parsing, not reasoning — Sonnet 5
         // runs adaptive thinking by default when 'thinking' is omitted (unlike
         // Opus 4.7/4.8, where omitting means no thinking), silently burning
@@ -126,6 +168,7 @@ function callClaudeMessages(string $systemPrompt, array $userContent, string $mo
     curl_close($ch);
 
     if ($code < 200 || $code >= 300 || !$result) {
+        logClaudeCall($vendorFileId, $callType, $model, $code, null, (string)$result, false, "HTTP error $code");
         throw new RuntimeException("Claude API error (HTTP $code): " . substr((string)$result, 0, 500));
     }
 
@@ -137,6 +180,7 @@ function callClaudeMessages(string $systemPrompt, array $userContent, string $mo
     foreach (($decoded['content'] ?? []) as $block) {
         if (($block['type'] ?? '') === 'text') { $text = $block['text']; break; }
     }
+    $rawText = $text; // exactly what Claude returned in the text block, pre-cleanup — what gets logged
     $text = trim(preg_replace('/^```(?:json)?|```$/m', '', $text));
 
     // Despite "no preamble" in the system prompt, Claude occasionally adds a
@@ -151,7 +195,9 @@ function callClaudeMessages(string $systemPrompt, array $userContent, string $mo
     }
 
     $parsed = json_decode($text, true);
-    if (!is_array($parsed)) {
+    $ok = is_array($parsed);
+    logClaudeCall($vendorFileId, $callType, $model, $code, $decoded, $rawText, $ok, $ok ? null : 'Claude response was not valid JSON');
+    if (!$ok) {
         throw new RuntimeException('Claude response was not valid JSON: ' . substr($text, 0, 300));
     }
     return $parsed;
@@ -168,8 +214,8 @@ function callClaudeMessages(string $systemPrompt, array $userContent, string $mo
  * source type would've meant a fifth bolted-on param. Returns the decoded
  * JSON payload.
  */
-function callClaudeExtraction(string $systemPrompt, array $userContent, string $model = CLAUDE_MODEL_DEFAULT): array {
-    $parsed = callClaudeMessages($systemPrompt, $userContent, $model);
+function callClaudeExtraction(string $systemPrompt, array $userContent, string $model = CLAUDE_MODEL_DEFAULT, ?int $vendorFileId = null): array {
+    $parsed = callClaudeMessages($systemPrompt, $userContent, $model, 'extraction', $vendorFileId);
     if (!isset($parsed['prices'])) {
         throw new RuntimeException('Claude response was not valid extraction JSON.');
     }
@@ -179,5 +225,5 @@ function callClaudeExtraction(string $systemPrompt, array $userContent, string $
 /** Fallback for the paste-to-parse vendor intake box when the regex pass can't resolve enough fields. */
 function callClaudeVendorContactParse(string $pastedText): array {
     $userContent = [['type' => 'text', 'text' => "Vendor's reply:\n\n{$pastedText}"]];
-    return callClaudeMessages(buildVendorContactParsePrompt(), $userContent, CLAUDE_MODEL_DEFAULT);
+    return callClaudeMessages(buildVendorContactParsePrompt(), $userContent, CLAUDE_MODEL_DEFAULT, 'vendor_contact_parse');
 }

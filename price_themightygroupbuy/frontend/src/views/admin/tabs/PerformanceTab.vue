@@ -6,14 +6,14 @@
         <option value="7d">Last 7 days</option>
         <option value="30d">Last 30 days</option>
       </select>
-      <select v-model="device" @change="load">
+      <select v-model="device" @change="refreshAll">
         <option value="">All devices</option>
         <option value="desktop">Desktop</option>
         <option value="mobile">Mobile</option>
         <option value="tablet">Tablet</option>
         <option value="other">Other</option>
       </select>
-      <input v-model="path" @change="load" placeholder="Filter by path…" style="max-width:200px" />
+      <input v-model="path" @change="refreshAll" placeholder="Filter by path…" style="max-width:200px" />
     </div>
 
     <div class="stat-grid">
@@ -24,10 +24,18 @@
     </div>
 
     <h4 class="section-title">Daily avg load time</h4>
-    <div class="sparkline">
-      <div v-for="d in data.daily" :key="d.day" class="bar" :style="{ height: barHeight(d.avg_load_ms) + '%' }" :title="`${d.day}: ${d.avg_load_ms}ms (${d.samples} samples)`"></div>
+    <div class="range-pills">
+      <button v-for="r in ['24h', '7d', '30d']" :key="r" type="button"
+              :class="['pill', { active: dailyRange === r }]" @click="dailyRange = r; loadDaily()">{{ r }}</button>
     </div>
-    <p v-if="!data.daily.length" class="text-muted text-sm">No performance samples yet.</p>
+    <div v-if="dailyData" class="hbar-chart">
+      <div v-for="d in dailyData" :key="d.day" class="hbar-row">
+        <span class="hbar-label">{{ d.day }}</span>
+        <div class="hbar-track"><div class="hbar-fill" :style="{ width: barWidth(d.avg_load_ms) + '%' }" :title="`${d.avg_load_ms}ms (${d.samples} samples)`"></div></div>
+        <span class="hbar-value">{{ d.avg_load_ms }}ms</span>
+      </div>
+      <p v-if="!dailyData.length" class="text-muted text-sm">No performance samples yet.</p>
+    </div>
 
     <div class="breakdown-grid">
       <div>
@@ -79,10 +87,12 @@
 import { ref, onMounted } from 'vue'
 import { get } from '@/utils/api.js'
 
-const data   = ref(null)
-const range  = ref('7d')
-const device = ref('')
-const path   = ref('')
+const data       = ref(null)
+const range      = ref('7d')
+const device     = ref('')
+const path       = ref('')
+const dailyRange = ref('7d') // independent of `range` above — its own pills
+const dailyData  = ref(null)
 
 async function load() {
   const params = new URLSearchParams({ range: range.value })
@@ -90,12 +100,23 @@ async function load() {
   if (path.value)   params.set('path', path.value)
   data.value = await get(`/api/admin/performance?${params}`)
 }
-onMounted(load)
+
+async function loadDaily() {
+  const params = new URLSearchParams({ range: dailyRange.value })
+  if (device.value) params.set('device', device.value)
+  if (path.value)   params.set('path', path.value)
+  const res = await get(`/api/admin/performance?${params}`)
+  dailyData.value = res.daily
+}
+
+function refreshAll() { load(); loadDaily() }
+
+onMounted(refreshAll)
 
 function fmt(v) { return v === null ? '—' : `${v}ms` }
-function barHeight(ms) {
-  const max = Math.max(...data.value.daily.map(d => d.avg_load_ms), 1)
-  return Math.max(4, Math.round((ms / max) * 100))
+function barWidth(ms) {
+  const max = Math.max(...dailyData.value.map(d => d.avg_load_ms), 1)
+  return Math.max(2, Math.round((ms / max) * 100))
 }
 </script>
 
@@ -109,8 +130,21 @@ function barHeight(ms) {
 .stat-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; margin-top: 4px; }
 
 .section-title { margin: 20px 0 10px; font-size: 13.5px; }
-.sparkline { display: flex; align-items: flex-end; gap: 2px; height: 80px; border-bottom: 1px solid var(--border); }
-.bar { flex: 1; background: var(--accent); border-radius: 2px 2px 0 0; min-height: 2px; }
+
+.range-pills { display: flex; gap: 6px; margin-bottom: 10px; }
+.pill {
+  padding: 4px 12px; border-radius: 99px; border: 1.5px solid var(--border); background: var(--surface);
+  cursor: pointer; font-size: 12px; font-weight: 500; color: var(--text-secondary); transition: all var(--transition);
+}
+.pill:hover  { border-color: var(--accent); color: var(--accent); }
+.pill.active { background: var(--primary); border-color: var(--primary); color: var(--text-on-primary); }
+
+.hbar-chart { display: flex; flex-direction: column; gap: 6px; }
+.hbar-row { display: flex; align-items: center; gap: 10px; }
+.hbar-label { width: 90px; flex-shrink: 0; font-size: 12px; color: var(--text-secondary); }
+.hbar-track { flex: 1; background: var(--surface-alt); border-radius: 2px; height: 14px; }
+.hbar-fill { height: 100%; background: var(--accent); border-radius: 2px; min-width: 2px; }
+.hbar-value { width: 60px; flex-shrink: 0; font-size: 12px; color: var(--text-secondary); text-align: right; }
 
 .breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }

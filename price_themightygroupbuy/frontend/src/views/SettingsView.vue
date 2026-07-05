@@ -170,6 +170,13 @@
         <button class="btn btn-ghost btn-sm" @click="exportData">Export my data</button>
       </div>
 
+      <!-- Full dataset export (Expert tier) -->
+      <div v-if="auth.isAdmin || (auth.tier === 'expert' && auth.tierActive)" class="card">
+        <h3 class="card-title">Full dataset export</h3>
+        <p class="text-muted text-sm" style="margin-bottom:12px">Download every active product, vendor, spec, and price row — the whole live dataset, not filtered by the Comparison view.</p>
+        <button class="btn btn-ghost btn-sm" @click="exportFullDataset">Download full dataset (JSON)</button>
+      </div>
+
       <!-- Feedback -->
       <div class="card" ref="feedbackCard">
         <div class="card-header-icon">
@@ -351,6 +358,15 @@ async function exportData() {
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
   a.href = url; a.download = 'my-data-export.json'; a.click()
+  URL.revokeObjectURL(url)
+}
+
+async function exportFullDataset() {
+  const res = await get('/api/export/full')
+  const blob = new Blob([JSON.stringify(res, null, 2)], { type: 'application/json' })
+  const url  = URL.createObjectURL(blob)
+  const a    = document.createElement('a')
+  a.href = url; a.download = 'full-export.json'; a.click()
   URL.revokeObjectURL(url)
 }
 

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/config.php';
 require_once dirname(__DIR__, 2) . '/helpers.php';
+require_once dirname(__DIR__, 2) . '/lib/price_import.php';
 
 // PUT /prices/{id}  body: { price_usd?, kit_vial_count?, vendor_sku?, tier_kit_size?, non_standard_kit? }
 // Edits one vendor's existing price line directly (Inventory tab) — does not
@@ -31,7 +32,7 @@ if (array_key_exists('price_usd', $d) && (float)$d['price_usd'] > 0) {
     $vals[]   = $newPrice;
 }
 $newKit = null;
-if (array_key_exists('kit_vial_count', $d) && (int)$d['kit_vial_count'] >= 1 && (int)$d['kit_vial_count'] <= 255) {
+if (array_key_exists('kit_vial_count', $d) && (int)$d['kit_vial_count'] >= 1 && (int)$d['kit_vial_count'] <= 65535) {
     $newKit = (int)$d['kit_vial_count'];
     $fields[] = 'kit_vial_count = ?';
     $vals[]   = $newKit;
@@ -46,7 +47,7 @@ if ($newPrice !== null || $newKit !== null) {
         (float)$price['numeric_value']
     );
 }
-if (array_key_exists('tier_kit_size', $d) && (int)$d['tier_kit_size'] >= 1 && (int)$d['tier_kit_size'] <= 255) {
+if (array_key_exists('tier_kit_size', $d) && (int)$d['tier_kit_size'] >= 1 && (int)$d['tier_kit_size'] <= 65535) {
     $fields[] = 'tier_kit_size = ?';
     $vals[]   = (int)$d['tier_kit_size'];
 }
@@ -67,6 +68,21 @@ try {
     // Most likely uq_price (vendor_id, product_id, specification_id, tier_kit_size)
     // if the edited tier_kit_size collides with another existing line.
     jsonResponse(['error' => 'Update failed — check for a duplicate tier size on this vendor/spec.', 'message' => $e->getMessage()], 409);
+}
+
+// Only a real price/kit-count change is a history event — a re-save of the
+// same value, or an edit that only touched tier_kit_size/vendor_sku, isn't.
+$priceActuallyChanged = ($newPrice !== null && $newPrice !== (float)$price['price_usd'])
+    || ($newKit !== null && $newKit !== (int)$price['kit_vial_count']);
+if ($priceActuallyChanged) {
+    logPriceHistory(
+        db(), (int)$price['vendor_id'], (int)$price['product_id'], (int)$price['specification_id'],
+        (float)$price['price_usd'], (float)$price['price_per_unit'], (int)$price['kit_vial_count'],
+        $newPrice ?? (float)$price['price_usd'],
+        pricePerUnit($newPrice ?? (float)$price['price_usd'], $newKit ?? (int)$price['kit_vial_count'], (float)$price['numeric_value']),
+        $newKit ?? (int)$price['kit_vial_count'],
+        'manual_edit', (int)$admin['id']
+    );
 }
 
 cacheBust('pricing_data');

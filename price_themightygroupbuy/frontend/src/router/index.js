@@ -59,9 +59,16 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/cart',
+      component: () => import('@/views/CartView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      // Public — CalendarView itself branches on auth state: a teaser
+      // summary (counts/categories/product names, no $ or vendor) for
+      // anonymous visitors, the full ledger for logged-in users.
       path: '/calendar',
       component: () => import('@/views/CalendarView.vue'),
-      meta: { requiresAuth: true },
     },
     {
       path: '/pricing',

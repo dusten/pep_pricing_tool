@@ -8,11 +8,19 @@ declare(strict_types=1);
  * the two never drift.
  */
 
-/** Exact case-insensitive match against canonical_name or an existing alias. */
+/**
+ * Exact case-insensitive match against canonical_name or an existing alias.
+ * Both columns use utf8mb4_unicode_ci (case-insensitive) collation, so a
+ * plain `=` already matches case-insensitively AND can use their UNIQUE
+ * indexes — wrapping in LOWER() defeated that, forcing a full index scan on
+ * every call (this was the single largest source of noise in the slow-query
+ * log: called once per price line on every import/approval, thousands of
+ * times, and flagged for not using an index every time).
+ */
 function findExactProductMatch(PDO $pdo, string $name): ?int {
     $stmt = $pdo->prepare(
-        'SELECT id FROM pc_products WHERE LOWER(canonical_name) = LOWER(?)
-         UNION SELECT product_id FROM pc_product_aliases WHERE LOWER(alias) = LOWER(?) LIMIT 1'
+        'SELECT id FROM pc_products WHERE canonical_name = ?
+         UNION SELECT product_id FROM pc_product_aliases WHERE alias = ? LIMIT 1'
     );
     $stmt->execute([$name, $name]);
     $id = $stmt->fetchColumn();
@@ -52,23 +60,62 @@ function createProduct(PDO $pdo, string $name): int {
     return (int)$pdo->lastInsertId();
 }
 
-function findOrCreateSpec(PDO $pdo, int $productId, string $label, float $value, string $unit): int {
+function findOrCreateSpec(PDO $pdo, int $productId, string $label, float $value, string $unit, bool $isRawMaterial = false): int {
     $find = $pdo->prepare('SELECT id FROM pc_specifications WHERE product_id = ? AND spec_label = ?');
     $find->execute([$productId, $label]);
     $specId = $find->fetchColumn();
     if ($specId) return (int)$specId;
 
     $unit = in_array($unit, ['mg', 'iu', 'ml'], true) ? $unit : 'other';
-    $pdo->prepare('INSERT INTO pc_specifications (product_id, spec_label, numeric_value, unit) VALUES (?,?,?,?)')
-        ->execute([$productId, $label, $value, $unit]);
+    $pdo->prepare('INSERT INTO pc_specifications (product_id, spec_label, numeric_value, unit, is_raw_material) VALUES (?,?,?,?,?)')
+        ->execute([$productId, $label, $value, $unit, $isRawMaterial ? 1 : 0]);
     return (int)$pdo->lastInsertId();
 }
 
+/**
+ * Snapshot into the append-only price-change ledger (backlog #3). Only
+ * called when a value actually changed — see callers. $oldPrice === null
+ * means this is a brand-new price line (no prior value to diff against).
+ */
+function logPriceHistory(
+    PDO $pdo, int $vendorId, int $productId, int $specId,
+    ?float $oldPrice, ?float $oldPricePerUnit, ?int $oldKitCount,
+    float $newPrice, float $newPricePerUnit, int $newKitCount,
+    string $source, ?int $changedBy = null
+): void {
+    $pdo->prepare(
+        'INSERT INTO pc_price_history
+           (vendor_id, product_id, specification_id, old_price_usd, old_price_per_unit, old_kit_vial_count,
+            new_price_usd, new_price_per_unit, new_kit_vial_count, source, changed_by)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+    )->execute([
+        $vendorId, $productId, $specId, $oldPrice, $oldPricePerUnit, $oldKitCount,
+        $newPrice, $newPricePerUnit, $newKitCount, $source, $changedBy,
+    ]);
+}
+
+/**
+ * Returns true if this was a new price line or a real price/kit-count
+ * change, false if it was an identical resubmit (backlog #14, layer 2 —
+ * lets a caller tally changed vs. unchanged rows across a file import).
+ */
 function commitPriceRow(
     PDO $pdo, int $vendorId, int $productId, int $specId,
     float $price, float $numericValue, int $kitCount, int $tierKitSize, bool $nonStandard, ?int $sourceFileId,
     ?string $vendorSku = null
-): void {
+): bool {
+    // Snapshot the pre-overwrite state before the upsert destroys it — this
+    // is the exact match the UNIQUE key (vendor, product, spec, tier) would
+    // update, so it's also the row a "price changed" event is relative to.
+    $existing = $pdo->prepare(
+        'SELECT price_usd, price_per_unit, kit_vial_count FROM pc_prices
+         WHERE vendor_id = ? AND product_id = ? AND specification_id = ? AND tier_kit_size = ? LIMIT 1'
+    );
+    $existing->execute([$vendorId, $productId, $specId, $tierKitSize]);
+    $prior = $existing->fetch();
+
+    $newPricePerUnit = pricePerUnit($price, $kitCount, $numericValue);
+
     $pdo->prepare(
         'INSERT INTO pc_prices (vendor_id, product_id, specification_id, price_usd, price_per_unit, kit_vial_count, tier_kit_size, vendor_sku, non_standard_kit, source_file_id, is_active)
          VALUES (?,?,?,?,?,?,?,?,?,?,1)
@@ -76,7 +123,22 @@ function commitPriceRow(
            kit_vial_count = VALUES(kit_vial_count), vendor_sku = VALUES(vendor_sku), non_standard_kit = VALUES(non_standard_kit),
            source_file_id = VALUES(source_file_id), is_active = 1, created_at = NOW()'
     )->execute([
-        $vendorId, $productId, $specId, $price, pricePerUnit($price, $kitCount, $numericValue),
+        $vendorId, $productId, $specId, $price, $newPricePerUnit,
         $kitCount, $tierKitSize, $vendorSku ?: null, $nonStandard ? 1 : 0, $sourceFileId,
     ]);
+
+    $priceChanged = !$prior
+        || (float)$prior['price_usd'] !== $price
+        || (int)$prior['kit_vial_count'] !== $kitCount;
+    if ($priceChanged) {
+        logPriceHistory(
+            $pdo, $vendorId, $productId, $specId,
+            $prior ? (float)$prior['price_usd'] : null,
+            $prior ? (float)$prior['price_per_unit'] : null,
+            $prior ? (int)$prior['kit_vial_count'] : null,
+            $price, $newPricePerUnit, $kitCount, 'import'
+        );
+    }
+
+    return $priceChanged;
 }

@@ -17,8 +17,10 @@
       <VendorsTab       v-if="activeTab === 'vendors'" />
       <ReviewQueueTab   v-if="activeTab === 'review-queue'" />
       <ProductsTab      v-if="activeTab === 'products'" />
+      <StacksTab        v-if="activeTab === 'stacks'" />
       <InventoryTab     v-if="activeTab === 'inventory'" />
       <FilesTab         v-if="activeTab === 'files'" />
+      <ClaudeApiTab     v-if="activeTab === 'claude-api'" />
       <SettingsTab      v-if="activeTab === 'settings'" />
       <PerformanceTab   v-if="activeTab === 'performance'" />
       <SystemTab        v-if="activeTab === 'system'" />
@@ -39,8 +41,10 @@ import SubscriptionsTab from './tabs/SubscriptionsTab.vue'
 import VendorsTab       from './tabs/VendorsTab.vue'
 import ReviewQueueTab   from './tabs/ReviewQueueTab.vue'
 import ProductsTab      from './tabs/ProductsTab.vue'
+import StacksTab        from './tabs/StacksTab.vue'
 import InventoryTab     from './tabs/InventoryTab.vue'
 import FilesTab         from './tabs/FilesTab.vue'
+import ClaudeApiTab     from './tabs/ClaudeApiTab.vue'
 import SettingsTab      from './tabs/SettingsTab.vue'
 import PerformanceTab   from './tabs/PerformanceTab.vue'
 import SystemTab        from './tabs/SystemTab.vue'
@@ -57,8 +61,10 @@ const tabs = [
   { id: 'vendors',       label: 'Vendors' },
   { id: 'review-queue',  label: 'Review Queue' },
   { id: 'products',      label: 'Products' },
+  { id: 'stacks',        label: 'Stacks' },
   { id: 'inventory',     label: 'Inventory' },
   { id: 'files',         label: 'Files' },
+  { id: 'claude-api',    label: 'Claude API' },
   { id: 'settings',      label: 'Settings' },
   { id: 'performance',   label: 'Performance' },
   { id: 'system',        label: 'System' },

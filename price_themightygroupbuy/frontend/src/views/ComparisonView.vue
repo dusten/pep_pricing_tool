@@ -2,10 +2,18 @@
   <AppLayout title="Price Comparison">
     <!-- Filter bar -->
     <div class="card filter-bar">
+      <div v-if="comparison.tiers.length > 1" class="tier-tabs">
+        <span class="tier-label">Kit size:</span>
+        <button v-for="t in comparison.tiers" :key="t"
+                :class="['cat-tab', { active: selectedTier === t }]"
+                @click="selectedTier = t">{{ t }}-kit</button>
+      </div>
       <div class="category-tabs">
-        <button v-for="c in categories" :key="c.value"
-                :class="['cat-tab', { active: category === c.value }]"
-                @click="category = c.value">{{ c.label }}</button>
+        <button :class="['cat-tab', { active: !selectedClassifications.length }]"
+                @click="selectedClassifications = []">All</button>
+        <button v-for="c in comparison.classifications" :key="c.id"
+                :class="['cat-tab', { active: selectedClassifications.includes(c.id) }]"
+                @click="toggleClassification(c.id)">{{ c.name }}</button>
       </div>
       <div class="filter-row">
         <input v-model="search" type="text" placeholder="Search product or Cat No.…" class="search-input" />
@@ -17,6 +25,15 @@
           <input type="checkbox" v-model="verifiedOnly" />
           Verified vendors only
         </label>
+        <label class="toggle-label">
+          <input type="checkbox" v-model="rawMaterialOnly" />
+          Raw/bulk powder only
+        </label>
+        <template v-if="canExport">
+          <button class="btn btn-ghost btn-sm" :disabled="exporting" @click="exportComparison('csv')">Export CSV</button>
+          <button class="btn btn-ghost btn-sm" :disabled="exporting" @click="exportComparison('xlsx')">Export Excel</button>
+        </template>
+        <RouterLink v-else to="/pricing" class="feedback-pill">Export (Pro+)</RouterLink>
         <RouterLink to="/settings?feedback_type=product" class="feedback-pill">Product feedback</RouterLink>
       </div>
       <div v-if="comparison.vendors.length" class="vendor-checks">
@@ -49,10 +66,11 @@
         <table class="cmp-table">
           <thead>
             <tr>
+              <th class="sticky-col col-cart" rowspan="2"></th>
               <th class="sticky-col col-product" rowspan="2">Product</th>
               <th class="sticky-col col-spec" rowspan="2">Spec</th>
               <th v-for="v in vendorColumns" :key="v.id" colspan="2" class="vendor-header">
-                {{ v.name }}
+                <button class="vendor-name-btn" @click="openVendorCard(v.id)">{{ v.name }}</button>
                 <span v-if="v.is_verified" class="badge badge-pro">✓</span>
               </th>
               <th rowspan="2" class="stat-header">Avg</th>
@@ -67,8 +85,14 @@
           </thead>
           <tbody>
             <tr v-for="(row, i) in filteredRows" :key="row.product_id + ':' + row.spec" :class="{ odd: i % 2 === 1 }">
+              <td class="sticky-col col-cart">
+                <button class="btn btn-ghost btn-sm" :disabled="cartKeys.has(row.product_id + ':' + row.specification_id)"
+                        @click="addToCart(row)">
+                  {{ cartKeys.has(row.product_id + ':' + row.specification_id) ? 'Added' : '+ Cart' }}
+                </button>
+              </td>
               <td class="sticky-col col-product">{{ row.product }}</td>
-              <td class="sticky-col col-spec">{{ row.spec }}</td>
+              <td class="sticky-col col-spec">{{ row.spec }} <span v-if="row.is_raw_material" class="badge badge-free" title="Raw/bulk powder, not a finished vial">Raw</span></td>
               <template v-for="v in vendorColumns" :key="v.id">
                 <template v-if="row.byVendor[v.id]">
                   <td :class="{ lowest: row.byVendor[v.id].is_lowest }" :title="row.byVendor[v.id].vendor_sku ? `Cat No.: ${row.byVendor[v.id].vendor_sku}` : ''">
@@ -89,6 +113,8 @@
         </table>
       </div>
     </div>
+
+    <VendorCard v-if="openVendorId" :vendor-id="openVendorId" @close="openVendorId = null" />
   </AppLayout>
 </template>
 
@@ -96,37 +122,77 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
+import VendorCard from '@/components/VendorCard.vue'
 import { useComparisonStore } from '@/stores/comparison.js'
+import { useCartStore } from '@/stores/cart.js'
+import { useAuthStore } from '@/stores/auth.js'
 
 const comparison = useComparisonStore()
+const cart       = useCartStore()
+const auth       = useAuthStore()
+const cartKeys   = computed(() => new Set(cart.items.map(it => it.product_id + ':' + it.specification_id)))
 
-const categories = [
-  { value: '',            label: 'All' },
-  { value: 'glp1',        label: 'GLP-1' },
-  { value: 'peptide',     label: 'Peptide' },
-  { value: 'hormone',     label: 'Hormone' },
-  { value: 'blend',       label: 'Blend' },
-  { value: 'consumable',  label: 'Consumable' },
-]
+const openVendorId = ref(null)
+function openVendorCard(id) { openVendorId.value = id }
 
-const category         = ref('')
+function addToCart(row) {
+  cart.add(row.product_id, row.specification_id)
+}
+
+const canExport = computed(() => auth.isAdmin || (auth.tierActive && ['pro', 'expert'].includes(auth.tier)))
+const exporting = ref(false)
+async function exportComparison(format) {
+  exporting.value = true
+  try {
+    const params = comparison.buildParams({
+      vendors: selectedVendors.value, products: [], classificationIds: selectedClassifications.value,
+      multiOnly: multiOnly.value, verifiedOnly: verifiedOnly.value, rawMaterialOnly: rawMaterialOnly.value,
+      tier: selectedTier.value,
+    })
+    const res = await fetch(`/api/comparison/export/${format}?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
+    })
+    if (!res.ok) throw new Error('Export failed.')
+    const blob = await res.blob()
+    const url  = URL.createObjectURL(blob)
+    const a    = document.createElement('a')
+    a.href = url; a.download = `comparison.${format}`; a.click()
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    alert(err.message)
+  } finally {
+    exporting.value = false
+  }
+}
+
+const selectedClassifications = ref([])
+const selectedTier       = ref(1)
 const search            = ref('')
 const multiOnly          = ref(false)
 const verifiedOnly       = ref(false)
+const rawMaterialOnly    = ref(false)
 const selectedVendors    = ref([])
+
+function toggleClassification(id) {
+  const i = selectedClassifications.value.indexOf(id)
+  if (i === -1) selectedClassifications.value.push(id)
+  else selectedClassifications.value.splice(i, 1)
+}
 
 function runSearch() {
   comparison.search({
-    category: category.value, vendors: selectedVendors.value,
-    multiOnly: multiOnly.value, verifiedOnly: verifiedOnly.value,
+    classificationIds: selectedClassifications.value, vendors: selectedVendors.value,
+    multiOnly: multiOnly.value, verifiedOnly: verifiedOnly.value, rawMaterialOnly: rawMaterialOnly.value,
+    tier: selectedTier.value,
   })
 }
 
 onMounted(async () => {
   await comparison.loadFilters()
+  cart.load()
   runSearch()
 })
-watch([category, multiOnly, verifiedOnly, selectedVendors], runSearch, { deep: true })
+watch([selectedClassifications, multiOnly, verifiedOnly, rawMaterialOnly, selectedVendors, selectedTier], runSearch, { deep: true })
 
 const filteredRows = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -148,6 +214,8 @@ const vendorColumns = computed(() => {
 
 <style scoped>
 .filter-bar { margin-bottom: 20px; }
+.tier-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.tier-label { font-size: 12.5px; color: var(--text-secondary); font-weight: 600; margin-right: 4px; }
 .category-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
 .cat-tab {
   padding: 6px 14px; border-radius: 99px; border: 1.5px solid var(--border); background: var(--surface);
@@ -171,17 +239,31 @@ const vendorColumns = computed(() => {
 .vendor-check input { width: auto; }
 
 .table-card { padding: 0; overflow: hidden; }
-.table-scroll { overflow-x: auto; }
+/* Bounded to the viewport with its own scroll (both axes) so the horizontal
+   scrollbar sits just below the visible rows, not at the bottom of however
+   many rows the filters return — no more scrolling the whole page down to
+   reach it. Header rows below are sticky within this box to match. */
+.table-scroll { overflow: auto; max-height: 70vh; }
 .cmp-table { border-collapse: collapse; width: 100%; font-size: 13px; white-space: nowrap; }
 .cmp-table th, .cmp-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: right; }
 .cmp-table thead th { background: var(--primary); color: var(--text-on-primary); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.4px; text-align: center; }
-.cmp-table thead tr:last-child th.sub-header { background: var(--info); font-size: 11px; }
+.cmp-table thead tr:first-child th { position: sticky; top: 0; z-index: 3; }
+.cmp-table thead tr:last-child th.sub-header { background: var(--info); font-size: 11px; position: sticky; top: 40px; z-index: 3; }
 .stat-header { background: var(--success) !important; }
+.vendor-name-btn {
+  background: none; border: none; padding: 0; font: inherit; color: inherit;
+  cursor: pointer; text-decoration: underline; text-decoration-color: transparent;
+}
+.vendor-name-btn:hover { text-decoration-color: currentColor; }
 
 .sticky-col { position: sticky; text-align: left !important; background: var(--surface); z-index: 2; }
-.col-product { left: 0; min-width: 140px; font-weight: 600; }
-.col-spec    { left: 140px; min-width: 80px; color: var(--text-secondary); }
-thead .sticky-col { z-index: 3; }
+.col-cart    { left: 0; width: 90px; min-width: 90px; max-width: 90px; text-align: center !important; }
+.col-product { left: 90px; width: 170px; min-width: 170px; max-width: 170px; white-space: normal; word-break: break-word; font-weight: 600; }
+.col-spec    { left: 260px; width: 80px; min-width: 80px; max-width: 80px; white-space: normal; word-break: break-word; color: var(--text-secondary); }
+/* Must out-specificity ".cmp-table thead tr:first-child th" (which also sets
+   z-index) or this loses to it — the corner cells (rowspan=2, sticky on both
+   axes) need to beat every other sticky cell, header or body. */
+.cmp-table thead tr th.sticky-col { z-index: 4; }
 
 tr.odd td:not(.sticky-col) { background: var(--surface-alt); }
 td.lowest { background: var(--success-bg); color: var(--success); font-weight: 700; }
