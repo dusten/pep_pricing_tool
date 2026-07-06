@@ -88,18 +88,25 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
     foreach ($grouped as $row) {
         if ($multiOnly && count($row['vendors']) < 2) continue;
 
+        // $/unit drives is_lowest/min/max — the fair cross-vendor comparison
+        // when kit sizes differ. Avg/Median are the summary columns next to
+        // each vendor's kit Price column, so they average the kit price
+        // (price_usd), not $/unit.
         $ppus = array_column($row['vendors'], 'price_per_unit');
         sort($ppus);
         $n = count($ppus);
-        $median = $n % 2 === 0 ? ($ppus[$n / 2 - 1] + $ppus[$n / 2]) / 2 : $ppus[(int)floor($n / 2)];
         $min = min($ppus);
         foreach ($row['vendors'] as &$v) {
             $v['is_lowest'] = abs($v['price_per_unit'] - $min) < 0.000001;
         }
 
+        $prices = array_column($row['vendors'], 'price');
+        sort($prices);
+        $priceMedian = $n % 2 === 0 ? ($prices[$n / 2 - 1] + $prices[$n / 2]) / 2 : $prices[(int)floor($n / 2)];
+
         $row['stats'] = [
-            'avg'    => round(array_sum($ppus) / $n, 6),
-            'median' => round($median, 6),
+            'avg'    => round(array_sum($prices) / $n, 6),
+            'median' => round($priceMedian, 6),
             'min'    => $min,
             'max'    => max($ppus),
         ];
