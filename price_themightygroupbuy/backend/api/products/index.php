@@ -15,10 +15,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
              FROM pc_products p
              ORDER BY p.canonical_name ASC"
         )->fetchAll();
-        foreach ($rows as &$r) {
-            $r['id']           = (int)$r['id'];
-            $r['alias_count']  = (int)$r['alias_count'];
-            $r['vendor_count'] = (int)$r['vendor_count'];
+        $byId = [];
+        foreach ($rows as $i => $r) {
+            $rows[$i]['id']              = (int)$r['id'];
+            $rows[$i]['alias_count']     = (int)$r['alias_count'];
+            $rows[$i]['vendor_count']    = (int)$r['vendor_count'];
+            $rows[$i]['aliases']         = [];
+            $rows[$i]['classifications'] = [];
+            $byId[(int)$r['id']]         = $i;
+        }
+
+        // Bulk-fetch aliases/classifications for every product in 2 queries total,
+        // grouped in PHP — was previously a per-product GET /api/products/{id} loop
+        // in the frontend (194 sequential round trips just to render this list;
+        // every merge/alias/edit action re-triggered the whole loop on refresh).
+        // Specs+per-spec prices stay out of this payload; they're only shown for
+        // one expanded row at a time, so ProductsTab.vue fetches those on demand.
+        foreach (db()->query('SELECT product_id, id, alias FROM pc_product_aliases ORDER BY alias') as $a) {
+            if (isset($byId[$a['product_id']])) $rows[$byId[$a['product_id']]]['aliases'][] = ['id' => (int)$a['id'], 'alias' => $a['alias']];
+        }
+        foreach (db()->query(
+            'SELECT pc.product_id, c.id, c.name FROM pc_classifications c
+             JOIN pc_product_classifications pc ON pc.classification_id = c.id
+             ORDER BY c.name'
+        ) as $c) {
+            if (isset($byId[$c['product_id']])) $rows[$byId[$c['product_id']]]['classifications'][] = ['id' => (int)$c['id'], 'name' => $c['name']];
         }
         return $rows;
     });

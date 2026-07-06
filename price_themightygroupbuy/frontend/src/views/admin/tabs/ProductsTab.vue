@@ -112,9 +112,12 @@ async function load() {
   const res = await get('/api/products')
   products.value = res.products
   for (const p of res.products) {
-    const d = await get(`/api/products/${p.id}`)
-    detail[p.id] = d
+    detail[p.id] = { ...detail[p.id], aliases: p.aliases, classifications: p.classifications }
   }
+}
+async function loadSpecs(p) {
+  const d = await get(`/api/products/${p.id}`)
+  detail[p.id] = { ...detail[p.id], specifications: d.specifications }
 }
 async function loadClassifications() {
   const res = await get('/api/classifications')
@@ -148,6 +151,7 @@ function startEdit(p) {
   editingId.value = p.id
   editForm.canonical_name = p.canonical_name
   editForm.classification_ids = classificationsFor(p).map(c => c.id)
+  loadSpecs(p)
 }
 function cancelEdit() {
   editingId.value = null
@@ -159,6 +163,14 @@ async function saveEdit(p) {
   await load()
 }
 
+// Spec edits only affect the one product currently expanded — refetch just its
+// specs (loadSpecs) instead of the old approach of reloading every product's
+// full detail via a 194-request loop just to refresh one row.
+async function refreshEditingSpecs() {
+  const p = products.value.find(x => x.id === editingId.value)
+  if (p) await loadSpecs(p)
+}
+
 async function saveSpec(s) {
   if (!s.numeric_value || s.numeric_value <= 0 || !s.spec_label.trim()) return
   try {
@@ -167,6 +179,7 @@ async function saveSpec(s) {
     alert(err.message)
   }
   await load()
+  await refreshEditingSpecs()
 }
 
 async function moveSpec(spec, targetProductId) {
@@ -178,6 +191,7 @@ async function moveSpec(spec, targetProductId) {
     return
   }
   await load()
+  await refreshEditingSpecs()
 }
 
 async function mergeSpec(spec, targetSpecId) {
@@ -190,6 +204,7 @@ async function mergeSpec(spec, targetSpecId) {
     return
   }
   await load()
+  await refreshEditingSpecs()
 }
 
 async function addAlias(p) {
@@ -207,6 +222,7 @@ async function merge(loser, winnerId) {
   if (!confirm(`Merge "${loser.canonical_name}" into the selected product? This cannot be undone.`)) return
   await post(`/api/products/${winnerId}/merge`, { loser_id: loser.id })
   await load()
+  await refreshEditingSpecs() // merge can move the loser's specs onto whichever product is currently expanded
 }
 </script>
 
