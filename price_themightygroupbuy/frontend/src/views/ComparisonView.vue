@@ -245,7 +245,7 @@ const vendorColumns = computed(() => {
    reach it. Header rows below are sticky within this box to match. */
 .table-scroll { overflow: auto; max-height: 70vh; }
 .cmp-table { border-collapse: collapse; width: 100%; font-size: 13px; white-space: nowrap; }
-.cmp-table th, .cmp-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: right; }
+.cmp-table th, .cmp-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); text-align: center; }
 .cmp-table thead th { background: var(--primary); color: var(--text-on-primary); font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.4px; text-align: center; }
 .cmp-table thead tr:first-child th { position: sticky; top: 0; z-index: 3; }
 .cmp-table thead tr:last-child th.sub-header { background: var(--info); font-size: 11px; position: sticky; top: 40px; z-index: 3; }
@@ -253,7 +253,7 @@ const vendorColumns = computed(() => {
 .vendor-name-btn {
   background: none; border: none; padding: 0; font: inherit; color: inherit;
   cursor: pointer; text-decoration: underline; text-decoration-color: transparent;
-  display: inline-block; max-width: 110px; overflow: hidden; text-overflow: ellipsis;
+  display: inline-block; max-width: 80px; overflow: hidden; text-overflow: ellipsis;
   vertical-align: bottom;
 }
 .vendor-name-btn:hover { text-decoration-color: currentColor; }
