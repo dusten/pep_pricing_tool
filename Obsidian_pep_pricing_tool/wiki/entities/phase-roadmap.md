@@ -75,6 +75,7 @@ Built:
 26. ~~**Claude API admin tab + manual JSON processing**~~ — **RESOLVED 2026-07-05** (see Resolved below).
 27. ~~**Files-page notes truncation + full Review Queue clearance + duplicate-product cleanup**~~ — **RESOLVED 2026-07-05** (see Resolved below).
 28. **Open product-identity questions surfaced during cleanup, not resolved** — deliberately left untouched pending your call: is "Adipotide" the same product as "Adipotide/FTPP" (3 products currently)? Is "Gonadorelin" the same as "Gonadorelin Acetate" (salt-form question)? Is "Sermorelin" the same as "Sermorelin Acetate"? Separately, `L-Carnitine`/`L-Carnitine 600mg`/`L-Carnitine 1200mg` exist as three separate *products* — the dose is baked into the product name instead of being a spec on one product, which is a modeling fix (move doses to specs), not a simple merge.
+29. **Blocked: Claude API usage limit hit — no extraction possible until 2026-08-01.** Attempting to process vendor file 32 (`Lucy-Oil Updated List.pdf`) on 2026-07-06 failed with HTTP 400: `"You have reached your specified API usage limits. You will regain access on 2026-08-01 at 00:00 UTC."` File 32 is marked `failed` with this error in `processing_notes`, no partial/stuck state. Blocks any further vendor-file processing (real Claude calls; manual-JSON processing via `files/{id}/manual-process` still works since it doesn't call the API) until the limit resets or is raised on the Anthropic account side. Re-run file 32 (and any other pending uploads) once access returns.
 
 ## Resolved
 
