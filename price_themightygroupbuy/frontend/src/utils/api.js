@@ -22,7 +22,9 @@ export async function api(method, path, body = null) {
   try { data = await res.json() } catch { data = {} }
 
   if (!res.ok) {
-    const err = new Error(data.message || data.error || `HTTP ${res.status}`)
+    // 'error' is the friendly headline every endpoint sets; 'message' (when present)
+    // is raw exception detail meant as a secondary diagnostic, not primary display text.
+    const err = new Error(data.error || data.message || `HTTP ${res.status}`)
     err.status = res.status
     err.data   = data
     throw err
