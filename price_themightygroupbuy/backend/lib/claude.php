@@ -14,17 +14,7 @@ const VARIANT_COMPOUND_WATCH_NAMES = [
 ];
 
 function buildExtractionSystemPrompt(): string {
-    $rows = db()->query(
-        "SELECT p.canonical_name, GROUP_CONCAT(a.alias SEPARATOR ', ') AS aliases
-         FROM pc_products p LEFT JOIN pc_product_aliases a ON a.product_id = p.id
-         GROUP BY p.id ORDER BY p.canonical_name"
-    )->fetchAll();
-    $list = [];
-    foreach ($rows as $r) {
-        $list[] = $r['aliases'] ? "{$r['canonical_name']} ({$r['aliases']})" : $r['canonical_name'];
-    }
-    $canonicalList = implode("\n", $list);
-    $watchNames    = implode(', ', VARIANT_COMPOUND_WATCH_NAMES);
+    $watchNames = implode(', ', VARIANT_COMPOUND_WATCH_NAMES);
 
     return <<<PROMPT
 You are a vendor price list parser. Extract EVERY priced product from the attached
@@ -44,8 +34,10 @@ Rules:
 4. Non-standard kit sizes (1, 5, 6, 11, 12 vials): set non_standard_kit=true, include a warning, still include the row.
 5. Normalize specs: numeric value + unit; convert 100mcg -> 0.1mg.
 6. Combo products (e.g. "BPC 5mg + TB500 5mg"): spec = total mg (10mg).
-7. Canonical names to map common variants to (name and known aliases in parens):
-{$canonicalList}
+7. canonical_name = the product name exactly as this vendor writes it (trim whitespace,
+   fix obvious casing) — do not rename, merge, or annotate it with other names/aliases
+   you may know. Matching this name to existing products/aliases is handled entirely by
+   the software after extraction, not by you.
 8. Variant-compound watchlist — these common names cover multiple, meaningfully different
    molecules (e.g. "TB-500" usually means the 7aa fragment, not full Thymosin Beta-4; "TB5"
    can mean an unrelated small-molecule MAO-B inhibitor). If a listing uses one of these names
@@ -68,7 +60,7 @@ Return exactly this shape:
 {
   "contact": {"name": "", "email": "", "whatsapp": "", "website": ""},
   "warnings": ["..."],
-  "prices": [{"canonical_name":"","is_new_product":false,"spec_label":"","numeric_value":0,"unit":"mg",
+  "prices": [{"canonical_name":"","spec_label":"","numeric_value":0,"unit":"mg",
               "price_usd":0,"kit_vial_count":10,"tier_kit_size":1,"vendor_sku":"","non_standard_kit":false,
               "is_raw_material":false}]
 }
