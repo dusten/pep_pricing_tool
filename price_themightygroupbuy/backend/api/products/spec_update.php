@@ -47,7 +47,9 @@ try {
     $pdo->commit();
 } catch (Throwable $e) {
     $pdo->rollBack();
-    jsonResponse(['error' => 'Update failed.', 'message' => $e->getMessage()], 500);
+    // Most likely (product_id, spec_label)'s UNIQUE key if the new label
+    // collides with another spec already on this product.
+    jsonResponse(['error' => 'Update failed — check for a duplicate label on this product.', 'message' => $e->getMessage()], 500);
 }
 
 cacheBust('admin_products');
