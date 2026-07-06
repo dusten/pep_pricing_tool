@@ -69,8 +69,8 @@
               <th class="sticky-col col-cart" rowspan="2"></th>
               <th class="sticky-col col-product" rowspan="2">Product</th>
               <th class="sticky-col col-spec" rowspan="2">Spec</th>
-              <th v-for="v in vendorColumns" :key="v.id" colspan="2" class="vendor-header">
-                <button class="vendor-name-btn" @click="openVendorCard(v.id)">{{ v.name }}</button>
+              <th v-for="v in vendorColumns" :key="v.id" colspan="2" class="vendor-header vendor-divider">
+                <button class="vendor-name-btn" :title="v.name" @click="openVendorCard(v.id)">{{ v.name }}</button>
                 <span v-if="v.is_verified" class="badge badge-pro">✓</span>
               </th>
               <th rowspan="2" class="stat-header">Avg</th>
@@ -78,7 +78,7 @@
             </tr>
             <tr>
               <template v-for="v in vendorColumns" :key="'sub'+v.id">
-                <th class="sub-header">Price</th>
+                <th class="sub-header vendor-divider">Price</th>
                 <th class="sub-header">$/unit</th>
               </template>
             </tr>
@@ -95,7 +95,7 @@
               <td class="sticky-col col-spec">{{ row.spec }} <span v-if="row.is_raw_material" class="badge badge-free" title="Raw/bulk powder, not a finished vial">Raw</span></td>
               <template v-for="v in vendorColumns" :key="v.id">
                 <template v-if="row.byVendor[v.id]">
-                  <td :class="{ lowest: row.byVendor[v.id].is_lowest }" :title="row.byVendor[v.id].vendor_sku ? `Cat No.: ${row.byVendor[v.id].vendor_sku}` : ''">
+                  <td class="vendor-divider" :class="{ lowest: row.byVendor[v.id].is_lowest }" :title="row.byVendor[v.id].vendor_sku ? `Cat No.: ${row.byVendor[v.id].vendor_sku}` : ''">
                     ${{ row.byVendor[v.id].price.toFixed(2) }}
                     <span v-if="row.byVendor[v.id].non_standard_kit" class="warn-icon"
                           :title="`Listed as ${row.byVendor[v.id].kit_vial_count}-vial kit — \$/unit may not be comparable.`">⚠</span>
@@ -103,7 +103,7 @@
                   <td :class="{ lowest: row.byVendor[v.id].is_lowest }">${{ row.byVendor[v.id].price_per_unit.toFixed(2) }}</td>
                 </template>
                 <template v-else>
-                  <td class="blank"></td><td class="blank"></td>
+                  <td class="blank vendor-divider"></td><td class="blank"></td>
                 </template>
               </template>
               <td class="stat-cell">${{ row.stats.avg.toFixed(2) }}</td>
@@ -253,8 +253,16 @@ const vendorColumns = computed(() => {
 .vendor-name-btn {
   background: none; border: none; padding: 0; font: inherit; color: inherit;
   cursor: pointer; text-decoration: underline; text-decoration-color: transparent;
+  display: inline-block; max-width: 110px; overflow: hidden; text-overflow: ellipsis;
+  vertical-align: bottom;
 }
 .vendor-name-btn:hover { text-decoration-color: currentColor; }
+/* Separates each vendor's Price/$-per-unit pair from the next vendor — long
+   display names used to stretch the whole 2-column group to fit, leaving a
+   lot of empty space in the narrow numeric cells below; truncating the name
+   (title attr shows the full name on hover, and the vendor card on click)
+   fixed that, this just makes the boundary between vendors visible too. */
+.vendor-divider { border-left: 2px solid var(--border); }
 
 .sticky-col { position: sticky; text-align: left !important; background: var(--surface); z-index: 2; }
 .col-cart    { left: 0; width: 90px; min-width: 90px; max-width: 90px; text-align: center !important; }
