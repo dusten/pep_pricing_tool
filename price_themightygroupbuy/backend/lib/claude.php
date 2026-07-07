@@ -66,6 +66,14 @@ Rules:
     standing recorded price is worse than under-discounting. Note the sale price and its
     name/duration in a warning instead of using it, so a human can decide whether to apply
     it manually.
+12. If a source prices PER VIAL explicitly (e.g. column header "Price/vial") alongside a
+    minimum order quantity given in raw vial units (e.g. "MOQ/vial" = 100, 500 — not a kit
+    count), that MOQ is not tier_kit_size directly. A standard kit is 10 vials unless the
+    source states a different bundle size elsewhere (e.g. a "Package" column reading
+    "15vial/bag"). Set kit_vial_count to that bundle size (10 if unstated), tier_kit_size =
+    ceil(MOQ / kit_vial_count) — the number of kits needed to meet the MOQ, rounding up since
+    a fractional kit can't be ordered — and price_usd = the given per-vial price × kit_vial_count
+    (the price for one whole kit, matching how every other vendor's price_usd is recorded).
 
 Return exactly this shape:
 {
