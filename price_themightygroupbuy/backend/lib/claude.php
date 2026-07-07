@@ -28,7 +28,12 @@ Rules:
    ≥50kits" columns — breakpoints vary by vendor, don't assume 1/10/100): emit ONE row per
    tier column present, each with its own tier_kit_size set to that column's minimum kit
    quantity as a plain integer, and its own price_usd for that tier. Do not collapse to
-   just the lowest tier's price.
+   just the lowest tier's price. This only applies when the source shows genuinely separate
+   prices for different order quantities. A vial count baked into the spec/dose text itself
+   (e.g. "10mg*10vials", "5mg *10 vials") describes packaging — how many vials come bundled
+   in one kit — not a purchase-quantity tier: record that number as kit_vial_count only.
+   tier_kit_size stays 1 unless the source separately shows more than one price for that
+   same item at different order quantities.
 2. USD only. If only RMB/CNY is present, convert at 7.2.
 3. Skip entries marked X, —, or blank price.
 4. Non-standard kit sizes (1, 5, 6, 11, 12 vials): set non_standard_kit=true, include a warning, still include the row.
@@ -55,6 +60,12 @@ Rules:
     given but add a warning naming the product — multi-tier bulk pricing isn't fully modeled
     yet, so it needs a human to decide the right rows rather than guessing here. Every other
     row (finished vials/kits) gets is_raw_material=false.
+11. If a source lists more than one price for the same item (e.g. a regular/list price
+    column alongside a limited-time sale/discount price column), use the regular/list price
+    as price_usd, not the promotional one — a time-limited discount going stale as the
+    standing recorded price is worse than under-discounting. Note the sale price and its
+    name/duration in a warning instead of using it, so a human can decide whether to apply
+    it manually.
 
 Return exactly this shape:
 {
