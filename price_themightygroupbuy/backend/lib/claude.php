@@ -37,7 +37,10 @@ Rules:
 2. USD only. If only RMB/CNY is present, convert at 7.2.
 3. Skip entries marked X, —, or blank price.
 4. Non-standard kit sizes (1, 5, 6, 11, 12 vials): set non_standard_kit=true, include a warning, still include the row.
-5. Normalize specs: numeric value + unit; convert 100mcg -> 0.1mg.
+5. Normalize specs: numeric value + unit; convert 100mcg -> 0.1mg. spec_label itself must
+   be just the dose ("10mg"), never the full source text — strip any packaging/vial-count
+   suffix baked into the spec column (e.g. "10mg*10vials" -> spec_label "10mg"; that vial
+   count already goes in kit_vial_count per rule 1, not into spec_label too).
 6. Combo products (e.g. "BPC 5mg + TB500 5mg"): spec = total mg (10mg).
 7. canonical_name = the product name exactly as this vendor writes it (trim whitespace,
    fix obvious casing) — do not rename, merge, or annotate it with other names/aliases
