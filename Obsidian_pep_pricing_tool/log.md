@@ -347,3 +347,10 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - **#35 email escaping**: loadTemplate() htmlspecialchars() all vars except trusted self-built 'button'. Verified.
 - **#36 download filename**: download.php sends sanitized quoted filename + RFC 5987 filename*=UTF-8'' for the real name. Verified an embedded quote no longer breaks the header.
 - Deployed (schema 024/025 + code), all changed files php -l clean, smoke check green.
+
+## [2026-07-08] change | Admin Panel tabs grouped into two primary sections (user request)
+
+- The admin nav had grown to 17 pills in one row (flagged during the 2026-07-07 code review as unwieldy). Reorganized AdminView.vue into two primary group tabs, each fanning out to its own sub-tab row:
+  - **Vendor / Product Management**: Vendors, Review Queue, Products, Inventory, Stacks, Files, Claude API, Calendar
+  - **System / User Management**: Overview, Users, Waitlist, Subscriptions, Feedback, Performance, System, Backup, Settings
+- Two-level tab state (activeGroup + activeTab); selecting a group defaults to its first sub-tab. Still lands on System→Overview so the default landing is unchanged. Primary groups render as navy buttons, sub-tabs as gold pills to distinguish the levels. Pure frontend change, no backend/route/API changes. Calendar and Stacks placed under Vendor/Product as the two judgment calls (both catalog-facing). Commit b8cd02f.
