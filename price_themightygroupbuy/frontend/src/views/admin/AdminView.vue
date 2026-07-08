@@ -1,8 +1,17 @@
 <template>
   <AppLayout title="Admin Panel">
-    <!-- Pill tabs -->
+    <!-- Primary groups -->
+    <div class="admin-groups">
+      <button v-for="g in groups" :key="g.id"
+              :class="['admin-group-tab', { active: activeGroup === g.id }]"
+              @click="selectGroup(g.id)">
+        {{ g.label }}
+      </button>
+    </div>
+
+    <!-- Sub-tabs for the active group -->
     <div class="admin-tabs">
-      <button v-for="tab in tabs" :key="tab.id"
+      <button v-for="tab in currentTabs" :key="tab.id"
               :class="['admin-tab', { active: activeTab === tab.id }]"
               @click="activeTab = tab.id">
         {{ tab.label }}
@@ -32,7 +41,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import AppLayout from '@/components/AppLayout.vue'
 
 import OverviewTab      from './tabs/OverviewTab.vue'
@@ -53,30 +62,64 @@ import SystemTab        from './tabs/SystemTab.vue'
 import FeedbackTab      from './tabs/FeedbackTab.vue'
 import BackupTab        from './tabs/BackupTab.vue'
 
-const activeTab = ref('overview')
-
-const tabs = [
-  { id: 'overview',      label: 'Overview' },
-  { id: 'users',         label: 'Users' },
-  { id: 'waitlist',      label: 'Waitlist' },
-  { id: 'subscriptions', label: 'Subscriptions' },
-  { id: 'vendors',       label: 'Vendors' },
-  { id: 'review-queue',  label: 'Review Queue' },
-  { id: 'products',      label: 'Products' },
-  { id: 'stacks',        label: 'Stacks' },
-  { id: 'inventory',     label: 'Inventory' },
-  { id: 'files',         label: 'Files' },
-  { id: 'claude-api',    label: 'Claude API' },
-  { id: 'calendar',      label: 'Calendar' },
-  { id: 'settings',      label: 'Settings' },
-  { id: 'performance',   label: 'Performance' },
-  { id: 'system',        label: 'System' },
-  { id: 'feedback',      label: 'Feedback' },
-  { id: 'backup',        label: 'Backup' },
+// Two primary groups, each fanning out into its own sub-tabs — keeps the
+// admin nav from being a single 17-wide pill row.
+const groups = [
+  { id: 'catalog', label: 'Vendor / Product Management', tabs: [
+    { id: 'vendors',      label: 'Vendors' },
+    { id: 'review-queue', label: 'Review Queue' },
+    { id: 'products',     label: 'Products' },
+    { id: 'inventory',    label: 'Inventory' },
+    { id: 'stacks',       label: 'Stacks' },
+    { id: 'files',        label: 'Files' },
+    { id: 'claude-api',   label: 'Claude API' },
+    { id: 'calendar',     label: 'Calendar' },
+  ] },
+  { id: 'system', label: 'System / User Management', tabs: [
+    { id: 'overview',      label: 'Overview' },
+    { id: 'users',         label: 'Users' },
+    { id: 'waitlist',      label: 'Waitlist' },
+    { id: 'subscriptions', label: 'Subscriptions' },
+    { id: 'feedback',      label: 'Feedback' },
+    { id: 'performance',   label: 'Performance' },
+    { id: 'system',        label: 'System' },
+    { id: 'backup',        label: 'Backup' },
+    { id: 'settings',      label: 'Settings' },
+  ] },
 ]
+
+const activeGroup = ref('system')          // land on Overview, as before
+const activeTab   = ref('overview')
+
+const currentTabs = computed(() => groups.find(g => g.id === activeGroup.value).tabs)
+
+function selectGroup(id) {
+  activeGroup.value = id
+  activeTab.value   = groups.find(g => g.id === id).tabs[0].id
+}
 </script>
 
 <style scoped>
+.admin-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.admin-group-tab {
+  padding: 9px 20px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+}
+.admin-group-tab:hover  { border-color: var(--accent); color: var(--accent); }
+.admin-group-tab.active { background: var(--primary); border-color: var(--primary); color: var(--text-on-primary); }
+
 .admin-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -97,7 +140,7 @@ const tabs = [
   transition: all var(--transition);
 }
 .admin-tab:hover  { border-color: var(--accent); color: var(--accent); }
-.admin-tab.active { background: var(--primary); border-color: var(--primary); color: var(--text-on-primary); }
+.admin-tab.active { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
 
 .admin-body { }
 </style>
