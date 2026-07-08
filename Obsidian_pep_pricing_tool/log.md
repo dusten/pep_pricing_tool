@@ -359,3 +359,10 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 
 - User clarified the blocker: freshclam signature downloads are blocked from AWS/EC2 IP addresses (ClamAV's CDN, database.clamav.net, refuses this IP range), so clamd has no virus DB and crash-loops. This matches the existing comment in config.php. It is NOT a daemon/config bug to root-cause on the box — the daemon is fine, it has nothing to load.
 - Item is ON HOLD until the user resolves the signature-download problem (mirror off the blocked range, private S3/DatabaseMirror in freshclam.conf, out-of-band CVD copy, or a proxy). Uploads remain unscanned (MALWARE_SCAN_ENABLED=false) until then. Backlog #8 updated to reflect this so it isn't re-investigated.
+
+## [2026-07-08] feature | Cart cheapest-per-item (mix & match) view (#38, user request)
+
+- Cart previously showed only single-vendor options (cheapest vendor covering the whole cart + partial-coverage vendors). Added a per-item breakdown: each item's lowest price from whichever vendor is cheapest for that line, plus a grand total — the "split the cart across vendors for the absolute lowest" mode.
+- Backend: extended getCartSnapshot() (backend/lib/cart.php) to compute cheapest_by_item + cheapest_total from the price rows it already fetches (no extra query). Per-item entries aligned to cart order; vendor_id null when no vendor carries an item (shown as unavailable, not dropped). All snapshot consumers (cart GET/POST, add_stack) get the new fields automatically.
+- Frontend: cart.js store exposes cheapestByItem/cheapestTotal via a shared _apply(); CartView.vue renders a new "Cheapest per item (mix & match)" card with clickable vendor names (→ VendorCard) and a total shown once every item has a vendor.
+- Verified live on a real 4-item cart: $155.71 mix-and-match vs. $166.71 best single vendor; invariant (split ≤ best single-vendor full-coverage total) confirmed.

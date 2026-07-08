@@ -42,13 +42,28 @@ function getCartSnapshot(PDO $pdo, int $userId): array {
                AND (pr.product_id, pr.specification_id) IN ($tuples)"
         );
         $stmt->execute($params);
+        $priceRows = $stmt->fetchAll();
 
         $byVendor = [];
-        foreach ($stmt->fetchAll() as $r) {
+        // Cheapest single vendor PER item (mix-and-match across vendors) — the
+        // lowest price_usd wins each line, tie broken by cheaper $/... isn't
+        // needed since it's the same spec, so lowest kit price is unambiguous.
+        $cheapestByKey = [];
+        foreach ($priceRows as $r) {
             $vid = (int)$r['vendor_id'];
+            $key = $r['product_id'] . ':' . $r['specification_id'];
             $byVendor[$vid] ??= ['vendor_name' => $r['vendor_name'], 'covered' => [], 'total' => 0.0];
-            $byVendor[$vid]['covered'][$r['product_id'] . ':' . $r['specification_id']] = $r['vendor_sku'];
+            $byVendor[$vid]['covered'][$key] = $r['vendor_sku'];
             $byVendor[$vid]['total'] += (float)$r['price_usd'];
+
+            if (!isset($cheapestByKey[$key]) || (float)$r['price_usd'] < $cheapestByKey[$key]['price']) {
+                $cheapestByKey[$key] = [
+                    'vendor_id'   => $vid,
+                    'vendor_name' => $r['vendor_name'],
+                    'price'       => (float)$r['price_usd'],
+                    'vendor_sku'  => $r['vendor_sku'],
+                ];
+            }
         }
 
         $labelByKey = [];
@@ -77,5 +92,32 @@ function getCartSnapshot(PDO $pdo, int $userId): array {
         usort($vendors, fn($a, $b) => $b['items_covered'] <=> $a['items_covered'] ?: $a['total_usd'] <=> $b['total_usd']);
     }
 
-    return ['items' => $items, 'vendors' => $vendors];
+    // Per-item cheapest breakdown ("buy each item from whoever's cheapest",
+    // vs. the single-vendor totals above). Aligned to cart order; an item no
+    // vendor carries is included with vendor_id null so the UI can show it as
+    // unavailable rather than silently dropping it.
+    $cheapestByItem = [];
+    $cheapestTotal  = 0.0;
+    foreach ($items as $it) {
+        $key  = $it['product_id'] . ':' . $it['specification_id'];
+        $best = $cheapestByKey[$key] ?? null;
+        if ($best) $cheapestTotal += $best['price'];
+        $cheapestByItem[] = [
+            'product'          => $it['product'],
+            'spec'             => $it['spec'],
+            'product_id'       => $it['product_id'],
+            'specification_id' => $it['specification_id'],
+            'vendor_id'        => $best['vendor_id'] ?? null,
+            'vendor_name'      => $best['vendor_name'] ?? null,
+            'price'            => $best['price'] ?? null,
+            'vendor_sku'       => $best['vendor_sku'] ?? null,
+        ];
+    }
+
+    return [
+        'items'            => $items,
+        'vendors'          => $vendors,
+        'cheapest_by_item' => $cheapestByItem,
+        'cheapest_total'   => round($cheapestTotal, 2),
+    ];
 }

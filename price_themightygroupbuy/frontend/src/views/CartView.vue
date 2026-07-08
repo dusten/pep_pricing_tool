@@ -36,6 +36,28 @@
             </div>
           </template>
         </div>
+
+        <div class="card">
+          <div class="items-header">
+            <h3>Cheapest per item (mix &amp; match)</h3>
+            <span v-if="allItemsAvailable" class="vendor-total">${{ cart.cheapestTotal.toFixed(2) }}</span>
+          </div>
+          <p class="text-muted text-sm" style="margin:-6px 0 14px">
+            The lowest price for each item, buying each from whichever vendor is cheapest.
+          </p>
+          <div v-for="c in cart.cheapestByItem" :key="c.product_id + ':' + c.specification_id" class="split-row">
+            <div>
+              <div class="split-item">{{ c.product }} — {{ c.spec }}</div>
+              <button v-if="c.vendor_id" class="vendor-name-btn text-sm" @click="openVendorId = c.vendor_id">{{ c.vendor_name }}</button>
+              <span v-else class="text-muted text-sm">No vendor carries this</span>
+            </div>
+            <span v-if="c.price !== null" class="split-price">${{ c.price.toFixed(2) }}</span>
+            <span v-else class="text-muted text-sm">—</span>
+          </div>
+          <div v-if="!allItemsAvailable" class="text-muted text-sm" style="margin-top:12px">
+            Total shown once every item has at least one vendor. Available items so far: <strong>${{ cart.cheapestTotal.toFixed(2) }}</strong>.
+          </div>
+        </div>
       </template>
     </template>
 
@@ -44,7 +66,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import VendorCard from '@/components/VendorCard.vue'
@@ -52,6 +74,8 @@ import { useCartStore } from '@/stores/cart.js'
 
 const cart = useCartStore()
 const openVendorId = ref(null)
+const allItemsAvailable = computed(() =>
+  cart.cheapestByItem.length > 0 && cart.cheapestByItem.every(c => c.vendor_id !== null))
 onMounted(() => cart.load())
 </script>
 
@@ -71,4 +95,9 @@ onMounted(() => cart.load())
   cursor: pointer; text-decoration: underline; text-decoration-color: transparent;
 }
 .vendor-name-btn:hover { text-decoration-color: currentColor; }
+
+.split-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.split-row:last-child { border-bottom: none; }
+.split-item { font-size: 13.5px; margin-bottom: 2px; }
+.split-price { font-weight: 700; font-size: 14px; white-space: nowrap; }
 </style>
