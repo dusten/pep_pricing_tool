@@ -23,15 +23,41 @@
           <div v-for="d in weekdayLabels" :key="d" class="cal-weekday">{{ d }}</div>
           <div v-for="n in leadingBlanks" :key="'b'+n" class="cal-cell blank"></div>
           <button v-for="day in daysInMonth" :key="day"
-                  :class="['cal-cell', { active: selectedDay === day, 'has-changes': dayKey(day) in days || dayKey(day) in approved }]"
+                  :class="['cal-cell', { active: selectedDay === day, 'has-changes': dayHasContent(day) }]"
                   @click="selectedDay = day">
             <span class="cal-day-num">{{ day }}</span>
             <span v-if="dayKey(day) in days" class="cal-dot">{{ days[dayKey(day)].length }}</span>
             <span v-if="dayKey(day) in approved" class="cal-dot approved-dot">{{ approved[dayKey(day)].length }}</span>
+            <span v-if="dayKey(day) in featured" class="cal-dot featured-dot" title="Featured product">★</span>
           </button>
         </div>
 
-        <div v-if="selectedDay && (dayKey(selectedDay) in days || dayKey(selectedDay) in approved)" class="day-detail">
+        <div v-if="selectedDay && dayHasContent(selectedDay)" class="day-detail">
+          <!-- Featured product — admin-picked, fully revealed to anonymous visitors (backlog #18) -->
+          <div v-if="!auth.isAuthenticated && dayKey(selectedDay) in featured" class="featured-card">
+            <div class="featured-tag">★ Featured</div>
+            <div class="featured-name">
+              {{ featured[dayKey(selectedDay)].product }}
+              <span class="text-muted">{{ featured[dayKey(selectedDay)].spec }}</span>
+            </div>
+            <div class="featured-price">
+              <strong>${{ featured[dayKey(selectedDay)].price.toFixed(2) }}</strong>
+              <span v-if="featured[dayKey(selectedDay)].old_price != null"
+                    :class="['price-change', featured[dayKey(selectedDay)].price < featured[dayKey(selectedDay)].old_price ? 'down' : featured[dayKey(selectedDay)].price > featured[dayKey(selectedDay)].old_price ? 'up' : '']">
+                was ${{ featured[dayKey(selectedDay)].old_price.toFixed(2) }}
+              </span>
+              <span class="text-muted">— {{ featured[dayKey(selectedDay)].vendor }}</span>
+            </div>
+            <p v-if="featured[dayKey(selectedDay)].note" class="featured-note">{{ featured[dayKey(selectedDay)].note }}</p>
+          </div>
+
+          <!-- All-time-low milestones — name-only teaser (backlog #19) -->
+          <div v-if="!auth.isAuthenticated && dayKey(selectedDay) in milestones" class="milestones">
+            <div v-for="(m, i) in milestones[dayKey(selectedDay)]" :key="i" class="milestone">
+              🏆 <strong>All-time low</strong> — {{ m.product }} <span class="text-muted">{{ m.spec }}</span>
+            </div>
+          </div>
+
           <template v-if="dayKey(selectedDay) in days">
             <h4>{{ monthLabel }} {{ selectedDay }} — {{ days[dayKey(selectedDay)].length }} price change(s)</h4>
 
@@ -105,6 +131,8 @@ const viewMonth   = ref(today.getMonth()) // 0-indexed
 const days        = ref({}) // { 'YYYY-MM-DD': [changes] } — shape differs by auth state, see template
 const approved    = ref({}) // { 'YYYY-MM-DD': [review-queue approvals] } — authenticated only
 const summary     = ref(null) // { total_changes, vendor_count, by_classification } — public only
+const featured    = ref({}) // { 'YYYY-MM-DD': {product,spec,vendor,price,old_price,note} } — public only
+const milestones  = ref({}) // { 'YYYY-MM-DD': [{product,spec}] } all-time lows — public only
 const loading     = ref(false)
 const selectedDay = ref(null)
 
@@ -118,6 +146,11 @@ const leadingBlanks  = computed(() => new Date(viewYear.value, viewMonth.value, 
 
 function dayKey(day) {
   return `${viewYear.value}-${String(viewMonth.value + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+function dayHasContent(day) {
+  const k = dayKey(day)
+  return k in days.value || k in approved.value || k in featured.value || k in milestones.value
 }
 
 function shiftMonth(delta) {
@@ -138,11 +171,15 @@ async function load() {
       const res = await get(`/api/calendar?month=${month}`)
       days.value = res.days
       approved.value = res.approved
+      featured.value = {}
+      milestones.value = {}
     } else {
       const res = await get(`/api/calendar/public?month=${month}`)
       days.value = res.days
       approved.value = {}
       summary.value = res.summary
+      featured.value = res.featured || {}
+      milestones.value = res.milestones || {}
     }
   } finally {
     loading.value = false
@@ -177,6 +214,20 @@ watch([viewYear, viewMonth], load)
   font-size: 9px; font-weight: 700; border-radius: 99px; min-width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; padding: 0 3px;
 }
 .cal-dot.approved-dot { right: auto; left: 3px; background: var(--success); }
+.cal-dot.featured-dot { bottom: 2px; top: auto; right: 3px; background: var(--accent); min-width: 0; }
+
+.featured-card {
+  border: 1.5px solid var(--accent); border-radius: var(--radius-sm);
+  background: var(--accent-subtle); padding: 12px 14px; margin-bottom: 14px;
+}
+.featured-tag { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--accent); margin-bottom: 4px; }
+.featured-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+.featured-price { font-size: 13px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.featured-price strong { font-size: 15px; }
+.featured-note { font-size: 12px; color: var(--text-secondary); margin: 8px 0 0; }
+
+.milestones { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
+.milestone { font-size: 12.5px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; }
 
 .day-detail { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--border); }
 .day-detail h4 { font-size: 13.5px; margin-bottom: 12px; }

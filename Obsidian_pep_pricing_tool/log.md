@@ -337,3 +337,13 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - **#34 CSV formula injection**: export_csv.php single-quote-prefixes cells starting with =+-@; numeric cells untouched.
 - **#37 last-admin guard**: users_show.php rejects (422) clearing is_admin on the only admin.
 - Deployed (schema sync + code), all changed files php -l clean, GET_LOCK/is_hidden/CSV-guard/safeHttpUrl self-checks pass on prod, smoke check green.
+
+## [2026-07-08] fix | Backlog batch: #18, #19, #30(MT), #33, #35, #36
+
+- **#18 featured product (admin-picked)**: new pc_calendar_features table (migration 025), admin endpoint admin/calendar-features (GET/POST/DELETE) + new admin "Calendar" tab (CalendarTab.vue) to pick date→product→spec→note. Public calendar_public.php resolves the featured day to the product's cheapest active listing (vendor, price, delta from latest history); CalendarView.vue renders a full card (★ on the cell) for logged-out visitors only. Verified live.
+- **#19 all-time-low milestones**: calendar_public.php returns milestones per day (product+spec that first hit a new recorded low this month, needs a prior higher price). Name-only 🏆 callouts, preserving the teaser. Verified populated across real July history.
+- **#30 MT→Melanotan 1**: merged product 321 "MT" (SKU MT1) onto 93 per user decision (migration_scripts/2026-07-08-merge_mt_into_melanotan1.php). Cagrisema kept merged per user decision. Catalog 200→199.
+- **#33 audit log FK**: migration 024 — admin_id nullable, CASCADE→SET NULL, so deleting an admin keeps their ~3000 audit rows. Verified live.
+- **#35 email escaping**: loadTemplate() htmlspecialchars() all vars except trusted self-built 'button'. Verified.
+- **#36 download filename**: download.php sends sanitized quoted filename + RFC 5987 filename*=UTF-8'' for the real name. Verified an embedded quote no longer breaks the header.
+- Deployed (schema 024/025 + code), all changed files php -l clean, smoke check green.

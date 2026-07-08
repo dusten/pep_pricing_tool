@@ -122,12 +122,12 @@ CREATE TABLE IF NOT EXISTS pc_referrals (
 
 CREATE TABLE IF NOT EXISTS pc_admin_audit_log (
   id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  admin_id   INT UNSIGNED NOT NULL,
+  admin_id   INT UNSIGNED NULL,             -- SET NULL on admin delete — audit rows outlive their admin (#33)
   action     VARCHAR(200) NOT NULL,
   details    JSON         NULL,
   ip         VARCHAR(45)  NULL,
   created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (admin_id) REFERENCES pc_users(id) ON DELETE CASCADE,
+  FOREIGN KEY (admin_id) REFERENCES pc_users(id) ON DELETE SET NULL,
   INDEX (admin_id),
   INDEX (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -366,6 +366,19 @@ CREATE TABLE IF NOT EXISTS pc_price_history (
   changed_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX (vendor_id, product_id, specification_id, changed_at),
   INDEX (changed_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Admin-picked featured product for the public price calendar (backlog #18).
+CREATE TABLE IF NOT EXISTS pc_calendar_features (
+  feature_date     DATE         NOT NULL PRIMARY KEY,
+  product_id       INT UNSIGNED NOT NULL,
+  specification_id INT UNSIGNED NULL,
+  note             VARCHAR(200) NULL,
+  created_by       INT UNSIGNED NULL,
+  created_at       DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (product_id)       REFERENCES pc_products(id)       ON DELETE CASCADE,
+  FOREIGN KEY (specification_id) REFERENCES pc_specifications(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by)       REFERENCES pc_users(id)          ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pc_pending_imports (

@@ -155,6 +155,7 @@ $ROUTES = [
     'admin/slow-queries/export' => 'admin/slow_queries_export.php',
     'admin/claude-prompt'  => 'admin/claude_prompt.php',
     'admin/claude-log'     => 'admin/claude_log.php',
+    'admin/calendar-features' => 'admin/calendar_features.php',
     'admin/backup'         => 'admin/backup.php',
     // ── Backlog — Stripe billing, do not build yet ───────────────
     // 'billing/checkout'     => 'billing/checkout.php',
@@ -177,6 +178,7 @@ $DYNAMIC = [
     'files/(\d+)/status'                => ['files/status.php',      'id'],
     'files/(\d+)'                       => ['files/delete.php',      'id'],
     'admin/claude-log/(\d+)'            => ['admin/claude_log_show.php', 'id'],
+    'admin/calendar-features/(\d{4}-\d{2}-\d{2})' => ['admin/calendar_features.php', 'date'],
     'products/(\d+)'                    => ['products/show.php',     'id'],
     'products/(\d+)/aliases'            => ['products/aliases.php',  'id'],
     'products/(\d+)/aliases/(\d+)'      => ['products/aliases.php',  'id', 'aliasId'],

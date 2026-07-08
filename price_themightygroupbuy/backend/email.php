@@ -43,7 +43,11 @@ function loadTemplate(string $name, array $vars = []): string {
     $path = dirname(__DIR__) . '/backend/email_templates/' . $name . '.html';
     $body = file_get_contents($path);
     foreach ($vars as $k => $v) {
-        $body = str_replace('{{' . $k . '}}', $v, $body);
+        // HTML-escape every substitution — display names etc. are user-supplied
+        // and land inside the HTML body. The one exception is 'button', which is
+        // trusted HTML we build ourselves in _btn(), not user input.
+        $safe = $k === 'button' ? $v : htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8');
+        $body = str_replace('{{' . $k . '}}', $safe, $body);
     }
     return $body;
 }

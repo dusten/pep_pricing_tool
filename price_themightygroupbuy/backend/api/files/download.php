@@ -29,8 +29,14 @@ if ($file['file_type'] === 'image') {
         'csv' => 'text/csv', 'zip' => 'application/zip',
     ][$file['file_type']] ?? 'application/octet-stream';
 }
+// A " in an uploaded filename breaks the quoted filename= value. Send an
+// ASCII-sanitized fallback (quotes/control chars stripped) plus RFC 5987
+// filename* carrying the real UTF-8 name percent-encoded — modern browsers
+// prefer filename*, older ones fall back to the safe filename.
+$rawName   = basename($file['original_filename']);
+$asciiName = preg_replace('/[^\x20-\x7e]/', '_', str_replace(['"', '\\'], '', $rawName));
 header('Content-Type: ' . $mime);
-header('Content-Disposition: attachment; filename="' . basename($file['original_filename']) . '"');
+header("Content-Disposition: attachment; filename=\"$asciiName\"; filename*=UTF-8''" . rawurlencode($rawName));
 header('Content-Length: ' . filesize($fullPath));
 readfile($fullPath);
 exit;

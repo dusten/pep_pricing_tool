@@ -21,6 +21,7 @@
       <InventoryTab     v-if="activeTab === 'inventory'" />
       <FilesTab         v-if="activeTab === 'files'" />
       <ClaudeApiTab     v-if="activeTab === 'claude-api'" />
+      <CalendarTab      v-if="activeTab === 'calendar'" />
       <SettingsTab      v-if="activeTab === 'settings'" />
       <PerformanceTab   v-if="activeTab === 'performance'" />
       <SystemTab        v-if="activeTab === 'system'" />
@@ -45,6 +46,7 @@ import StacksTab        from './tabs/StacksTab.vue'
 import InventoryTab     from './tabs/InventoryTab.vue'
 import FilesTab         from './tabs/FilesTab.vue'
 import ClaudeApiTab     from './tabs/ClaudeApiTab.vue'
+import CalendarTab      from './tabs/CalendarTab.vue'
 import SettingsTab      from './tabs/SettingsTab.vue'
 import PerformanceTab   from './tabs/PerformanceTab.vue'
 import SystemTab        from './tabs/SystemTab.vue'
@@ -65,6 +67,7 @@ const tabs = [
   { id: 'inventory',     label: 'Inventory' },
   { id: 'files',         label: 'Files' },
   { id: 'claude-api',    label: 'Claude API' },
+  { id: 'calendar',      label: 'Calendar' },
   { id: 'settings',      label: 'Settings' },
   { id: 'performance',   label: 'Performance' },
   { id: 'system',        label: 'System' },
