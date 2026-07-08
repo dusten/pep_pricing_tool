@@ -366,3 +366,10 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Backend: extended getCartSnapshot() (backend/lib/cart.php) to compute cheapest_by_item + cheapest_total from the price rows it already fetches (no extra query). Per-item entries aligned to cart order; vendor_id null when no vendor carries an item (shown as unavailable, not dropped). All snapshot consumers (cart GET/POST, add_stack) get the new fields automatically.
 - Frontend: cart.js store exposes cheapestByItem/cheapestTotal via a shared _apply(); CartView.vue renders a new "Cheapest per item (mix & match)" card with clickable vendor names (→ VendorCard) and a total shown once every item has a vendor.
 - Verified live on a real 4-item cart: $155.71 mix-and-match vs. $166.71 best single vendor; invariant (split ≤ best single-vendor full-coverage total) confirmed.
+
+## [2026-07-08] feature | Vendor file upload: multi-file select + clipboard image paste (#39, user request)
+
+- Admin vendor-file upload (VendorsTab.vue) previously took one file per pick. Backend (vendors/files.php) is one-file-per-request by design (per-file malware scan, dedup, is_current supersede), so kept it as-is and looped on the frontend.
+- Added: `multiple` on the file input; a shared uploadFiles() that POSTs each file sequentially with a live progress counter (uploadDone/uploadTotal) and an end-of-batch summary alert (uploaded N / duplicates skipped / per-file failures) — silent on all-success since the file-repo table refreshes as feedback.
+- Image paste: a focusable dashed paste-zone with @paste pulls image items off the clipboard, synthesizes a filename with the correct extension (backend keys file_type off the extension) since pasted blobs often lack a usable name, and runs them through the same uploadFiles() loop. Honors the selected category (price_list/coa/other). preventDefault only when images are actually found so text paste elsewhere isn't blocked.
+- Frontend-only, no backend/route change. Deployed; build clean, new code confirmed in bundle, file input has `multiple`.

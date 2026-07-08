@@ -78,8 +78,12 @@
           <option value="coa">COA</option>
           <option value="other">Other</option>
         </select>
-        <input type="file" ref="fileInput" accept=".pdf,.xlsx,.csv,.jpg,.jpeg,.png,.zip" @change="upload" />
+        <input type="file" ref="fileInput" multiple accept=".pdf,.xlsx,.csv,.jpg,.jpeg,.png,.zip" @change="upload" />
       </div>
+      <div v-if="selectedVendorId" class="paste-zone" tabindex="0" @paste="onPaste">
+        📋 Click here, then paste a screenshot (Ctrl/⌘+V) to upload it as a {{ uploadCategory === 'price_list' ? 'price list' : uploadCategory }}.
+      </div>
+      <div v-if="uploading" class="text-muted text-sm" style="margin-bottom:12px">Uploading {{ uploadDone }}/{{ uploadTotal }}…</div>
 
       <div v-if="selectedVendorId && files.length" class="file-repo">
         <span class="label-sm">File repository</span>
@@ -189,6 +193,9 @@ const parseNote          = ref('')
 const copyNote           = ref('')
 const uploadCategory     = ref('price_list')
 const fileInput          = ref(null)
+const uploading          = ref(false)
+const uploadTotal        = ref(0)
+const uploadDone         = ref(0)
 const files              = ref([])
 const prices              = ref([])
 const showHidden          = ref(false)
@@ -323,21 +330,62 @@ async function deleteVendor(v) {
   alert(res.message)
 }
 
-async function upload(event) {
-  const file = event.target.files[0]
-  if (!file || !selectedVendorId.value) return
-  const body = new FormData()
-  body.append('file', file)
-  body.append('category', uploadCategory.value)
-  const res = await fetch(`/api/vendors/${selectedVendorId.value}/files`, {
-    method: 'POST', body, headers: { Authorization: 'Bearer ' + localStorage.getItem('pc_token') },
-  })
-  if (res.ok) { await onSelectVendor(); await load() }
-  else {
-    const data = await res.json().catch(() => ({}))
-    alert(data.message ? `${data.error} ${data.message}` : (data.error || 'Upload failed.'))
+// Backend takes one file per request (malware scan, dedup, is_current
+// supersede are all per-file) — so multi-file and paste both just loop it
+// here, one POST per file, rather than reworking that pipeline.
+async function uploadFiles(fileList) {
+  const filesArr = Array.from(fileList || []).filter(Boolean)
+  if (!filesArr.length || !selectedVendorId.value) return
+  uploading.value = true
+  uploadTotal.value = filesArr.length
+  uploadDone.value = 0
+  const results = { ok: 0, dup: 0, fail: [] }
+  for (const file of filesArr) {
+    const body = new FormData()
+    body.append('file', file, file.name)
+    body.append('category', uploadCategory.value)
+    try {
+      const res = await fetch(`/api/vendors/${selectedVendorId.value}/files`, {
+        method: 'POST', body, headers: { Authorization: 'Bearer ' + localStorage.getItem('pc_token') },
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) data.duplicate ? results.dup++ : results.ok++
+      else results.fail.push(`${file.name}: ${data.error || 'failed'}`)
+    } catch (e) {
+      results.fail.push(`${file.name}: ${e.message}`)
+    }
+    uploadDone.value++
   }
+  uploading.value = false
+  await onSelectVendor()
+  await load()
+  if (results.dup || results.fail.length) {
+    let msg = `Uploaded ${results.ok} file(s).`
+    if (results.dup) msg += ` ${results.dup} duplicate(s) skipped.`
+    if (results.fail.length) msg += `\nFailed:\n${results.fail.join('\n')}`
+    alert(msg)
+  }
+}
+
+function upload(event) {
+  uploadFiles(event.target.files)
   event.target.value = ''
+}
+
+// Grab pasted image(s) from the clipboard. A pasted blob often has no usable
+// filename, so synthesize one with the right extension — the backend keys
+// file_type off the extension.
+function onPaste(event) {
+  const imgs = []
+  for (const item of event.clipboardData?.items || []) {
+    if (item.kind !== 'file' || !item.type.startsWith('image/')) continue
+    const blob = item.getAsFile()
+    if (!blob) continue
+    const ext  = item.type.split('/')[1] === 'jpeg' ? 'jpg' : (item.type.split('/')[1] || 'png')
+    const name = blob.name && /\.\w+$/.test(blob.name) ? blob.name : `pasted-${Date.now()}-${imgs.length + 1}.${ext}`
+    imgs.push(new File([blob], name, { type: blob.type }))
+  }
+  if (imgs.length) { event.preventDefault(); uploadFiles(imgs) }
 }
 </script>
 
@@ -363,6 +411,12 @@ async function upload(event) {
 .pm-check input { width: auto; margin: 0; }
 .upload-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .upload-row select { max-width: 140px; }
+.paste-zone {
+  border: 1.5px dashed var(--border); border-radius: var(--radius-sm);
+  padding: 12px 14px; margin-bottom: 12px; font-size: 12.5px; color: var(--text-secondary);
+  cursor: text; transition: all var(--transition);
+}
+.paste-zone:focus { outline: none; border-color: var(--accent); color: var(--accent); background: var(--accent-subtle); }
 .file-repo { margin-top: 8px; }
 .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
