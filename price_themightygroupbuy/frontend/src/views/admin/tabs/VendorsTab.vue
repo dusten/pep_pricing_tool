@@ -113,11 +113,14 @@
       </div>
     </div>
 
+    <label class="text-sm" style="display:inline-flex;align-items:center;gap:6px;margin-bottom:8px">
+      <input type="checkbox" v-model="showHidden" @change="load()" /> Show hidden vendors
+    </label>
     <table class="admin-table">
       <thead><tr><th>Name</th><th>Contact</th><th>Prices</th><th>Last upload</th><th>Active</th><th>Merge into</th><th></th></tr></thead>
       <tbody>
         <tr v-for="v in vendors" :key="v.id">
-          <td>{{ v.display_name }} <span v-if="v.is_verified" class="badge badge-pro">Verified</span></td>
+          <td>{{ v.display_name }} <span v-if="v.is_verified" class="badge badge-pro">Verified</span> <span v-if="v.is_hidden" class="badge">Hidden</span></td>
           <td class="text-muted text-sm">{{ v.contact_name || v.email || '—' }}</td>
           <td>{{ v.price_count }}</td>
           <td class="text-muted text-sm">{{ v.last_upload || 'never' }}</td>
@@ -132,6 +135,7 @@
           </td>
           <td>
             <button class="btn btn-ghost btn-sm" @click="selectedVendorId = v.id; onSelectVendor()">Manage</button>
+            <button class="btn btn-ghost btn-sm" @click="toggleHidden(v)">{{ v.is_hidden ? 'Unhide' : 'Hide' }}</button>
             <button class="btn btn-ghost btn-sm" @click="deleteVendor(v)">Delete</button>
           </td>
         </tr>
@@ -187,12 +191,20 @@ const uploadCategory     = ref('price_list')
 const fileInput          = ref(null)
 const files              = ref([])
 const prices              = ref([])
+const showHidden          = ref(false)
 
 async function load() {
-  const res = await get('/api/vendors')
+  const res = await get(`/api/vendors${showHidden.value ? '?include_hidden=1' : ''}`)
   vendors.value = res.vendors
 }
 load()
+
+async function toggleHidden(v) {
+  const hiding = !v.is_hidden
+  if (hiding && !confirm(`Hide "${v.display_name}"? All data is kept, but the vendor disappears everywhere (including this list) until unhidden via "Show hidden".`)) return
+  await put(`/api/vendors/${v.id}`, { is_hidden: hiding })
+  await load()
+}
 
 function startNew() {
   selectedVendorId.value = null

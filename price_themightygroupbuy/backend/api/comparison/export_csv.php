@@ -20,15 +20,21 @@ sort($vendorNames);
 header('Content-Type: text/csv');
 header('Content-Disposition: attachment; filename="comparison-' . date('Y-m-d') . '.csv"');
 
+// CSV formula injection guard (backlog #34): product/spec/vendor names come
+// from vendor files — a value starting with = + - or @ becomes a live formula
+// when the CSV opens in Excel. Single-quote prefix is the standard defusal
+// (Excel shows the text as-is); numeric price cells pass through untouched.
+$noFormula = fn($v) => is_string($v) && preg_match('/^[=+\-@]/', $v) ? "'" . $v : $v;
+
 $out = fopen('php://output', 'w');
-fputcsv($out, array_merge(['Product', 'Specification'], $vendorNames, ['Avg', 'Median']));
+fputcsv($out, array_map($noFormula, array_merge(['Product', 'Specification'], $vendorNames, ['Avg', 'Median'])));
 foreach ($rows as $row) {
     $byName = array_column($row['vendors'], null, 'name');
     $line = [$row['product'], $row['spec']];
     foreach ($vendorNames as $name) $line[] = isset($byName[$name]) ? $byName[$name]['price'] : '';
     $line[] = $row['stats']['avg'];
     $line[] = $row['stats']['median'];
-    fputcsv($out, $line);
+    fputcsv($out, array_map($noFormula, $line));
 }
 fclose($out);
 exit;

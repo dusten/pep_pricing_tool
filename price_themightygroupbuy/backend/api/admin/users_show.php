@@ -16,6 +16,15 @@ if (!$target->fetch()) jsonResponse(['error' => 'User not found.'], 404);
 $fields = [];
 $vals   = [];
 if (array_key_exists('is_admin', $d)) {
+    // Last-admin lockout guard (backlog #37): refuse to demote the only admin —
+    // nobody would be left who can reach /admin to undo it.
+    if (!(bool)$d['is_admin']) {
+        $otherAdmins = db()->prepare('SELECT COUNT(*) FROM pc_users WHERE is_admin = 1 AND id != ?');
+        $otherAdmins->execute([$id]);
+        if ((int)$otherAdmins->fetchColumn() === 0) {
+            jsonResponse(['error' => 'Cannot remove the last admin — make another account admin first.'], 422);
+        }
+    }
     $fields[] = 'is_admin = ?';
     $vals[]   = (bool)$d['is_admin'] ? 1 : 0;
 }

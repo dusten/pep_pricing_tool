@@ -38,6 +38,15 @@ function updateVendorScalarFields(PDO $pdo, int $vendorId, array $d): void {
             $vals[]   = $f === 'website' ? safeHttpUrl((string)$d[$f]) : (trim((string)$d[$f]) ?: null);
         }
     }
+    // Hidden implies inactive (backlog #9) — every user-facing query filters on
+    // is_active, so forcing it here is what actually removes the vendor from
+    // comparison/cart/exports; is_hidden itself only hides the admin list row.
+    // Ordered before the is_active block so hiding overrides a passed value.
+    if (array_key_exists('is_hidden', $d)) {
+        $fields[] = 'is_hidden = ?';
+        $vals[]   = (bool)$d['is_hidden'] ? 1 : 0;
+        if ((bool)$d['is_hidden']) $d['is_active'] = false;
+    }
     if (array_key_exists('is_active', $d))   { $fields[] = 'is_active = ?';   $vals[] = (bool)$d['is_active']   ? 1 : 0; }
     if (array_key_exists('is_verified', $d)) { $fields[] = 'is_verified = ?'; $vals[] = (bool)$d['is_verified'] ? 1 : 0; }
     if (!$fields) return;

@@ -8,18 +8,23 @@ method('GET', 'POST');
 $admin = requireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $rows = cacheGet('admin_vendors', 'all', 60, function () {
+    // Hidden vendors (backlog #9) stay out of the list unless explicitly asked
+    // for (?include_hidden=1 — the admin "Show hidden" toggle, for audit/unhide).
+    $includeHidden = ($_GET['include_hidden'] ?? '') === '1';
+    $rows = cacheGet('admin_vendors', $includeHidden ? 'all_with_hidden' : 'all', 60, function () use ($includeHidden) {
         $rows = db()->query(
             "SELECT v.*, COUNT(p.id) AS price_count, MAX(f.uploaded_at) AS last_upload
              FROM pc_vendors v
              LEFT JOIN pc_prices p ON p.vendor_id = v.id AND p.is_active = 1
              LEFT JOIN pc_vendor_files f ON f.vendor_id = v.id
+             " . ($includeHidden ? '' : 'WHERE v.is_hidden = 0') . "
              GROUP BY v.id
              ORDER BY v.display_name ASC"
         )->fetchAll();
         foreach ($rows as &$r) {
             $r['id']          = (int)$r['id'];
             $r['is_active']   = (bool)$r['is_active'];
+            $r['is_hidden']   = (bool)$r['is_hidden'];
             $r['is_verified'] = (bool)$r['is_verified'];
             $r['price_count'] = (int)$r['price_count'];
         }

@@ -73,6 +73,7 @@ $pdo->commit();
 if ($d) {
     cacheBust('admin_vendors');
     if (array_key_exists('is_active', $d))   cacheBust('pricing_data');
+    if (array_key_exists('is_hidden', $d))   cacheBust('pricing_data'); // hiding forces is_active=0 (see updateVendorScalarFields)
     if (array_key_exists('is_verified', $d)) cacheBust('pricing_data'); // verified badge/filter feeds comparison
     logAdminAction((int)$admin['id'], 'update_vendor', ['vendor_id' => $id, 'fields' => array_keys($d)]);
 }

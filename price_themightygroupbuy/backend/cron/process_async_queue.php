@@ -13,6 +13,18 @@ require_once dirname(__DIR__) . '/lib/zip_reader.php';
 require_once dirname(__DIR__) . '/lib/price_import.php';
 require_once dirname(__DIR__) . '/lib/vendor_file_processor.php';
 
+// Overlap guard (backlog #31): one extraction can run longer than the cron
+// interval (curl timeout is 400s), so without this two ticks could process the
+// same still-'processing' file twice — double Claude spend, double history
+// writes. GET_LOCK over a schema claim column on purpose: the lock releases
+// automatically when the holder's connection closes, so a crashed run can
+// never leave a file stuck in a claimed state.
+if (!(int)db()->query("SELECT GET_LOCK('pc_process_async_queue', 0)")->fetchColumn()) {
+    db()->prepare('INSERT INTO pc_maintenance_runs (job, status, details) VALUES (?,?,?)')
+        ->execute(['process_async_vendor_files', 'ok', 'skipped — previous run still in progress']);
+    exit;
+}
+
 // Filter matches vendorFileQualifiesForAsync() exactly — files/process.php never
 // leaves a small/non-pdf file sitting at 'processing' for long, but this guards
 // against the cron picking up a file that's genuinely mid-flight in a concurrent

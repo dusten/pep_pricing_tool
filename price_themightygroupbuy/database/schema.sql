@@ -258,6 +258,7 @@ CREATE TABLE IF NOT EXISTS pc_vendors (
   shipping_note  TEXT         NULL,
   notes          TEXT         NULL,
   is_active      BOOLEAN      NOT NULL DEFAULT TRUE,
+  is_hidden      BOOLEAN      NOT NULL DEFAULT FALSE, -- hide-not-delete purge (backlog #9); hiding also forces is_active=0
   is_verified    BOOLEAN      NOT NULL DEFAULT FALSE,  -- manual admin toggle, not auto-computed
   created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
