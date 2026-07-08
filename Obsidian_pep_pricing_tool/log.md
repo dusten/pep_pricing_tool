@@ -354,3 +354,8 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
   - **Vendor / Product Management**: Vendors, Review Queue, Products, Inventory, Stacks, Files, Claude API, Calendar
   - **System / User Management**: Overview, Users, Waitlist, Subscriptions, Feedback, Performance, System, Backup, Settings
 - Two-level tab state (activeGroup + activeTab); selecting a group defaults to its first sub-tab. Still lands on System→Overview so the default landing is unchanged. Primary groups render as navy buttons, sub-tabs as gold pills to distinguish the levels. Pure frontend change, no backend/route/API changes. Calendar and Stacks placed under Vendor/Product as the two judgment calls (both catalog-facing). Commit b8cd02f.
+
+## [2026-07-08] note | Backlog #8 (ClamAV) root cause confirmed + put on hold
+
+- User clarified the blocker: freshclam signature downloads are blocked from AWS/EC2 IP addresses (ClamAV's CDN, database.clamav.net, refuses this IP range), so clamd has no virus DB and crash-loops. This matches the existing comment in config.php. It is NOT a daemon/config bug to root-cause on the box — the daemon is fine, it has nothing to load.
+- Item is ON HOLD until the user resolves the signature-download problem (mirror off the blocked range, private S3/DatabaseMirror in freshclam.conf, out-of-band CVD copy, or a proxy). Uploads remain unscanned (MALWARE_SCAN_ENABLED=false) until then. Backlog #8 updated to reflect this so it isn't re-investigated.
