@@ -41,6 +41,41 @@ function pricePerUnit(float $price, int $kitCount, float $numericValue): float {
     return $denom > 0 ? round($price / $denom, 6) : 0.0;
 }
 
+/**
+ * Sanitize a URL destined for an <a href>: only http(s) survives — any other
+ * scheme (javascript:, data:, ...) returns null. FILTER_VALIDATE_URL alone is
+ * NOT enough here: it accepts javascript://-style URLs, which become live XSS
+ * when Vue binds them into :href. A bare "example.com" gets https:// prepended,
+ * since that's what people actually type and a schemeless href renders as a
+ * broken relative link anyway. Every write path for a value that ends up in an
+ * href (coa_url, vendor website) must route through this.
+ */
+function safeHttpUrl(?string $url): ?string {
+    $url = trim((string)$url);
+    if ($url === '') return null;
+    if (!preg_match('#^https?://#i', $url)) {
+        if (preg_match('#^[a-z][a-z0-9+.-]*:#i', $url)) return null; // some other scheme — reject
+        $url = 'https://' . $url;
+    }
+    return filter_var($url, FILTER_VALIDATE_URL) ? $url : null;
+}
+
+/**
+ * Repoint users' cart items and stack items from one spec onto another
+ * (possibly under a different product) BEFORE the old spec/product row is
+ * deleted — both tables FK to specs/products with ON DELETE CASCADE, so
+ * without this every admin merge/move silently deletes matching rows out of
+ * user carts and curated stacks. UPDATE IGNORE: if the destination row
+ * already exists (user has both variants in their cart), the old row is left
+ * behind for the CASCADE to clean up — correct dedup.
+ */
+function repointCartAndStackItems(PDO $pdo, int $newProductId, int $newSpecId, int $oldSpecId): void {
+    foreach (['pc_cart_items', 'pc_stack_items'] as $table) {
+        $pdo->prepare("UPDATE IGNORE $table SET product_id = ?, specification_id = ? WHERE specification_id = ?")
+            ->execute([$newProductId, $newSpecId, $oldSpecId]);
+    }
+}
+
 // ── Tokens ───────────────────────────────────────────────────────
 
 function generateToken(int $bytes = 32): string {

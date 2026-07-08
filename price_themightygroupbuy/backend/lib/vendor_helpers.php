@@ -34,7 +34,8 @@ function updateVendorScalarFields(PDO $pdo, int $vendorId, array $d): void {
     foreach (['display_name', 'contact_name', 'email', 'whatsapp', 'discord', 'telegram', 'website', 'shipping_note', 'notes'] as $f) {
         if (array_key_exists($f, $d)) {
             $fields[] = "$f = ?";
-            $vals[]   = trim((string)$d[$f]) ?: null;
+            // website is rendered as :href in VendorCard — http(s) only (safeHttpUrl)
+            $vals[]   = $f === 'website' ? safeHttpUrl((string)$d[$f]) : (trim((string)$d[$f]) ?: null);
         }
     }
     if (array_key_exists('is_active', $d))   { $fields[] = 'is_active = ?';   $vals[] = (bool)$d['is_active']   ? 1 : 0; }

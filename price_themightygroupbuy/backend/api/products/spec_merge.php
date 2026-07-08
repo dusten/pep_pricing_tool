@@ -33,6 +33,8 @@ try {
     // left behind and cascade-deleted with the loser spec row below.
     $pdo->prepare('UPDATE IGNORE pc_prices SET specification_id = ? WHERE specification_id = ?')
         ->execute([$winnerId, $loserId]);
+    // Repoint user carts/stacks BEFORE the delete — their FKs cascade.
+    repointCartAndStackItems($pdo, (int)$specs[$winnerId]['product_id'], $winnerId, $loserId);
     $pdo->prepare('DELETE FROM pc_specifications WHERE id = ?')->execute([$loserId]);
     $pdo->commit();
 } catch (Throwable $e) {

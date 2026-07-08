@@ -64,7 +64,7 @@ $stmt->execute([
     trim($d['whatsapp'] ?? '') ?: null,
     trim($d['discord'] ?? '') ?: null,
     trim($d['telegram'] ?? '') ?: null,
-    trim($d['website'] ?? '') ?: null,
+    safeHttpUrl($d['website'] ?? null), // rendered as :href in VendorCard — http(s) only
     trim($d['shipping_note'] ?? '') ?: null,
     trim($d['notes'] ?? '') ?: null,
 ]);

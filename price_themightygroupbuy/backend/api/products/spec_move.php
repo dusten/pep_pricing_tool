@@ -42,12 +42,16 @@ try {
         // Target already has an equivalent spec — move prices onto it, drop the now-duplicate spec row.
         $pdo->prepare('UPDATE IGNORE pc_prices SET product_id = ?, specification_id = ? WHERE product_id = ? AND specification_id = ?')
             ->execute([$targetId, $targetSpecId, $spec['product_id'], $specId]);
+        // Repoint user carts/stacks BEFORE the delete — their FKs cascade.
+        repointCartAndStackItems($pdo, $targetId, (int)$targetSpecId, $specId);
         $pdo->prepare('DELETE FROM pc_specifications WHERE id = ?')->execute([$specId]);
     } else {
         // No equivalent on the target — re-home the spec row itself.
         $pdo->prepare('UPDATE pc_specifications SET product_id = ? WHERE id = ?')->execute([$targetId, $specId]);
         $pdo->prepare('UPDATE pc_prices SET product_id = ? WHERE product_id = ? AND specification_id = ?')
             ->execute([$targetId, $spec['product_id'], $specId]);
+        // Cart/stack rows carry their own product_id — keep them in sync with the move.
+        repointCartAndStackItems($pdo, $targetId, $specId, $specId);
     }
     $pdo->commit();
 } catch (Throwable $e) {

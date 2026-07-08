@@ -95,11 +95,15 @@ function commitExtractionResult(array $file, array $result): array {
     // processing_status='processing' forever with no error ever recorded.
     try {
         // Fill in any missing vendor contact fields from the extracted document.
+        // website is VENDOR-CONTROLLED content (Claude reads it out of their
+        // file) and gets rendered as :href in VendorCard for every user —
+        // safeHttpUrl or it doesn't get stored at all.
         if ($contact) {
             $fillable = [];
             $vals     = [];
             foreach (['contact_name' => 'name', 'email' => 'email', 'whatsapp' => 'whatsapp', 'website' => 'website'] as $col => $key) {
-                if (!empty($contact[$key])) { $fillable[] = "$col = COALESCE($col, ?)"; $vals[] = $contact[$key]; }
+                $val = $col === 'website' ? safeHttpUrl((string)($contact[$key] ?? '')) : ($contact[$key] ?? null);
+                if (!empty($val)) { $fillable[] = "$col = COALESCE($col, ?)"; $vals[] = $val; }
             }
             if ($fillable) {
                 $vals[] = $file['vendor_id'];

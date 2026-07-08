@@ -18,7 +18,11 @@ $customName = trim((string)($d['custom_product_name'] ?? ''));
 $coaUrl     = trim((string)($d['coa_url'] ?? ''));
 
 if (!$vendorId) jsonResponse(['error' => 'A vendor is required.'], 422);
-if (!$coaUrl || !filter_var($coaUrl, FILTER_VALIDATE_URL)) jsonResponse(['error' => 'A valid COA URL is required.'], 422);
+// safeHttpUrl, not bare FILTER_VALIDATE_URL — this URL is rendered as a
+// clickable link in the admin Review Queue, so a javascript: scheme here
+// would be stored XSS against whoever reviews it.
+$coaUrl = safeHttpUrl($coaUrl);
+if (!$coaUrl) jsonResponse(['error' => 'A valid COA URL is required (http/https only).'], 422);
 if (!$productId && !$customName) jsonResponse(['error' => 'Choose a product or enter a custom product name.'], 422);
 if ($productId && $customName) jsonResponse(['error' => 'Choose either an existing product or a custom name, not both.'], 422);
 

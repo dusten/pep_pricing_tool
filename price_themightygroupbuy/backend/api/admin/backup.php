@@ -17,14 +17,19 @@ $zipPath = "$tmpDir/backup.zip";
 file_put_contents($cnfPath, "[client]\nuser=" . DB_USER . "\npassword=" . DB_PASS . "\nhost=" . DB_HOST . "\nport=" . DB_PORT . "\n");
 chmod($cnfPath, 0600);
 
+// stderr to its own file, never 2>&1 — merged into stdout it lands INSIDE
+// database.sql, so any mysqldump warning corrupts the dump for restore.
+$errPath = "$tmpDir/mysqldump.err";
 exec('mysqldump --defaults-extra-file=' . escapeshellarg($cnfPath) . ' --single-transaction '
-    . escapeshellarg(DB_NAME) . ' > ' . escapeshellarg($sqlPath) . ' 2>&1', $out, $exitCode);
+    . escapeshellarg(DB_NAME) . ' > ' . escapeshellarg($sqlPath) . ' 2> ' . escapeshellarg($errPath), $out, $exitCode);
 
 if ($exitCode !== 0 || !is_file($sqlPath)) {
+    $detail = is_file($errPath) ? trim((string)file_get_contents($errPath)) : '';
     array_map('unlink', glob("$tmpDir/*"));
     rmdir($tmpDir);
-    jsonResponse(['error' => 'mysqldump failed.', 'detail' => implode("\n", $out)], 500);
+    jsonResponse(['error' => 'mysqldump failed.', 'detail' => $detail], 500);
 }
+unlink($errPath);
 
 $zip = new ZipArchive();
 $zip->open($zipPath, ZipArchive::CREATE);

@@ -37,12 +37,18 @@ try {
                 'UPDATE IGNORE pc_prices SET product_id = ?, specification_id = ? WHERE product_id = ? AND specification_id = ?'
             );
             $movePrices->execute([$winnerId, $winnerSpecId, $loserId, $spec['id']]);
+            // Repoint user carts/stacks BEFORE the delete — their FKs cascade,
+            // so without this the merge silently empties them.
+            repointCartAndStackItems($pdo, $winnerId, (int)$winnerSpecId, (int)$spec['id']);
             $pdo->prepare('DELETE FROM pc_specifications WHERE id = ?')->execute([$spec['id']]);
         } else {
             // No equivalent spec on winner — re-home this spec (and its prices) directly.
             $pdo->prepare('UPDATE pc_specifications SET product_id = ? WHERE id = ?')->execute([$winnerId, $spec['id']]);
             $pdo->prepare('UPDATE pc_prices SET product_id = ? WHERE product_id = ? AND specification_id = ?')
                 ->execute([$winnerId, $loserId, $spec['id']]);
+            // Cart/stack rows carry their own product_id — left pointing at the
+            // loser they'd cascade-delete when it's removed below.
+            repointCartAndStackItems($pdo, $winnerId, (int)$spec['id'], (int)$spec['id']);
         }
     }
 
