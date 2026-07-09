@@ -6,7 +6,7 @@ metadata:
 ---
 
 All session notes, analyses, and persistent memory for the pep_pricing_tool project live in:
-`/home/dusten/projects/pep_cal/pep_pricing_tool/Obsidian_pep_pricing_tool/`
+`/home/dusten/projects/peptides_projects/pep_pricing_tool/Obsidian_pep_pricing_tool/`
 
 - Session notes → `sessions/YYYY-MM-DD.md`
 - Memory entries → `memory/` (with pointer in `memory/MEMORY.md`)
