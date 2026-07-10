@@ -33,6 +33,10 @@
           <input type="checkbox" v-model="showUnitPricing" />
           Show $/unit
         </label>
+        <div class="view-toggle">
+          <button :class="['view-btn', { active: viewMode === 'table' }]" @click="viewMode = 'table'">Table</button>
+          <button :class="['view-btn', { active: viewMode === 'list' }]" @click="viewMode = 'list'">List</button>
+        </div>
         <template v-if="canExport">
           <button class="btn btn-ghost btn-sm" :disabled="exporting" @click="exportComparison('csv')">Export CSV</button>
           <button class="btn btn-ghost btn-sm" :disabled="exporting" @click="exportComparison('xlsx')">Export Excel</button>
@@ -65,7 +69,7 @@
     </div>
 
     <!-- Comparison table -->
-    <div v-else class="card table-card">
+    <div v-else-if="viewMode === 'table'" class="card table-card">
       <div class="table-scroll">
         <table class="cmp-table">
           <thead>
@@ -77,8 +81,8 @@
                 <button class="vendor-name-btn" :title="v.name" @click="openVendorCard(v.id)">{{ v.name }}</button>
                 <span v-if="v.is_verified" class="badge badge-pro">✓</span>
               </th>
-              <th rowspan="2" class="stat-header">Avg</th>
-              <th rowspan="2" class="stat-header">Median</th>
+              <th rowspan="2" class="stat-header col-avg">Avg</th>
+              <th rowspan="2" class="stat-header col-median">Median</th>
             </tr>
             <tr>
               <template v-for="v in vendorColumns" :key="'sub'+v.id">
@@ -110,11 +114,43 @@
                   <td class="blank vendor-divider"></td><td v-if="showUnitPricing" class="blank"></td>
                 </template>
               </template>
-              <td class="stat-cell">${{ row.stats.avg.toFixed(2) }}</td>
-              <td class="stat-cell">${{ row.stats.median.toFixed(2) }}</td>
+              <td class="stat-cell col-avg">${{ row.stats.avg.toFixed(2) }}</td>
+              <td class="stat-cell col-median">{{ row.stats.median === null ? '—' : '$' + row.stats.median.toFixed(2) }}</td>
             </tr>
           </tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- Compact list view — each row shows only the vendors that carry it,
+         cheapest first. Far more readable on a phone and for sparse rows than
+         the wide matrix. -->
+    <div v-else class="list-view">
+      <div v-for="row in filteredRows" :key="row.product_id + ':' + row.spec" class="card list-row">
+        <div class="list-head">
+          <div class="list-title">
+            {{ row.product }} <span class="list-spec">{{ row.spec }}</span>
+            <span v-if="row.is_raw_material" class="badge badge-free" title="Raw/bulk powder, not a finished vial">Raw</span>
+          </div>
+          <button class="btn btn-ghost btn-sm" :disabled="cartKeys.has(row.product_id + ':' + row.specification_id)" @click="addToCart(row)">
+            {{ cartKeys.has(row.product_id + ':' + row.specification_id) ? 'Added' : '+ Cart' }}
+          </button>
+        </div>
+        <div class="list-summary">
+          Avg <strong>${{ row.stats.avg.toFixed(2) }}</strong>
+          &nbsp;·&nbsp; Median <strong>{{ row.stats.median === null ? '—' : '$' + row.stats.median.toFixed(2) }}</strong>
+          <span class="list-count">{{ row.vendors.length }} vendor{{ row.vendors.length !== 1 ? 's' : '' }}</span>
+        </div>
+        <div class="list-vendors">
+          <div v-for="v in sortedVendors(row)" :key="v.vendor_id" :class="['list-vendor', { lowest: v.is_lowest }]">
+            <button class="vendor-name-btn list-vendor-name" :title="v.name" @click="openVendorCard(v.vendor_id)">{{ v.name }}</button>
+            <span class="list-vendor-price">
+              ${{ v.price.toFixed(2) }}
+              <span v-if="v.non_standard_kit" class="warn-icon" :title="`Listed as ${v.kit_vial_count}-vial kit — $/unit may not be comparable.`">⚠</span>
+              <span v-if="showUnitPricing" class="list-ppu">${{ v.price_per_unit.toFixed(2) }}/unit</span>
+            </span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -180,6 +216,17 @@ const selectedVendors    = ref([])
 // Persisted so a mobile user sets it once. Pure display — no re-query.
 const showUnitPricing    = ref(localStorage.getItem('cmp_show_unit') !== '0')
 watch(showUnitPricing, v => localStorage.setItem('cmp_show_unit', v ? '1' : '0'))
+
+// Table (wide matrix) vs. List (compact per-row) view. Default to List on a
+// phone-width screen, Table on desktop; persisted once the user picks.
+const viewMode = ref(localStorage.getItem('cmp_view') || (window.innerWidth < 768 ? 'list' : 'table'))
+watch(viewMode, v => localStorage.setItem('cmp_view', v))
+
+// List view shows a row's vendors cheapest-first (by $/unit, matching the
+// "lowest" highlight the server computes).
+function sortedVendors(row) {
+  return [...row.vendors].sort((a, b) => a.price_per_unit - b.price_per_unit)
+}
 
 function toggleClassification(id) {
   const i = selectedClassifications.value.indexOf(id)
@@ -286,4 +333,34 @@ td.lowest { background: var(--success-bg); color: var(--success); font-weight: 7
 td.blank  { background: transparent; }
 .warn-icon { color: var(--warning); margin-left: 3px; cursor: help; }
 .stat-cell { color: var(--text-secondary); font-weight: 500; }
+
+/* Pin Avg + Median to the right edge so a row's summary stays visible while
+   you scroll its (potentially many) vendor price columns — the fix for
+   "the average doesn't match the one price I can see". */
+.col-median { position: sticky; right: 0;    width: 76px; min-width: 76px; }
+.col-avg    { position: sticky; right: 76px; width: 76px; min-width: 76px; border-left: 2px solid var(--border); }
+td.col-avg, td.col-median { z-index: 2; background: var(--surface); }
+tr.odd td.col-avg, tr.odd td.col-median { background: var(--surface-alt); }
+.cmp-table thead th.col-avg, .cmp-table thead th.col-median { z-index: 5; } /* beat vendor sub-headers when scrolled */
+
+/* View toggle */
+.view-toggle { display: inline-flex; border: 1.5px solid var(--border); border-radius: 99px; overflow: hidden; }
+.view-btn { padding: 5px 14px; border: none; background: var(--surface); cursor: pointer; font-size: 12.5px; font-weight: 500; color: var(--text-secondary); }
+.view-btn.active { background: var(--primary); color: var(--text-on-primary); }
+
+/* Compact list view */
+.list-view { display: flex; flex-direction: column; gap: 12px; }
+.list-row { padding: 14px 16px; }
+.list-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.list-title { font-size: 14.5px; font-weight: 600; }
+.list-spec { color: var(--text-secondary); font-weight: 500; margin-left: 4px; }
+.list-summary { font-size: 12.5px; color: var(--text-secondary); margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+.list-count { float: right; }
+.list-vendors { display: flex; flex-direction: column; gap: 6px; }
+.list-vendor { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; padding: 4px 8px; border-radius: var(--radius-sm); }
+.list-vendor.lowest { background: var(--success-bg); }
+.list-vendor.lowest .list-vendor-price { color: var(--success); font-weight: 700; }
+.list-vendor-name { max-width: 60%; }
+.list-vendor-price { white-space: nowrap; font-weight: 600; }
+.list-ppu { color: var(--text-secondary); font-weight: 400; margin-left: 8px; font-size: 12px; }
 </style>

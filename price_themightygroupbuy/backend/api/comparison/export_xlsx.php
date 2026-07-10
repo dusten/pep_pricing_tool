@@ -96,7 +96,7 @@ foreach ($rows as $i => $row) {
         $styles[] = $isLowest ? $lowCellPpu : $cellPpu;
     }
     $vals[]   = $row['stats']['avg'];
-    $vals[]   = $row['stats']['median'];
+    $vals[]   = $row['stats']['median'] ?? '—'; // null when <3 vendors (see comparison_query.php)
     $styles[] = $cell;
     $styles[] = $cell;
 

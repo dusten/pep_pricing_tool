@@ -102,11 +102,17 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
 
         $prices = array_column($row['vendors'], 'price');
         sort($prices);
-        $priceMedian = $n % 2 === 0 ? ($prices[$n / 2 - 1] + $prices[$n / 2]) / 2 : $prices[(int)floor($n / 2)];
+        // Median needs at least 3 vendors to say anything the average doesn't —
+        // with 1 or 2 data points the median just collapses onto the average
+        // (for n=2 it IS the average), so it's noise. Below 3, report null and
+        // let the UI/exports show a dash instead of a redundant number.
+        $priceMedian = $n >= 3
+            ? ($n % 2 === 0 ? ($prices[$n / 2 - 1] + $prices[$n / 2]) / 2 : $prices[(int)floor($n / 2)])
+            : null;
 
         $row['stats'] = [
             'avg'    => round(array_sum($prices) / $n, 6),
-            'median' => round($priceMedian, 6),
+            'median' => $priceMedian === null ? null : round($priceMedian, 6),
             'min'    => $min,
             'max'    => max($ppus),
         ];

@@ -33,7 +33,7 @@ foreach ($rows as $row) {
     $line = [$row['product'], $row['spec']];
     foreach ($vendorNames as $name) $line[] = isset($byName[$name]) ? $byName[$name]['price'] : '';
     $line[] = $row['stats']['avg'];
-    $line[] = $row['stats']['median'];
+    $line[] = $row['stats']['median'] ?? ''; // null when <3 vendors (see comparison_query.php)
     fputcsv($out, array_map($noFormula, $line));
 }
 fclose($out);
