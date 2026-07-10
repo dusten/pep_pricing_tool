@@ -1,5 +1,5 @@
 <template>
-  <AppLayout title="Price Comparison">
+  <AppLayout title="Price Comparison" wide>
     <!-- Filter bar -->
     <div class="card filter-bar">
       <div v-if="comparison.tiers.length > 1" class="tier-tabs">
@@ -28,6 +28,10 @@
         <label class="toggle-label">
           <input type="checkbox" v-model="rawMaterialOnly" />
           Raw/bulk powder only
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" v-model="showUnitPricing" />
+          Show $/unit
         </label>
         <template v-if="canExport">
           <button class="btn btn-ghost btn-sm" :disabled="exporting" @click="exportComparison('csv')">Export CSV</button>
@@ -69,7 +73,7 @@
               <th class="sticky-col col-cart" rowspan="2"></th>
               <th class="sticky-col col-product" rowspan="2">Product</th>
               <th class="sticky-col col-spec" rowspan="2">Spec</th>
-              <th v-for="v in vendorColumns" :key="v.id" colspan="2" class="vendor-header vendor-divider">
+              <th v-for="v in vendorColumns" :key="v.id" :colspan="showUnitPricing ? 2 : 1" class="vendor-header vendor-divider">
                 <button class="vendor-name-btn" :title="v.name" @click="openVendorCard(v.id)">{{ v.name }}</button>
                 <span v-if="v.is_verified" class="badge badge-pro">✓</span>
               </th>
@@ -79,7 +83,7 @@
             <tr>
               <template v-for="v in vendorColumns" :key="'sub'+v.id">
                 <th class="sub-header vendor-divider">Price</th>
-                <th class="sub-header">$/unit</th>
+                <th v-if="showUnitPricing" class="sub-header">$/unit</th>
               </template>
             </tr>
           </thead>
@@ -100,10 +104,10 @@
                     <span v-if="row.byVendor[v.id].non_standard_kit" class="warn-icon"
                           :title="`Listed as ${row.byVendor[v.id].kit_vial_count}-vial kit — \$/unit may not be comparable.`">⚠</span>
                   </td>
-                  <td :class="{ lowest: row.byVendor[v.id].is_lowest }">${{ row.byVendor[v.id].price_per_unit.toFixed(2) }}</td>
+                  <td v-if="showUnitPricing" :class="{ lowest: row.byVendor[v.id].is_lowest }">${{ row.byVendor[v.id].price_per_unit.toFixed(2) }}</td>
                 </template>
                 <template v-else>
-                  <td class="blank vendor-divider"></td><td class="blank"></td>
+                  <td class="blank vendor-divider"></td><td v-if="showUnitPricing" class="blank"></td>
                 </template>
               </template>
               <td class="stat-cell">${{ row.stats.avg.toFixed(2) }}</td>
@@ -172,6 +176,10 @@ const multiOnly          = ref(false)
 const verifiedOnly       = ref(false)
 const rawMaterialOnly    = ref(false)
 const selectedVendors    = ref([])
+// Hide the $/unit columns for a narrower, small-screen-friendly table.
+// Persisted so a mobile user sets it once. Pure display — no re-query.
+const showUnitPricing    = ref(localStorage.getItem('cmp_show_unit') !== '0')
+watch(showUnitPricing, v => localStorage.setItem('cmp_show_unit', v ? '1' : '0'))
 
 function toggleClassification(id) {
   const i = selectedClassifications.value.indexOf(id)

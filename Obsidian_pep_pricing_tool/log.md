@@ -373,3 +373,9 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Added: `multiple` on the file input; a shared uploadFiles() that POSTs each file sequentially with a live progress counter (uploadDone/uploadTotal) and an end-of-batch summary alert (uploaded N / duplicates skipped / per-file failures) — silent on all-success since the file-repo table refreshes as feedback.
 - Image paste: a focusable dashed paste-zone with @paste pulls image items off the clipboard, synthesizes a filename with the correct extension (backend keys file_type off the extension) since pasted blobs often lack a usable name, and runs them through the same uploadFiles() loop. Honors the selected category (price_list/coa/other). preventDefault only when images are actually found so text paste elsewhere isn't blocked.
 - Frontend-only, no backend/route change. Deployed; build clean, new code confirmed in bundle, file input has `multiple`.
+
+## [2026-07-10] feature | Comparison table: $/unit toggle + wide-screen full width (#40, user request)
+
+- "Show $/unit" toggle in the Comparison filter bar (default on, persisted to localStorage `cmp_show_unit`). Off = hide each vendor's $/unit sub-column, halving column count for small screens. Done via conditional vendor-header colspan (2→1) + v-if on the $/unit sub-header/body/blank cells; two-row header stays aligned. Price cell keeps the lowest-value highlight (derived server-side from price_per_unit) even with $/unit hidden. Pure display, no re-query.
+- Wide screens: AppLayout.vue gained a `wide` prop that removes the centered max-width:1400px cap; ComparisonView passes it, so the table fills a very wide window (minus gutter) instead of a narrow centered column. Other pages unaffected (default stays capped).
+- Frontend-only. Deployed; build clean, toggle + wide CSS confirmed in bundle.
