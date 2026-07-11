@@ -132,6 +132,20 @@ CREATE TABLE IF NOT EXISTS pc_admin_audit_log (
   INDEX (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- User activity/audit log (exports, etc.) — the user-side twin of the admin
+-- audit log; surfaced per-user in the admin Users tab. See migrations/027.
+CREATE TABLE IF NOT EXISTS pc_user_audit_log (
+  id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id    INT UNSIGNED NOT NULL,
+  action     VARCHAR(80)  NOT NULL,
+  details    JSON         NULL,
+  ip         VARCHAR(45)  NULL,
+  created_at DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES pc_users(id) ON DELETE CASCADE,
+  INDEX (user_id, created_at),
+  INDEX (action, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS pc_feedback (
   id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id    INT UNSIGNED NULL,

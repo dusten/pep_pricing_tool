@@ -45,9 +45,37 @@
               </label>
             </td>
             <td class="text-muted text-sm">{{ u.created_at }}</td>
-            <td><button class="btn btn-ghost btn-sm" @click="toggleReferrals(u)">{{ expanded === u.id ? 'Hide' : 'Referrals' }}</button></td>
+            <td class="row-actions">
+              <button class="btn btn-ghost btn-sm" @click="toggle(u, 'activity')">{{ isOpen(u, 'activity') ? 'Hide' : 'Activity' }}</button>
+              <button class="btn btn-ghost btn-sm" @click="toggle(u, 'referrals')">{{ isOpen(u, 'referrals') ? 'Hide' : 'Referrals' }}</button>
+            </td>
           </tr>
-          <tr v-if="expanded === u.id">
+          <tr v-if="isOpen(u, 'activity')">
+            <td colspan="9">
+              <div v-if="!activityData[u.id]" class="text-muted text-sm">Loading…</div>
+              <div v-else class="activity-panel">
+                <div class="text-sm"><strong>Recent activity</strong> (exports &amp; logged actions)</div>
+                <table v-if="activityData[u.id].audit.length" class="admin-table sub-table">
+                  <thead><tr><th>Action</th><th>Details</th><th>IP</th><th>When</th></tr></thead>
+                  <tbody>
+                    <tr v-for="(a, i) in activityData[u.id].audit" :key="i">
+                      <td class="text-sm">{{ a.action }}</td>
+                      <td class="text-sm text-muted">{{ fmtDetails(a.details) }}</td>
+                      <td class="text-sm text-muted">{{ a.ip || '—' }}</td>
+                      <td class="text-sm text-muted">{{ a.created_at }}</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <p v-else class="text-muted text-sm">No recorded activity yet.</p>
+                <div class="text-sm" style="margin-top:12px"><strong>Recent logins</strong></div>
+                <ul v-if="activityData[u.id].logins.length" class="referral-list">
+                  <li v-for="(l, i) in activityData[u.id].logins" :key="i" class="text-sm text-muted">{{ l.created_at }} — {{ l.ip || '—' }}</li>
+                </ul>
+                <p v-else class="text-muted text-sm">No login history.</p>
+              </div>
+            </td>
+          </tr>
+          <tr v-if="isOpen(u, 'referrals')">
             <td colspan="9">
               <div v-if="!referralData[u.id]" class="text-muted text-sm">Loading…</div>
               <div v-else class="referral-tree">
@@ -79,8 +107,9 @@ import { get, patch } from '@/utils/api.js'
 
 const users      = ref([])
 const tierFilter = ref('')
-const expanded    = ref(null)
+const expanded     = ref(null) // { id, type } — one open panel at a time
 const referralData = ref({})
+const activityData = ref({})
 
 async function load() {
   const res = await get(`/api/admin/users${tierFilter.value ? '?tier=' + tierFilter.value : ''}`)
@@ -93,13 +122,22 @@ async function setField(u, field, value) {
   u[field] = value
 }
 
-async function toggleReferrals(u) {
-  if (expanded.value === u.id) { expanded.value = null; return }
-  expanded.value = u.id
-  if (!referralData.value[u.id]) {
-    const res = await get(`/api/admin/users/${u.id}/referrals`)
-    referralData.value[u.id] = res
+function isOpen(u, type) { return expanded.value?.id === u.id && expanded.value?.type === type }
+
+async function toggle(u, type) {
+  if (isOpen(u, type)) { expanded.value = null; return }
+  expanded.value = { id: u.id, type }
+  if (type === 'referrals' && !referralData.value[u.id]) {
+    referralData.value[u.id] = await get(`/api/admin/users/${u.id}/referrals`)
   }
+  if (type === 'activity' && !activityData.value[u.id]) {
+    activityData.value[u.id] = await get(`/api/admin/users/${u.id}/activity`)
+  }
+}
+
+function fmtDetails(d) {
+  if (!d || typeof d !== 'object') return '—'
+  return Object.entries(d).map(([k, v]) => `${k}: ${v}`).join(', ')
 }
 </script>
 
@@ -114,4 +152,9 @@ async function toggleReferrals(u) {
 .referral-tree { padding: 12px 4px; }
 .referral-list { margin: 6px 0 0; padding-left: 18px; }
 .text-success { color: var(--success); }
+.row-actions { white-space: nowrap; }
+.row-actions button + button { margin-left: 4px; }
+.activity-panel { padding: 12px 4px; }
+.sub-table { margin-top: 6px; background: var(--surface); }
+.sub-table th, .sub-table td { padding: 5px 8px; }
 </style>

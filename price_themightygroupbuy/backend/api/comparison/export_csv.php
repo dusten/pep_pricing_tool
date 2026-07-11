@@ -7,10 +7,11 @@ require_once dirname(__DIR__, 2) . '/lib/comparison_query.php';
 // GET /comparison/export/csv — same filters as GET /comparison, Pro tier and above.
 // One column per vendor (price only — $/unit and highlighting live in the XLSX export).
 method('GET');
-requireTier('pro');
+$user = requireTier('pro');
 
 [$productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly] = parseComparisonFiltersFromGet();
 $rows = runComparisonQuery($productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly);
+logUserAction((int)$user['id'], 'export_comparison_csv', ['rows' => count($rows), 'tier' => $tierKitSize, 'multi_only' => $multiOnly, 'verified_only' => $verifiedOnly]);
 
 $vendorNames = [];
 foreach ($rows as $row) foreach ($row['vendors'] as $v) $vendorNames[$v['name']] = true;

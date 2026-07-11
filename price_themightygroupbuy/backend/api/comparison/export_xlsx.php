@@ -9,10 +9,11 @@ require_once dirname(__DIR__, 2) . '/lib/xlsxwriter.class.php';
 // Formatting matches the original blueprint verbatim: navy/blue two-row vendor
 // headers, alternating row shading, green lowest-$/unit highlight, frozen panes.
 method('GET');
-requireTier('pro');
+$user = requireTier('pro');
 
 [$productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly] = parseComparisonFiltersFromGet();
 $rows = runComparisonQuery($productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly);
+logUserAction((int)$user['id'], 'export_comparison_xlsx', ['rows' => count($rows), 'tier' => $tierKitSize, 'multi_only' => $multiOnly, 'verified_only' => $verifiedOnly]);
 
 $vendorNames = [];
 foreach ($rows as $row) foreach ($row['vendors'] as $v) $vendorNames[$v['name']] = true;

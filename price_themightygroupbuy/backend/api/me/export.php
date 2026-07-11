@@ -16,7 +16,10 @@ $data = [
     'feedback' => q('SELECT type, message, url, created_at FROM pc_feedback WHERE user_id = ? ORDER BY created_at DESC', $id),
     'referrals_made' => q('SELECT referee_id, created_at FROM pc_referrals WHERE referrer_id = ?', $id),
     'referral_credits_earned' => q('SELECT amount_usd, granted_at FROM pc_referral_credits WHERE referrer_id = ?', $id),
+    'activity_log' => q('SELECT action, details, ip, created_at FROM pc_user_audit_log WHERE user_id = ? ORDER BY created_at DESC', $id),
 ];
+
+logUserAction((int)$id, 'export_personal_data');
 
 function q(string $sql, int $id): array {
     $stmt = db()->prepare($sql);

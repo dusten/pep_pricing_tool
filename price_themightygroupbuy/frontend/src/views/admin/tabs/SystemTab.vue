@@ -21,6 +21,11 @@
         <div class="stat-value">{{ sys.cache.available ? fmtBytes(sys.cache.bytes_used) : 'n/a' }}</div>
         <div class="stat-label">Cache memory used</div>
       </div>
+      <div class="stat-tile">
+        <div class="stat-value">{{ sys.cache.available ? sys.cache.curr_items.toLocaleString() : 'n/a' }}</div>
+        <div class="stat-label">Cached objects</div>
+        <div class="stat-sublabel">live keys held right now</div>
+      </div>
       <div class="stat-tile"><div class="stat-value">{{ sys.database.connections }}</div><div class="stat-label">DB connections</div></div>
       <div class="stat-tile">
         <div class="stat-value">{{ sys.database.total_queries === null ? 'n/a' : sys.database.total_queries.toLocaleString() }}</div>

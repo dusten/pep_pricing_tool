@@ -200,6 +200,23 @@ function logAdminAction(int $adminId, string $action, array $details = []): void
                 $_SERVER['REMOTE_ADDR'] ?? null]);
 }
 
+/**
+ * Audit trail for user-initiated events (data exports, etc.) — the user-side
+ * twin of logAdminAction. Surfaced per-user in the admin Users tab. Best-effort:
+ * never let an audit-write failure break the action being audited (an export
+ * must still stream even if this insert hiccups).
+ */
+function logUserAction(int $userId, string $action, array $details = []): void {
+    try {
+        db()->prepare(
+            'INSERT INTO pc_user_audit_log (user_id, action, details, ip) VALUES (?,?,?,?)'
+        )->execute([$userId, $action, $details ? json_encode($details) : null,
+                    $_SERVER['REMOTE_ADDR'] ?? null]);
+    } catch (Throwable $e) {
+        error_log('[user_audit] failed to persist: ' . $e->getMessage());
+    }
+}
+
 // ── Device detection (perf/log breakdowns; not a security control) ─
 
 function deviceType(): string {

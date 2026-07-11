@@ -194,6 +194,7 @@ $DYNAMIC = [
     'admin/stacks/(\d+)'                => ['admin/stacks/show.php',  'id'],
     'admin/users/(\d+)'                 => ['admin/users_show.php',    'id'],
     'admin/users/(\d+)/referrals'       => ['admin/user_referrals.php','id'],
+    'admin/users/(\d+)/activity'        => ['admin/user_activity.php', 'id'],
     'admin/waitlist/(\d+)'              => ['admin/waitlist_show.php', 'id'],
     'admin/feedback/(\d+)'              => ['admin/feedback_show.php', 'id'],
     'admin/query-log/(\d+)/rerun'       => ['admin/query_log_rerun.php', 'id'],

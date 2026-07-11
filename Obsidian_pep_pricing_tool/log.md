@@ -404,3 +404,11 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Skipped the my.cnf min_examined_row_limit change on purpose — server-wide and shared with the grp app, and unnecessary since the event filter + the existing hourly `DELETE FROM mysql.slow_log WHERE db='tmgb_price'` keep the table clean.
 - Result: table went 1565 noise rows -> 5 legitimate ones on first run, all high-rows-examined queries (comparison 14306, calendar/history 16399, vendors list 9315, audit 6243, calendar-approved 6644) — fast today (8-30ms) but the right early-warning watchlist as data grows. Zero self-referential/phantom rows. Verified live: event ENABLED with the new WHERE, table repopulated clean.
 - Threshold (0.5s / 5000 rows) is easy to tune later in a follow-up migration if it's too chatty or too quiet.
+
+## [2026-07-11] feature | User data-export audit log + admin display, memcache object count (#42)
+
+- Found: none of the 4 user exports (comparison CSV/XLSX, full, personal-data) were logged; no user-side audit table existed (only pc_admin_audit_log for admins).
+- pc_user_audit_log table (migration 027, FK CASCADE on user delete). logUserAction() helper in helpers.php — best-effort (try/catch, logs to error_log) so an audit-write failure never breaks the export it's auditing. Wired into all 4 exports with action + counts + filter context.
+- GET /admin/users/{id}/activity (new endpoint + route) returns the user's audit entries + last 20 logins. UsersTab gained an "Activity" expander next to "Referrals" (refactored expand state to {id,type} so one panel opens at a time) showing an actions table + login list. me/export.php now includes the user's own activity_log in their GDPR-style dump and logs the export.
+- Verified live: logUserAction round-trips through the admin query with JSON details intact; test row cleaned up.
+- Also (user request, same turn): System-tab memcache card now shows "Cached objects" (curr_items) — the "cache barely used" impression was from low bytes (small payloads), not low usage; object count + 97.7% hit rate show it's working.

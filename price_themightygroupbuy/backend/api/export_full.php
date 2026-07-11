@@ -6,7 +6,7 @@ require_once dirname(__DIR__) . '/helpers.php';
 // GET /export/full — every active product/vendor/spec/price row as one JSON
 // payload, Expert tier only. No filters — broader than the Comparison view.
 method('GET');
-requireTier('expert');
+$user = requireTier('expert');
 
 $data = [
     'products' => db()->query(
@@ -30,6 +30,8 @@ $data = [
          FROM pc_prices WHERE is_active = 1'
     )->fetchAll(),
 ];
+
+logUserAction((int)$user['id'], 'export_full', ['products' => count($data['products']), 'prices' => count($data['prices'])]);
 
 header('Content-Disposition: attachment; filename="full-export-' . date('Y-m-d') . '.json"');
 jsonResponse($data);
