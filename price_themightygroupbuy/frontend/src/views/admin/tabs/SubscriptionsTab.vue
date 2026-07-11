@@ -30,9 +30,3 @@ onMounted(async () => {
   paidUsers.value = res.users.filter(u => u.tier !== 'free')
 })
 </script>
-
-<style scoped>
-.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
-.admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
-</style>

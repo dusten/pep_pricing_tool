@@ -61,7 +61,7 @@
           <td class="text-sm">{{ q.rows_examined.toLocaleString() }}</td>
           <td class="text-sm text-muted">×{{ q.occurrence_count }}, last {{ q.last_seen_at }}</td>
           <td><span :class="['badge', statusBadge(q.status)]">{{ q.status }}</span></td>
-          <td class="sq-actions">
+          <td class="actions">
             <button v-if="q.status !== 'acknowledged'" class="btn btn-ghost btn-sm" @click="setStatus(q, 'acknowledged')">Acknowledge</button>
             <button v-if="q.status !== 'resolved'" class="btn btn-ghost btn-sm" @click="setStatus(q, 'resolved')">Resolve</button>
             <button v-if="q.status === 'resolved'" class="btn btn-ghost btn-sm" @click="setStatus(q, 'new')">Reopen</button>
@@ -109,7 +109,7 @@
           <td class="text-sm">{{ q.email }}</td>
           <td class="text-sm">{{ q.result_count }}</td>
           <td class="text-sm text-muted">{{ q.created_at }}</td>
-          <td class="ql-actions">
+          <td class="actions">
             <button class="btn btn-ghost btn-sm" @click="openQuery(q)" title="Open this query as a live Comparison in a new tab">Open</button>
             <button class="btn btn-ghost btn-sm" @click="rerun(q)" title="Re-execute server-side and compare timing">Time</button>
           </td>
@@ -255,7 +255,6 @@ async function rerun(q) {
 </script>
 
 <style scoped>
-.toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
 .poll-pills { display: flex; gap: 6px; flex-wrap: wrap; }
 .poll-pill {
   padding: 5px 14px; border-radius: 99px; border: 1.5px solid var(--border);
@@ -267,24 +266,11 @@ async function rerun(q) {
 .toggle-row { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .toggle-row input { width: auto; }
 
-.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 10px; }
-.stat-tile { background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
-.stat-value { font-size: 20px; font-weight: 700; color: var(--primary); }
-.stat-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; margin-top: 4px; }
-.stat-sublabel { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
-
 .section-title { margin: 24px 0 10px; font-size: 13.5px; }
-.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.admin-table th, .admin-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
-.admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 .mono { font-family: var(--font-mono); max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-.sq-actions { white-space: nowrap; }
-.sq-actions button + button { margin-left: 4px; }
 .text-danger { color: var(--danger); font-weight: 700; }
 
 .rerun-result { margin-top: 12px; padding: 10px 14px; background: var(--surface-alt); border-radius: var(--radius); font-size: 13px; }
 .ql-input { padding: 5px 9px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 12.5px; }
 .ql-num { max-width: 90px; }
-.ql-actions { white-space: nowrap; }
-.ql-actions button + button { margin-left: 4px; }
 </style>

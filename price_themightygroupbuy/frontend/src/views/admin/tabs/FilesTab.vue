@@ -269,10 +269,6 @@ function closeView() {
 </script>
 
 <style scoped>
-.toolbar { margin-bottom: 14px; }
-.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
-.admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 .notes-cell { max-width: 260px; }
 .notes-btn {
   background: none; border: none; padding: 0; font: inherit; color: inherit; text-align: left;
@@ -280,21 +276,9 @@ function closeView() {
 }
 .notes-btn:hover { text-decoration-color: currentColor; }
 .notes-card { height: min(70vh, 500px); }
-.actions { white-space: nowrap; }
-.actions button + button { margin-left: 4px; }
 
-.view-backdrop {
-  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6);
-  display: flex; align-items: center; justify-content: center; z-index: 1000;
-}
-.view-card {
-  background: var(--surface); border-radius: 8px; width: min(90vw, 900px); height: min(85vh, 900px);
-  display: flex; flex-direction: column; overflow: hidden;
-}
-.view-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-}
+/* Overrides the shared .view-body (main.css) — this one also centers an
+   image/PDF preview and needs position:relative for the pdf-pages overlay. */
 .view-body { flex: 1; overflow: auto; display: flex; align-items: center; justify-content: center; padding: 12px; position: relative; }
 .view-body img { max-width: 100%; max-height: 100%; object-fit: contain; }
 /* Same fill technique proven correct for the old iframe attempt (position:

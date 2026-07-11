@@ -65,7 +65,7 @@
             <button v-else class="btn btn-ghost btn-sm" @click="startEdit(p)">Edit</button>
           </td>
         </tr>
-        <tr v-if="editingId === p.id" class="specs-row">
+        <tr v-if="editingId === p.id" class="detail-row">
           <td colspan="6">
             <div class="label-sm">Versions / specs — edit the mg amount, or move one onto a different product if it doesn't actually belong here (e.g. a blend wrongly filed under a single-compound product). Price/vial-count edits per vendor live on the Inventory tab.</div>
             <div v-if="!specsFor(p).length" class="text-muted text-sm">No specs yet.</div>
@@ -227,21 +227,13 @@ async function merge(loser, winnerId) {
 </script>
 
 <style scoped>
-.toolbar { margin-bottom: 14px; }
 .add-form { margin-bottom: 16px; }
 .field-row { display: flex; gap: 8px; margin-bottom: 12px; }
-.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
 /* Only Name/Classifications/Aliases need to anchor to the top when Aliases wraps
    onto multiple lines — Vendors/Merge/Edit read better vertically centered
    in the row rather than pinned to the top with dead space underneath. */
 .admin-table td:nth-child(-n+3) { vertical-align: top; }
-.admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 .chip { display: inline-flex; align-items: center; gap: 3px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; font-size: 11.5px; margin: 0 4px 4px 0; }
 .chip-x { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 0; }
-.actions { white-space: nowrap; }
-.actions button + button { margin-left: 4px; }
-.specs-row td { background: var(--surface-alt); }
-.specs-row .label-sm { color: var(--text-muted); font-size: 11px; text-transform: uppercase; margin-bottom: 8px; }
 .spec-block { display: flex; align-items: center; gap: 6px; padding: 4px 0; }
 </style>

@@ -45,7 +45,7 @@
               </label>
             </td>
             <td class="text-muted text-sm">{{ u.created_at }}</td>
-            <td class="row-actions">
+            <td class="actions">
               <button class="btn btn-ghost btn-sm" @click="toggle(u, 'activity')">{{ isOpen(u, 'activity') ? 'Hide' : 'Activity' }}</button>
               <button class="btn btn-ghost btn-sm" @click="toggle(u, 'referrals')">{{ isOpen(u, 'referrals') ? 'Hide' : 'Referrals' }}</button>
             </td>
@@ -144,16 +144,11 @@ function fmtDetails(d) {
 <style scoped>
 .filter-row { margin-bottom: 14px; }
 .filter-row select { max-width: 200px; }
-.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
-.admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 .admin-table select { padding: 4px 8px; font-size: 12.5px; }
 .toggle-row input { width: auto; }
 .referral-tree { padding: 12px 4px; }
 .referral-list { margin: 6px 0 0; padding-left: 18px; }
 .text-success { color: var(--success); }
-.row-actions { white-space: nowrap; }
-.row-actions button + button { margin-left: 4px; }
 .activity-panel { padding: 12px 4px; }
 .sub-table { margin-top: 6px; background: var(--surface); }
 .sub-table th, .sub-table td { padding: 5px 8px; }

@@ -67,22 +67,5 @@ async function view(c) {
   padding: 12px; font-size: 11.5px; font-family: monospace; white-space: pre-wrap;
   max-height: 300px; overflow: auto; margin-bottom: 8px;
 }
-.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
-.admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
-
-.view-backdrop {
-  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6);
-  display: flex; align-items: center; justify-content: center; z-index: 1000;
-}
-.view-card {
-  background: var(--surface); border-radius: 8px; width: min(90vw, 900px); height: min(85vh, 900px);
-  display: flex; flex-direction: column; overflow: hidden;
-}
-.view-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-}
-.view-body { flex: 1; overflow: auto; padding: 12px; }
 .view-text { white-space: pre-wrap; font-size: 12px; font-family: monospace; }
 </style>

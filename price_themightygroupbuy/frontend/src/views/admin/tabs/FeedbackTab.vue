@@ -38,9 +38,9 @@ async function toggleRead(f) {
 </script>
 
 <style scoped>
-.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
-.admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 tr.unread { background: var(--accent-subtle); }
 .msg-cell { max-width: 360px; }
+/* Message text wraps within msg-cell's max-width — top-align this row's
+   other cells to that wrapped text instead of centering on its full height. */
+.admin-table td { vertical-align: top; }
 </style>

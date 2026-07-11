@@ -81,10 +81,3 @@ async function recalc() {
 
 onMounted(loadVendors)
 </script>
-
-<style scoped>
-.toolbar { margin-bottom: 14px; display: flex; gap: 10px; align-items: center; }
-.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
-.admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
-</style>

@@ -312,13 +312,50 @@ input.error, select.error { border-color: var(--danger); }
    Use `class="admin-table"` and `class="actions"` on the buttons cell
    instead of reinventing this. `white-space: nowrap` (not flex) is the
    correct way to keep a cell's action buttons on one line — flex/grid
-   directly on a <td> breaks its box participation in the row. */
+   directly on a <td> breaks its box participation in the row.
+
+   Deliberately NOT setting vertical-align here: an earlier version forced
+   `top` on every cell app-wide and had to be walked back (see ProductsTab's
+   `:nth-child(-n+3)` override) because it looked wrong on tables with
+   short, single-line rows (Vendors/Merge/Edit wanted centered, not pinned
+   to the top). A page with a genuinely tall-wrapping column (multi-line
+   cell content, wrapped chips) should add its own small scoped override
+   targeting just that column, in its own <style scoped> block — same
+   pattern ProductsTab already uses — rather than changing this shared
+   default for every other table. */
 .admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
-.admin-table thead th { color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 10.5px; vertical-align: middle; }
+.admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+.admin-table thead th { color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 10.5px; }
 .admin-table .actions { white-space: nowrap; }
 .admin-table .actions .btn { margin-right: 6px; }
 .admin-table .actions .btn:last-child { margin-right: 0; }
+.admin-table .detail-row td { background: var(--surface-alt); }
+.admin-table .detail-row .label-sm { color: var(--text-muted); font-size: 11px; text-transform: uppercase; margin-bottom: 8px; }
+
+/* ── Admin stat tiles (Overview/Performance/System dashboards) ───── */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 10px; }
+.stat-tile { background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+.stat-value { font-size: 22px; font-weight: 700; color: var(--primary); }
+.stat-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; margin-top: 4px; }
+.stat-sublabel { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+/* ── Admin toolbar row (filter controls above a table/grid) ──────── */
+.toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+
+/* ── Centered modal (file/text preview popups — Files, Claude API tabs) ── */
+.view-backdrop {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.view-card {
+  background: var(--surface); border-radius: 8px; width: min(90vw, 900px); height: min(85vh, 900px);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.view-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.view-body { flex: 1; overflow: auto; padding: 12px; }
 
 /* ── Divider ──────────────────────────────────────────────────── */
 .divider { height: 1px; background: var(--border); margin: 20px 0; }

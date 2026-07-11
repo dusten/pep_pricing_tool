@@ -124,11 +124,6 @@ function barWidth(ms) {
 .filter-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
 .filter-row select, .filter-row input { max-width: 160px; }
 
-.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 10px; }
-.stat-tile { background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
-.stat-value { font-size: 22px; font-weight: 700; color: var(--primary); }
-.stat-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; margin-top: 4px; }
-
 .section-title { margin: 20px 0 10px; font-size: 13.5px; }
 
 .range-pills { display: flex; gap: 6px; margin-bottom: 10px; }
@@ -147,9 +142,6 @@ function barWidth(ms) {
 .hbar-value { width: 60px; flex-shrink: 0; font-size: 12px; color: var(--text-secondary); text-align: right; }
 
 .breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.admin-table th, .admin-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); text-align: left; }
-.admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 
 @media (max-width: 720px) { .breakdown-grid { grid-template-columns: 1fr; } }
 </style>

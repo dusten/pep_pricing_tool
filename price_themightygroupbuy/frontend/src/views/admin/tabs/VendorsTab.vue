@@ -390,7 +390,6 @@ function onPaste(event) {
 </script>
 
 <style scoped>
-.toolbar { margin-bottom: 14px; }
 .intake-form { margin-bottom: 16px; }
 .field-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
 .field-row input, .field-row select { flex: 1; min-width: 140px; }
@@ -418,9 +417,6 @@ function onPaste(event) {
 }
 .paste-zone:focus { outline: none; border-color: var(--accent); color: var(--accent); background: var(--accent-subtle); }
 .file-repo { margin-top: 8px; }
-.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; }
-.admin-table thead th { color: var(--text-secondary); font-size: 11px; text-transform: uppercase; }
 .chip { display: inline-flex; align-items: center; gap: 3px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 99px; padding: 2px 8px; font-size: 11.5px; }
 .chip-x { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 13px; padding: 0; }
 .badge-pro { margin-left: 6px; }

@@ -219,6 +219,9 @@ onMounted(loadImport)
 
 .coa-list-card { margin-top: 20px; }
 .coa-list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+/* Submitted cell wraps name + date onto two lines — top-align just this
+   column instead of centering the whole row on its height. */
+.coa-list-card .admin-table td:first-child { vertical-align: top; }
 .badge-coa-pending  { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning); }
 .badge-coa-approved { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
 .badge-coa-rejected { background: var(--danger-bg);  color: var(--danger);  border: 1px solid var(--danger); }
