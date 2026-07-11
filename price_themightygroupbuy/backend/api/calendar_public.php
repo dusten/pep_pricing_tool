@@ -15,7 +15,7 @@ method('GET');
 $month = $_GET['month'] ?? date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $month)) jsonResponse(['error' => 'month must be YYYY-MM.'], 422);
 
-$data = cacheGet('pricing_data', "calendar_public:$month", 300, function () use ($month) {
+$data = cacheGet('calendar_data', "calendar_public:$month", 600, function () use ($month) {
     $stmt = db()->prepare(
         "SELECT ph.changed_at, ph.vendor_id, ph.product_id, p.canonical_name AS product,
                 s.spec_label AS spec, ph.old_price_usd

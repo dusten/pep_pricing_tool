@@ -11,7 +11,7 @@ method('GET', 'POST', 'DELETE');
 $admin = requireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $rows = cacheGet('admin_waitlist', 'all', 30, fn() => db()->query('SELECT * FROM pc_waitlist ORDER BY created_at DESC')->fetchAll());
+    $rows = cacheGet('admin_waitlist', 'all', 600, fn() => db()->query('SELECT * FROM pc_waitlist ORDER BY created_at DESC')->fetchAll());
     jsonResponse(['waitlist' => $rows]);
 }
 

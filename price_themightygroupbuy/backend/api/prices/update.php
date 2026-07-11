@@ -85,6 +85,7 @@ if ($priceActuallyChanged) {
     );
 }
 
-cacheBust('pricing_data');
+cacheBust('comparison_data');
+cacheBust('calendar_data'); // a price edit that changes the price also writes a pc_price_history row
 logAdminAction((int)$admin['id'], 'update_price', ['price_id' => $id, 'fields' => array_keys($d)]);
 jsonResponse(['message' => 'Price updated.']);

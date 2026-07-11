@@ -189,8 +189,9 @@ function commitExtractionResult(array $file, array $result): array {
     }
 
     // The main price-writing path — touches pc_prices/pc_products/pc_specifications
-    // and the vendor's price_count/last_upload, so all three cached views go stale.
-    cacheBust('pricing_data');
+    // and the vendor's price_count/last_upload, so all these cached views go stale.
+    cacheBust('comparison_data');
+    cacheBust('calendar_data'); // exact-match rows commit straight through, writing pc_price_history
     cacheBust('admin_vendors');
     cacheBust('admin_products');
 

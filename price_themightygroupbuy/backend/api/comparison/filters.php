@@ -8,8 +8,8 @@ method('GET');
 requireAuth();
 
 // Same for every user — only changes when prices/vendors/products change,
-// so it shares the 'pricing_data' cache group with the comparison results.
-$data = cacheGet('pricing_data', 'filters', 300, function () {
+// so it shares the 'comparison_data' cache group with the comparison results.
+$data = cacheGet('comparison_data', 'filters', 600, function () {
     $vendors = db()->query(
         "SELECT DISTINCT v.id, v.display_name, v.is_verified FROM pc_vendors v
          JOIN pc_prices pr ON pr.vendor_id = v.id AND pr.is_active = 1

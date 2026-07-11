@@ -44,6 +44,6 @@ try {
 }
 
 cacheBust('admin_products');
-cacheBust('pricing_data');
+cacheBust('comparison_data');
 logAdminAction((int)$admin['id'], 'merge_specification', ['loser_id' => $loserId, 'winner_id' => $winnerId]);
 jsonResponse(['message' => 'Specifications merged.']);

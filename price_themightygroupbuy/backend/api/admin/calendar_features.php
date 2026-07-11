@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     $date = $PARAMS['date'] ?? '';
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) jsonResponse(['error' => 'Invalid date.'], 422);
     db()->prepare('DELETE FROM pc_calendar_features WHERE feature_date = ?')->execute([$date]);
-    cacheBust('pricing_data'); // public calendar reads featured from this
+    cacheBust('calendar_data'); // public calendar reads featured from this
     logAdminAction((int)$admin['id'], 'clear_calendar_feature', ['date' => $date]);
     jsonResponse(['message' => 'Feature cleared.']);
 }
@@ -65,6 +65,6 @@ db()->prepare(
        note = VALUES(note), created_by = VALUES(created_by), created_at = NOW()'
 )->execute([$date, $product, $specId, $note, (int)$admin['id']]);
 
-cacheBust('pricing_data');
+cacheBust('calendar_data');
 logAdminAction((int)$admin['id'], 'set_calendar_feature', ['date' => $date, 'product_id' => $product, 'spec_id' => $specId]);
 jsonResponse(['message' => 'Featured product set.']);

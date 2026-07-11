@@ -11,7 +11,7 @@ requireAdmin();
 // referral crediting, waitlist joins, every admin action). Wiring precise
 // bust hooks into all of them isn't worth it for a dashboard tile — a short
 // TTL is the right tradeoff here, not exact invalidation.
-$data = cacheGet('admin_overview', 'all', 30, function () {
+$data = cacheGet('admin_overview', 'all', 600, function () {
     $users = db()->query(
         "SELECT COUNT(*) AS total,
                 SUM(email_verified_at IS NOT NULL) AS verified,

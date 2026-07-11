@@ -9,7 +9,7 @@ declare(strict_types=1);
  */
 
 function getCalendarFeatured(string $month): array {
-    return cacheGet('pricing_data', "calendar_featured:$month", 300, function () use ($month) {
+    return cacheGet('calendar_data', "calendar_featured:$month", 600, function () use ($month) {
         $stmt = db()->prepare(
             "SELECT feature_date, product_id, specification_id, note
              FROM pc_calendar_features WHERE DATE_FORMAT(feature_date, '%Y-%m') = ?"
@@ -61,7 +61,7 @@ function getCalendarFeatured(string $month): array {
 }
 
 function getCalendarMilestones(string $month): array {
-    return cacheGet('pricing_data', "calendar_milestones:$month", 300, function () use ($month) {
+    return cacheGet('calendar_data', "calendar_milestones:$month", 600, function () use ($month) {
         // Every (product, spec) pair that changed this month.
         $pairsStmt = db()->prepare(
             "SELECT DISTINCT product_id, specification_id FROM pc_price_history

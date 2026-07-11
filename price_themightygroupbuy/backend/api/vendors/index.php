@@ -11,7 +11,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // Hidden vendors (backlog #9) stay out of the list unless explicitly asked
     // for (?include_hidden=1 — the admin "Show hidden" toggle, for audit/unhide).
     $includeHidden = ($_GET['include_hidden'] ?? '') === '1';
-    $rows = cacheGet('admin_vendors', $includeHidden ? 'all_with_hidden' : 'all', 60, function () use ($includeHidden) {
+    $rows = cacheGet('admin_vendors', $includeHidden ? 'all_with_hidden' : 'all', 600, function () use ($includeHidden) {
         $rows = db()->query(
             "SELECT v.*, COUNT(p.id) AS price_count, MAX(f.uploaded_at) AS last_upload
              FROM pc_vendors v

@@ -7,7 +7,7 @@ method('GET', 'POST');
 $admin = requireAdmin();
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    $rows = cacheGet('admin_products', 'all', 60, function () {
+    $rows = cacheGet('admin_products', 'all', 600, function () {
         $rows = db()->query(
             "SELECT p.*,
                     (SELECT COUNT(*) FROM pc_product_aliases a WHERE a.product_id = p.id) AS alias_count,
@@ -62,7 +62,7 @@ if ($classificationIds) {
 }
 
 cacheBust('admin_products');
-cacheBust('pricing_data');
+cacheBust('comparison_data');
 logAdminAction((int)$admin['id'], 'create_product', ['product_id' => $id, 'canonical_name' => $name]);
 
 jsonResponse(['id' => $id], 201);

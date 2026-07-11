@@ -9,7 +9,7 @@ require_once dirname(__DIR__, 1) . '/helpers.php';
 method('GET');
 requireAuth();
 
-$stats = cacheGet('stats', 'summary', 60, function () {
+$stats = cacheGet('stats', 'summary', 600, function () {
     $pdo = db();
     return [
         'vendors'  => (int)$pdo->query('SELECT COUNT(*) FROM pc_vendors WHERE is_active = 1')->fetchColumn(),

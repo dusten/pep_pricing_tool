@@ -80,6 +80,6 @@ try {
 }
 
 cacheBust('admin_products');
-cacheBust('pricing_data');
+cacheBust('comparison_data');
 logAdminAction((int)$admin['id'], 'merge_product', ['winner_id' => $winnerId, 'loser_id' => $loserId]);
 jsonResponse(['message' => 'Products merged.']);

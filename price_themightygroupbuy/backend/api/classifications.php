@@ -9,7 +9,7 @@ method('GET', 'POST');
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     requireAuth();
-    $rows = cacheGet('pricing_data', 'classifications', 300, function () {
+    $rows = cacheGet('classifications_data', 'classifications', 600, function () {
         $rows = db()->query('SELECT id, name FROM pc_classifications ORDER BY name')->fetchAll();
         foreach ($rows as &$r) $r['id'] = (int)$r['id'];
         return $rows;
@@ -31,6 +31,6 @@ if (!$id) {
     $id = (int)$existing->fetchColumn();
 }
 
-cacheBust('pricing_data');
+cacheBust('classifications_data');
 logAdminAction((int)$admin['id'], 'create_classification', ['classification_id' => $id, 'name' => $name]);
 jsonResponse(['id' => $id, 'name' => $name], 201);

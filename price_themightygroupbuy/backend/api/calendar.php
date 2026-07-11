@@ -14,8 +14,8 @@ $month = $_GET['month'] ?? date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $month)) jsonResponse(['error' => 'month must be YYYY-MM.'], 422);
 
 // Same for every user, only changes when prices change — shares the
-// 'pricing_data' group with comparison/index.php and comparison/filters.php.
-$byDay = cacheGet('pricing_data', "calendar:$month", 300, function () use ($month) {
+// 'calendar_data' group with calendar_public.php and calendar_featured.php.
+$byDay = cacheGet('calendar_data', "calendar:$month", 600, function () use ($month) {
     // LEFT JOIN, not JOIN: pc_price_history has no FKs by design and must
     // survive a vendor/product being deleted later — a historical event for
     // a since-purged vendor still shows, just without a resolvable name.
@@ -52,7 +52,7 @@ $byDay = cacheGet('pricing_data', "calendar:$month", 300, function () use ($mont
 // before then (or from before this feature shipped) have no history row —
 // this reads pc_pending_imports directly instead, which has always recorded
 // reviewed_at regardless of when the ledger came online.
-$approvedByDay = cacheGet('pricing_data', "calendar_approved:$month", 300, function () use ($month) {
+$approvedByDay = cacheGet('calendar_data', "calendar_approved:$month", 600, function () use ($month) {
     $stmt = db()->prepare(
         "SELECT DATE(pi.reviewed_at) AS day, v.display_name AS vendor, pi.raw_json
          FROM pc_pending_imports pi

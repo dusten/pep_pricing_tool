@@ -7,7 +7,7 @@ require_once dirname(__DIR__, 1) . '/helpers.php';
 method('GET');
 requireAuth();
 
-$rows = cacheGet('pricing_data', 'stacks_active', 300, function () {
+$rows = cacheGet('stacks_data', 'stacks_active', 600, function () {
     $rows = db()->query(
         "SELECT s.id, s.name, s.description, (SELECT COUNT(*) FROM pc_stack_items si WHERE si.stack_id = s.id) AS item_count
          FROM pc_stacks s WHERE s.is_active = 1 ORDER BY s.name"

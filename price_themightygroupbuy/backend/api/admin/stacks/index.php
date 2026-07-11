@@ -29,6 +29,6 @@ $stmt = db()->prepare('INSERT INTO pc_stacks (name, description) VALUES (?,?)');
 $stmt->execute([$name, trim($d['description'] ?? '') ?: null]);
 $id = (int)db()->lastInsertId();
 
-cacheBust('pricing_data'); // GET /api/stacks (Dashboard card) shares this group
+cacheBust('stacks_data'); // GET /api/stacks (Dashboard card) shares this group
 logAdminAction((int)$admin['id'], 'create_stack', ['stack_id' => $id, 'name' => $name]);
 jsonResponse(['id' => $id], 201);

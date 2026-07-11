@@ -47,10 +47,10 @@ if ($isFree) {
 
 // The result rows don't depend on who's asking — only the quota bookkeeping
 // above does, and that already ran. Cached by filter hash, shares the
-// 'pricing_data' group with comparison/filters.php; busted whenever prices/
+// 'comparison_data' group with comparison/filters.php; busted whenever prices/
 // vendors/products change. duration_ms below still reflects real
 // user-perceived latency (a cache hit just makes it fast, which is correct).
-$rows = cacheGet('pricing_data', $filterHash, 300, fn() =>
+$rows = cacheGet('comparison_data', $filterHash, 600, fn() =>
     runComparisonQuery($productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly));
 
 // ── Query performance logging (for the admin replay/debug tool) ────────

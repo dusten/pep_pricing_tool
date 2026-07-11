@@ -13,7 +13,7 @@ $itemId  = isset($PARAMS['itemId']) ? (int)$PARAMS['itemId'] : null;
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     if (!$itemId) jsonResponse(['error' => 'Item id required.'], 422);
     db()->prepare('DELETE FROM pc_stack_items WHERE id = ? AND stack_id = ?')->execute([$itemId, $stackId]);
-    cacheBust('pricing_data'); // GET /api/stacks' item_count shares this group
+    cacheBust('stacks_data'); // GET /api/stacks' item_count shares this group
     logAdminAction((int)$admin['id'], 'remove_stack_item', ['stack_id' => $stackId, 'item_id' => $itemId]);
     jsonResponse(['message' => 'Component removed.']);
 }
@@ -30,6 +30,6 @@ if (!$check->fetchColumn()) jsonResponse(['error' => 'Specification not found fo
 db()->prepare('INSERT IGNORE INTO pc_stack_items (stack_id, product_id, specification_id) VALUES (?,?,?)')
     ->execute([$stackId, $productId, $specId]);
 
-cacheBust('pricing_data'); // GET /api/stacks' item_count shares this group
+cacheBust('stacks_data'); // GET /api/stacks' item_count shares this group
 logAdminAction((int)$admin['id'], 'add_stack_item', ['stack_id' => $stackId, 'product_id' => $productId, 'specification_id' => $specId]);
 jsonResponse(['message' => 'Component added.'], 201);

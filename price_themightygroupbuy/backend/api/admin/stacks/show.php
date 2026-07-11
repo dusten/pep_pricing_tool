@@ -17,7 +17,7 @@ if (!$stack) jsonResponse(['error' => 'Stack not found.'], 404);
 
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     db()->prepare('DELETE FROM pc_stacks WHERE id = ?')->execute([$id]);
-    cacheBust('pricing_data'); // GET /api/stacks (Dashboard card) shares this group
+    cacheBust('stacks_data'); // GET /api/stacks (Dashboard card) shares this group
     logAdminAction((int)$admin['id'], 'delete_stack', ['stack_id' => $id, 'name' => $stack['name']]);
     jsonResponse(['message' => 'Stack deleted.']);
 }
@@ -63,6 +63,6 @@ if (!$fields) jsonResponse(['error' => 'Nothing to update.'], 422);
 
 $vals[] = $id;
 db()->prepare('UPDATE pc_stacks SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);
-cacheBust('pricing_data'); // GET /api/stacks (Dashboard card) shares this group
+cacheBust('stacks_data'); // GET /api/stacks (Dashboard card) shares this group
 logAdminAction((int)$admin['id'], 'update_stack', ['stack_id' => $id, 'fields' => array_keys($d)]);
 jsonResponse(['message' => 'Stack updated.']);

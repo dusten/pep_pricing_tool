@@ -13,7 +13,7 @@ if ($tier) { $where[] = 'tier = ?'; $params[] = $tier; }
 
 // One shared 'admin_users' version so a single user update busts every tier-filtered
 // variant at once, without having to know or enumerate which filters are cached.
-$rows = cacheGet('admin_users', $tier ?? 'all', 30, function () use ($where, $params) {
+$rows = cacheGet('admin_users', $tier ?? 'all', 600, function () use ($where, $params) {
     $sql = 'SELECT id, email, display_name, tier, tier_status, tier_renews_at, account_credit_usd,
                    is_admin, test_account, referral_code, email_verified_at, last_login_at, created_at
             FROM pc_users' . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . '

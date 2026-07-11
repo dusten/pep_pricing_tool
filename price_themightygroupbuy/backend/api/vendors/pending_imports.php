@@ -158,7 +158,8 @@ foreach ($others->fetchAll() as $other) {
     }
 }
 
-cacheBust('pricing_data');
+cacheBust('comparison_data');
+cacheBust('calendar_data'); // commits a price + pc_price_history row, and reviewed_at feeds calendar_approved
 cacheBust('admin_products');
 logAdminAction((int)$admin['id'], 'approve_pending_import', ['pending_import_id' => $id, 'product_id' => $productId]);
 jsonResponse(['message' => 'Approved and committed.', 'auto_approved_matches' => $autoApproved]);

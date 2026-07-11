@@ -81,7 +81,7 @@ if (array_key_exists('classification_ids', $d)) {
 
 if ($fields) {
     cacheBust('admin_products');
-    cacheBust('pricing_data'); // canonical_name/classifications feed comparison results
+    cacheBust('comparison_data'); // canonical_name/classifications feed comparison results
     logAdminAction((int)$admin['id'], 'update_product', ['product_id' => $id, 'fields' => array_keys($d)]);
 }
 

@@ -241,11 +241,16 @@ function deviceType(): string {
 // unlike rateLimit() this fails OPEN by design: no Memcached just means
 // every request computes fresh — never reject a request over a cache miss.
 //
-// TTL guidance: short (30-60s) for admin lists that change via routine admin
-// action (users, waitlist) — fast-changing, low cost to recompute. Longer
-// (5min+) for slow-changing reference-ish data (public app settings).
-// Never cache a user's own live data (comparison results, /api/me) — those
-// must always reflect the instant they were written.
+// TTL guidance (2026-07-11): 10 minutes for everything that gets busted on
+// write anyway (admin lists, comparison/calendar/classifications/stacks) —
+// the TTL is just a backstop for the rare external DB change that skips the
+// app's own cacheBust() calls, so it doesn't need to be short. Hours for
+// truly static reference data (app settings). The one exception is the
+// session token→user cache (requireAuth) — kept at 60s on purpose, since a
+// longer TTL would let a just-revoked token or a self-edit (tier/email
+// verification) keep "working" for longer before it's rechecked.
+// Never cache a user's own live data (/api/me) — that must always reflect
+// the instant it was written.
 
 function cacheGroupKey(string $group): string {
     $mc = mc();
@@ -286,7 +291,7 @@ function cacheGet(string $group, string $variant, int $ttlSec, callable $compute
 function getAppSetting(string $key, string $default = ''): string {
     static $all = null;
     if ($all === null) {
-        $all = cacheGet('app_settings', 'all_kv', 300, function () {
+        $all = cacheGet('app_settings', 'all_kv', 21600, function () {
             $rows = db()->query('SELECT `key`, value FROM pc_app_settings')->fetchAll();
             $out = [];
             foreach ($rows as $r) $out[$r['key']] = $r['value'];

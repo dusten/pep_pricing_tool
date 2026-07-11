@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         // change reflected immediately, not wait out the public cache TTL.
         $rows = db()->query('SELECT `key`, value FROM pc_app_settings')->fetchAll();
     } else {
-        $rows = cacheGet('app_settings', 'public', 300, function () {
+        $rows = cacheGet('app_settings', 'public', 21600, function () {
             $stmt = db()->prepare(
                 'SELECT `key`, value FROM pc_app_settings WHERE `key` IN (' .
                 implode(',', array_fill(0, count(PUBLIC_SETTINGS), '?')) . ')'

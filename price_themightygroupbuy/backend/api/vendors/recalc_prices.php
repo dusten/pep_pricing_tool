@@ -28,7 +28,7 @@ $stmt = db()->prepare(
 $stmt->execute([$vendorId]);
 $changed = $stmt->rowCount();
 
-if ($changed > 0) cacheBust('pricing_data'); // $/unit feeds comparison ranking/highlight
+if ($changed > 0) cacheBust('comparison_data'); // $/unit feeds comparison ranking/highlight
 logAdminAction((int)$admin['id'], 'recalc_vendor_prices', ['vendor_id' => $vendorId, 'rows_changed' => $changed]);
 
 jsonResponse(['message' => "Recalculated \$/unit for {$vendor['display_name']} — {$changed} row(s) updated.", 'rows_changed' => $changed]);

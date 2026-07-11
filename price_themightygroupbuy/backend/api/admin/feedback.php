@@ -6,7 +6,7 @@ require_once dirname(__DIR__, 2) . '/helpers.php';
 method('GET');
 requireAdmin();
 
-$rows = cacheGet('admin_feedback', 'all', 30, function () {
+$rows = cacheGet('admin_feedback', 'all', 600, function () {
     $rows = db()->query(
         "SELECT f.*, u.email AS user_email, u.display_name
          FROM pc_feedback f LEFT JOIN pc_users u ON u.id = f.user_id

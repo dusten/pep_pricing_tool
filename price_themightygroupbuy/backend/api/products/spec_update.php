@@ -53,6 +53,6 @@ try {
 }
 
 cacheBust('admin_products');
-cacheBust('pricing_data');
+cacheBust('comparison_data');
 logAdminAction((int)$admin['id'], 'update_specification', ['specification_id' => $id, 'fields' => array_keys($d)]);
 jsonResponse(['message' => 'Specification updated.']);

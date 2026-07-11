@@ -18,7 +18,7 @@ $path   = trim((string)($_GET['path'] ?? ''));
 // rarely relative to that — TTL-only caching, no bust wiring, same
 // reasoning as admin/overview.php.
 $variant = "$range:" . ($device ?? '-') . ':' . ($path ?: '-');
-$data = cacheGet('admin_performance', $variant, 30, function () use ($interval, $device, $path, $range) {
+$data = cacheGet('admin_performance', $variant, 600, function () use ($interval, $device, $path, $range) {
     $where  = ["created_at >= DATE_SUB(NOW(), INTERVAL $interval)"];
     $params = [];
     if ($device) { $where[] = 'device_type = ?'; $params[] = $device; }

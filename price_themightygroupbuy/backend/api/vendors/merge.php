@@ -68,6 +68,6 @@ try {
 }
 
 cacheBust('admin_vendors');
-cacheBust('pricing_data');
+cacheBust('comparison_data');
 logAdminAction((int)$admin['id'], 'merge_vendor', ['winner_id' => $winnerId, 'loser_id' => $loserId, 'loser_name' => $rows[$loserId]['display_name']]);
 jsonResponse(['message' => 'Vendors merged.']);

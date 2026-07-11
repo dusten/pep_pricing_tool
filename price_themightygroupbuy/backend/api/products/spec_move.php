@@ -61,7 +61,7 @@ try {
 }
 
 cacheBust('admin_products');
-cacheBust('pricing_data');
+cacheBust('comparison_data');
 logAdminAction((int)$admin['id'], 'move_specification', [
     'specification_id' => $specId, 'from_product_id' => (int)$spec['product_id'], 'to_product_id' => $targetId,
 ]);
