@@ -83,27 +83,40 @@
         <option value="7d">Last 7 days</option>
         <option value="30d">Last 30 days</option>
       </select>
+      <input v-model="userFilter" type="text" placeholder="Filter by email…" class="ql-input" />
+      <input v-model.number="minMs" type="number" min="0" placeholder="Min ms" class="ql-input ql-num" />
+      <span class="text-muted text-sm">{{ sortedQueries.length }} shown</span>
     </div>
     <table v-if="queries" class="admin-table">
-      <thead><tr><th @click="sortByDuration" style="cursor:pointer">Duration ↕</th><th>User</th><th>Results</th><th>When</th><th></th></tr></thead>
+      <thead><tr>
+        <th @click="setSort('duration_ms')" style="cursor:pointer">Duration {{ sortArrow('duration_ms') }}</th>
+        <th @click="setSort('email')" style="cursor:pointer">User {{ sortArrow('email') }}</th>
+        <th @click="setSort('result_count')" style="cursor:pointer">Results {{ sortArrow('result_count') }}</th>
+        <th @click="setSort('created_at')" style="cursor:pointer">When {{ sortArrow('created_at') }}</th>
+        <th></th>
+      </tr></thead>
       <tbody>
         <tr v-for="q in sortedQueries" :key="q.id">
           <td class="text-sm" :class="{ 'text-danger': q.slow_flag }">{{ q.duration_ms }}ms</td>
           <td class="text-sm">{{ q.email }}</td>
           <td class="text-sm">{{ q.result_count }}</td>
           <td class="text-sm text-muted">{{ q.created_at }}</td>
-          <td><button class="btn btn-ghost btn-sm" @click="rerun(q)">Re-run</button></td>
+          <td class="ql-actions">
+            <button class="btn btn-ghost btn-sm" @click="openQuery(q)" title="Open this query as a live Comparison in a new tab">Open</button>
+            <button class="btn btn-ghost btn-sm" @click="rerun(q)" title="Re-execute server-side and compare timing">Time</button>
+          </td>
         </tr>
       </tbody>
     </table>
+    <p v-if="queries && !sortedQueries.length" class="text-muted text-sm">No queries match.</p>
     <div v-if="rerunResult" class="rerun-result">
-      <strong>Re-run:</strong> {{ rerunResult.original_duration_ms }}ms → {{ rerunResult.new_duration_ms }}ms now, {{ rerunResult.result_count }} rows
+      <strong>Timed re-run:</strong> {{ rerunResult.original_duration_ms }}ms → {{ rerunResult.new_duration_ms }}ms now, {{ rerunResult.result_count }} rows
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { get, post, patch } from '@/utils/api.js'
 
 const sys            = ref(null)
@@ -177,10 +190,13 @@ async function exportSlowQueries() {
 }
 
 // ── Comparison query log ─────────────────────────────────────────
-const queries  = ref(null)
-const slowOnly = ref(false)
-const qlRange  = ref('7d')
-const sortDesc = ref(true)
+const queries    = ref(null)
+const slowOnly   = ref(false)
+const qlRange    = ref('7d')
+const sortKey    = ref('duration_ms')
+const sortDesc   = ref(true)
+const userFilter = ref('')
+const minMs      = ref(0)
 const rerunResult = ref(null)
 
 async function loadQueryLog() {
@@ -191,13 +207,39 @@ async function loadQueryLog() {
 }
 onMounted(loadQueryLog)
 
-const sortedQueries = ref([])
-function applySort() {
-  sortedQueries.value = [...(queries.value || [])].sort((a, b) =>
-    sortDesc.value ? b.duration_ms - a.duration_ms : a.duration_ms - b.duration_ms)
+const sortedQueries = computed(() => {
+  let list = queries.value || []
+  const uf = userFilter.value.trim().toLowerCase()
+  if (uf) list = list.filter(q => (q.email || '').toLowerCase().includes(uf))
+  if (minMs.value > 0) list = list.filter(q => q.duration_ms >= minMs.value)
+  const k = sortKey.value
+  return [...list].sort((a, b) => {
+    if (k === 'email' || k === 'created_at') {
+      const av = String(a[k] || ''), bv = String(b[k] || '')
+      return sortDesc.value ? bv.localeCompare(av) : av.localeCompare(bv)
+    }
+    return sortDesc.value ? b[k] - a[k] : a[k] - b[k]
+  })
+})
+function setSort(key) {
+  if (sortKey.value === key) sortDesc.value = !sortDesc.value
+  else { sortKey.value = key; sortDesc.value = true }
 }
-function sortByDuration() { sortDesc.value = !sortDesc.value; applySort() }
-watch(queries, applySort)
+function sortArrow(key) { return sortKey.value === key ? (sortDesc.value ? '↓' : '↑') : '↕' }
+
+// Open the logged query as a live Comparison in a new tab (deep-linked filters)
+// so its result and behavior can be inspected directly.
+function openQuery(q) {
+  const p = q.selection_params || {}
+  const params = new URLSearchParams()
+  ;(p.classificationIds || []).forEach(id => params.append('classification_ids', id))
+  ;(p.vendorIds || []).forEach(id => params.append('vendors', id))
+  if (p.tierKitSize) params.set('tier', p.tierKitSize)
+  if (p.multiOnly)       params.set('multi_only', '1')
+  if (p.verifiedOnly)    params.set('verified_only', '1')
+  if (p.rawMaterialOnly) params.set('raw_material_only', '1')
+  window.open(`/comparison?${params.toString()}`, '_blank')
+}
 
 async function rerun(q) {
   rerunResult.value = await post(`/api/admin/query-log/${q.id}/rerun`)
@@ -233,4 +275,8 @@ async function rerun(q) {
 .text-danger { color: var(--danger); font-weight: 700; }
 
 .rerun-result { margin-top: 12px; padding: 10px 14px; background: var(--surface-alt); border-radius: var(--radius); font-size: 13px; }
+.ql-input { padding: 5px 9px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); font-size: 12.5px; }
+.ql-num { max-width: 90px; }
+.ql-actions { white-space: nowrap; }
+.ql-actions button + button { margin-left: 4px; }
 </style>

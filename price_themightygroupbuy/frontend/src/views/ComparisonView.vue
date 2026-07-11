@@ -160,7 +160,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRoute } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import VendorCard from '@/components/VendorCard.vue'
 import { useComparisonStore } from '@/stores/comparison.js'
@@ -242,9 +242,28 @@ function runSearch() {
   })
 }
 
+const route = useRoute()
+// Preload filter state from URL query — lets the admin query-log "Open" action
+// deep-link a logged user's exact comparison (classifications/vendors/tier/toggles)
+// for investigation. Product/spec IDs aren't reflected here because the live UI
+// never sets them (real logged queries always have those empty).
+function initFromQuery() {
+  const q = route.query
+  const arr = v => v == null ? [] : (Array.isArray(v) ? v : [v]).map(Number)
+  const cls = arr(q.classification_ids)
+  const ven = arr(q.vendors)
+  if (cls.length) selectedClassifications.value = cls
+  if (ven.length) selectedVendors.value = ven
+  if (q.tier) selectedTier.value = Number(q.tier)
+  multiOnly.value       = q.multi_only === '1'
+  verifiedOnly.value    = q.verified_only === '1'
+  rawMaterialOnly.value = q.raw_material_only === '1'
+}
+
 onMounted(async () => {
   await comparison.loadFilters()
   cart.load()
+  initFromQuery()
   runSearch()
 })
 watch([selectedClassifications, multiOnly, verifiedOnly, rawMaterialOnly, selectedVendors, selectedTier], runSearch, { deep: true })

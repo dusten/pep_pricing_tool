@@ -24,7 +24,15 @@
                 <option value="expert">Expert</option>
               </select>
             </td>
-            <td><span :class="['badge', u.tier_status === 'active' ? 'badge-pro' : 'badge-free']">{{ u.tier_status }}</span></td>
+            <td>
+              <select :value="u.tier_status" @change="setField(u, 'tier_status', $event.target.value)">
+                <option value="active">active</option>
+                <option value="trialing">trialing</option>
+                <option value="past_due">past_due</option>
+                <option value="canceled">canceled</option>
+                <option value="none">none</option>
+              </select>
+            </td>
             <td><span :class="['badge', u.email_verified_at ? 'badge-pro' : 'badge-free']">{{ u.email_verified_at ? 'Verified' : 'Unverified' }}</span></td>
             <td>
               <label class="toggle-row">
