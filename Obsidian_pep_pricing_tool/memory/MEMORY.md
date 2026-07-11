@@ -11,3 +11,4 @@
 - [Ledger rebuild blind spot](feedback_ledger_rebuild_blind_spot.md) — A "read from the new ledger only" rebuild silently loses anything from before the ledger existed, even same-day; check coverage or keep a second signal
 - [Archive migration scripts](feedback_archive_migration_scripts.md) — Any one-off server script for a bulk data operation goes in migration_scripts/ and gets committed, never deleted after running
 - [SSH key path](reference_ssh_key_path.md) — Prod server key is always at ~/projects/peptides_projects/pepcal_key.pem
+- [Archive diagnostic scripts](feedback_archive_diagnostic_scripts.md) — Read-only verification scripts go in diagnostic_scripts/ too, not just data-mutating ones, and get logged in the wiki

@@ -427,16 +427,26 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - `runComparisonQuery()` now flags each vendor cell with `has_coa` (approved COA exists for that vendor+product); Comparison page shows a ★ next to the price in both table and list views.
 - Verified live: ran the query function directly against prod data (4 approved COAs already exist) — has_coa correctly true for the matching vendor/product.
 
-## [2026-07-12] feature | Calendar featured product deep-links to Comparison (list view, no extra filters)
+## [2026-07-11] feature | Calendar featured product deep-links to Comparison (list view, no extra filters)
 
 - `calendar_public.php`'s featured payload now includes `product_id` (was already selected in the SQL, just not returned). `CalendarView.vue`'s featured card gained a "See every vendor for this product" link to `/comparison?products={id}` — bare product ID, no other filters, per user decision (the point is showing the unfiltered full vendor list to back up the quoted price).
 - `ComparisonView.vue` gained real `products` query-param support: `initFromQuery()` now reads `q.products`, forces list view (matches the "every vendor for this row" ask), and `runSearch()` passes it through to the existing `comparison.search()`/`buildParams()` (which already supported a `products` filter for other callers, just never wired to the URL before).
 - `/comparison` requires auth; an anonymous visitor clicking the link bounces through `/login?redirect=...` (already-existing router guard behavior) and lands back on the right filtered comparison view post-login — no new redirect logic needed.
 - Verified live: `pc_calendar_features` has real entries (today = product 63, PT-141); `GET /api/calendar/public?month=2026-07` confirmed `product_id` present in the JSON for all three current features.
 
-## [2026-07-12] fix | Calendar featured product + milestones now visible to logged-in users too
+## [2026-07-11] fix | Calendar featured product + milestones now visible to logged-in users too
 
 - User feedback: after adding the Comparison deep-link (#44), realized the whole featured card/milestones only ever rendered for anonymous visitors — logged-in users (i.e. everyone, since "there shouldn't be much of a site without being logged in") never saw it. Confirmed this was the original backlog #18/#19 design (public-only), not a bug, then the user asked to drop that gate entirely.
 - Extracted the featured-product and all-time-low-milestone logic (previously inline in `calendar_public.php`) into shared `backend/lib/calendar_featured.php` (`getCalendarFeatured()`/`getCalendarMilestones()`), and wired both into the authenticated `calendar.php` endpoint too (it only ever returned `days`+`approved` before). `calendar_public.php` now just calls the same two functions.
 - `CalendarView.vue`: dropped `!auth.isAuthenticated &&` from the featured-card and milestones `v-if`s; `load()`'s authenticated branch now populates `featured`/`milestones` from the response instead of hardcoding `{}`.
 - Verified live: ran `getCalendarFeatured()`/`getCalendarMilestones()` directly on the server (today's real data, product 23 Epithalon), and re-confirmed the public HTTP endpoint still returns identical output after the refactor.
+
+## [2026-07-11] chore | Archive this session's diagnostic/verification scripts
+
+- New `diagnostic_scripts/` directory (sibling to `migration_scripts/`) for one-off read-only PHP scripts run on the server to verify a change against live data — previously written to a scratch job-tmp path and discarded after running. Per user request, going forward every such script gets saved here and logged, same as `migration_scripts/` already does for data-mutating ones (see updated [[feedback_archive_migration_scripts]] and new [[feedback_archive_diagnostic_scripts]] in memory/).
+- Recovered and archived the five scripts run earlier this session:
+  - `2026-07-11-verify-comparison-has-coa.php` — confirmed `runComparisonQuery()`'s new `has_coa` flag resolves `true` for a vendor/product pair with a real approved COA (Retatrutide/vendor 24), verifying the ★ badge feature (#43).
+  - `2026-07-11-verify-coa-submissions-list-query.php` — confirmed the admin COA-queue list SQL (vendor/product/submitter join) used by the new `?list=1` endpoint resolves correctly across all 5 real submissions (#43).
+  - `2026-07-11-verify-calendar-featured-shared-functions.php` — confirmed `getCalendarFeatured()`/`getCalendarMilestones()` (extracted into `backend/lib/calendar_featured.php`) still return correct real data after the extraction (#44/#45).
+  - `2026-07-11-dump-memcached-keys.php` — dumped every live Memcached key (`Memcached::getAllKeys()`) to see exactly what's cached at a point in time; used to investigate the "Cached objects" count.
+  - `2026-07-11-cache-group-versions-and-stats.php` — printed each cache group's bust counter (`cv:<group>`) plus overall Memcached stats; found `pricing_data` had been busted ~1939 times (shared by comparison results/calendar/classifications/filters/stacks) and `admin_products` ~1499 times — the real explanation for the low object count, not underuse.
