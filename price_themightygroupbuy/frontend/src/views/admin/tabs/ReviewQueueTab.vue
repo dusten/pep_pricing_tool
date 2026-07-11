@@ -106,7 +106,9 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import { get, post } from '@/utils/api.js'
+import { useToastStore } from '@/stores/toast.js'
 
+const toast           = useToastStore()
 const mode            = ref('imports')
 const importRow       = ref(null)
 const coaRow          = ref(null)
@@ -135,7 +137,7 @@ async function setCoaStatus(s, action) {
   try {
     await post(`/api/admin/coa-queue/${s.id}/${action}`, {})
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
     return
   }
   await loadCoa()
@@ -161,7 +163,7 @@ async function approveImport() {
       setTimeout(() => { approveMsg.value = '' }, 6000)
     }
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
     return
   }
   await loadImport()
@@ -170,7 +172,7 @@ async function rejectImport() {
   try {
     await post(`/api/vendors/pending-imports/${importRow.value.id}/reject`, {})
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
     return
   }
   await loadImport()
@@ -179,7 +181,7 @@ async function approveCoa() {
   try {
     await post(`/api/admin/coa-queue/${coaRow.value.id}/approve`, {})
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
     return
   }
   await loadCoa()
@@ -188,7 +190,7 @@ async function rejectCoa() {
   try {
     await post(`/api/admin/coa-queue/${coaRow.value.id}/reject`, {})
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
     return
   }
   await loadCoa()

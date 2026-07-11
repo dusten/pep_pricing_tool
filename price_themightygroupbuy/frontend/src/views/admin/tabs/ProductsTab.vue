@@ -99,7 +99,9 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { get, post, put, del } from '@/utils/api.js'
+import { useToastStore } from '@/stores/toast.js'
 
+const toast    = useToastStore()
 const products = ref([])
 const detail   = reactive({}) // productId -> { aliases, classifications, specifications }
 const classifications = ref([]) // all available tags, for the pickers
@@ -176,7 +178,7 @@ async function saveSpec(s) {
   try {
     await put(`/api/products/specifications/${s.id}`, { spec_label: s.spec_label, numeric_value: s.numeric_value, unit: s.unit })
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
   }
   await load()
   await refreshEditingSpecs()
@@ -187,7 +189,7 @@ async function moveSpec(spec, targetProductId) {
   try {
     await post(`/api/products/specifications/${spec.id}/move`, { product_id: targetProductId })
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
     return
   }
   await load()
@@ -200,7 +202,7 @@ async function mergeSpec(spec, targetSpecId) {
   try {
     await post(`/api/products/specifications/${spec.id}/merge`, { into: targetSpecId })
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
     return
   }
   await load()

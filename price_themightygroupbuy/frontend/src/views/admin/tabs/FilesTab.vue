@@ -83,7 +83,10 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { get, post, del } from '@/utils/api.js'
+import { useToastStore } from '@/stores/toast.js'
 import * as pdfjsLib from 'pdfjs-dist'
+
+const toast = useToastStore()
 
 // Chrome's native PDF viewer (what an <iframe src="blob:..."> would use) has
 // a long-documented history of sizing/resize bugs specifically with blob
@@ -158,9 +161,9 @@ async function processAll() {
     const pending = res.results.reduce((sum, r) => sum + (r.pending || 0), 0)
     const failed = res.results.filter(r => r.error).length
     const queued = res.results.filter(r => r.queued).length
-    alert(`${res.message}\n${imported} price row(s) imported, ${pending} sent to review, ${failed} failed, ${queued} queued for background processing.`)
+    toast.info(`${res.message} — ${imported} price row(s) imported, ${pending} sent to review, ${failed} failed, ${queued} queued for background processing.`)
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
   } finally {
     batchRunning.value = false
     await load()
@@ -171,9 +174,9 @@ async function process(f) {
   f.processing_status = 'processing'
   try {
     const res = await post(`/api/files/${f.id}/process`, {})
-    alert(res.message)
+    toast.success(res.message)
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
   } finally {
     await load()
   }
@@ -234,7 +237,7 @@ async function downloadFile(f) {
     a.click()
     URL.revokeObjectURL(url)
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
   }
 }
 
@@ -253,7 +256,7 @@ async function viewFile(f) {
     viewing.value = f
     if (f.file_type === 'pdf') await renderPdf(blob)
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
   }
 }
 

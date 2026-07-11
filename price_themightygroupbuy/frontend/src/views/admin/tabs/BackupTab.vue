@@ -11,7 +11,9 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useToastStore } from '@/stores/toast.js'
 
+const toast       = useToastStore()
 const downloading = ref(false)
 
 async function download() {
@@ -29,7 +31,7 @@ async function download() {
     a.click()
     URL.revokeObjectURL(url)
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
   } finally {
     downloading.value = false
   }

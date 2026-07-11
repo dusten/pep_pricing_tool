@@ -151,6 +151,9 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { get, post, put, del } from '@/utils/api.js'
+import { useToastStore } from '@/stores/toast.js'
+
+const toast = useToastStore()
 
 const PAYMENT_METHODS = [
   { value: 'usdt_sol', label: 'USDT (Solana)' }, { value: 'usdc_sol', label: 'USDC (Solana)' },
@@ -293,7 +296,7 @@ async function save() {
     await parseIntake()
   }
   if (!form.display_name.trim()) {
-    alert('Vendor name is required — click "Parse reply" first, or fill in Vendor Name manually.')
+    toast.error('Vendor name is required — click "Parse reply" first, or fill in Vendor Name manually.')
     return
   }
   const body = { ...form }
@@ -327,7 +330,7 @@ async function deleteVendor(v) {
   const res = await del(`/api/vendors/${v.id}`)
   if (selectedVendorId.value === v.id) startNew()
   await load()
-  alert(res.message)
+  toast.success(res.message)
 }
 
 // Backend takes one file per request (malware scan, dedup, is_current
@@ -362,8 +365,8 @@ async function uploadFiles(fileList) {
   if (results.dup || results.fail.length) {
     let msg = `Uploaded ${results.ok} file(s).`
     if (results.dup) msg += ` ${results.dup} duplicate(s) skipped.`
-    if (results.fail.length) msg += `\nFailed:\n${results.fail.join('\n')}`
-    alert(msg)
+    if (results.fail.length) msg += ` Failed: ${results.fail.join('; ')}`
+    toast.info(msg)
   }
 }
 

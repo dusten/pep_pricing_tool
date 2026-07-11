@@ -40,7 +40,9 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { get, put, post } from '@/utils/api.js'
+import { useToastStore } from '@/stores/toast.js'
 
+const toast             = useToastStore()
 const vendors          = ref([])
 const selectedVendorId  = ref('')
 const prices            = ref([])
@@ -62,7 +64,7 @@ async function save(pr) {
       vendor_sku: pr.vendor_sku, tier_kit_size: pr.tier_kit_size, non_standard_kit: pr.non_standard_kit,
     })
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
     await loadVendor() // revert the edited field back to server state on failure
   }
 }
@@ -71,9 +73,9 @@ async function recalc() {
   recalcing.value = true
   try {
     const res = await post(`/api/vendors/${selectedVendorId.value}/recalc-prices`)
-    alert(res.message)
+    toast.success(res.message)
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
   } finally {
     recalcing.value = false
   }

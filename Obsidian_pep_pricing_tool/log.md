@@ -469,3 +469,10 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Deliberately did not force vertical-align:top in the shared .admin-table td rule -- ProductsTab's existing :nth-child(-n+3) override exists because blanket top-align looked wrong on short-row tables; pages needing it for a specific wrapping column keep a small scoped override instead (documented in feedback_shared_admin_table_css memory).
 - Verified live across Vendors/Products/Stacks/Files/Users/System -- all render correctly.
 - #48 alert(err.message) boilerplate (16 sites, 6 files) noted on the backlog, not fixed -- it's a UX call (toast vs alert), not a mechanical dedup.
+
+## [2026-07-11] feature | Replace alert() with toast notifications (#48)
+
+- New stores/toast.js (Pinia, toasts array + error()/success()/info() with auto-dismiss 6s/4s/4s) + components/ToastStack.vue (fixed top-right stack, click-to-dismiss), mounted once in App.vue.
+- Replaced all 22 alert(...) sites across 8 files (BackupTab, FilesTab, InventoryTab, ProductsTab, VendorsTab, ReviewQueueTab, ComparisonView, LoginView) -- error/success/info picked per message's actual nature (pure error, completed-action confirmation, or mixed batch summary).
+- Left confirm() and the one prompt() alone -- different UX role (blocking yes/no or text input), not in scope of "replace alert()".
+- Verified live: triggered VendorsTab's validation-error toast, confirmed render + auto-dismiss.

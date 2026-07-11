@@ -168,10 +168,12 @@ import VendorCard from '@/components/VendorCard.vue'
 import { useComparisonStore } from '@/stores/comparison.js'
 import { useCartStore } from '@/stores/cart.js'
 import { useAuthStore } from '@/stores/auth.js'
+import { useToastStore } from '@/stores/toast.js'
 
 const comparison = useComparisonStore()
 const cart       = useCartStore()
 const auth       = useAuthStore()
+const toast      = useToastStore()
 const cartKeys   = computed(() => new Set(cart.items.map(it => it.product_id + ':' + it.specification_id)))
 
 const openVendorId = ref(null)
@@ -201,7 +203,7 @@ async function exportComparison(format) {
     a.href = url; a.download = `comparison.${format}`; a.click()
     URL.revokeObjectURL(url)
   } catch (err) {
-    alert(err.message)
+    toast.error(err.message)
   } finally {
     exporting.value = false
   }

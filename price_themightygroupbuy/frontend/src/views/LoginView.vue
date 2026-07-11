@@ -49,8 +49,10 @@
 import { ref, reactive } from 'vue'
 import { useRouter, useRoute, RouterLink } from 'vue-router'
 import { useAuthStore } from '@/stores/auth.js'
+import { useToastStore } from '@/stores/toast.js'
 
 const auth    = useAuthStore()
+const toast   = useToastStore()
 const router  = useRouter()
 const route   = useRoute()
 
@@ -80,7 +82,7 @@ async function submit() {
 
 async function resendVerify() {
   // ponytail: stub — wire up when /api/auth/resend-verify is built
-  alert('Check your original verification email, or contact support.')
+  toast.info('Check your original verification email, or contact support.')
 }
 </script>
 

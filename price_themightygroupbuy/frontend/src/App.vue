@@ -1,11 +1,13 @@
 <template>
   <RouterView />
+  <ToastStack />
 </template>
 
 <script setup>
 import { watch, onMounted } from 'vue'
 import { useAuthStore } from '@/stores/auth.js'
 import { sendPerfBeacon } from '@/utils/perfBeacon.js'
+import ToastStack from '@/components/ToastStack.vue'
 
 const auth = useAuthStore()
 
