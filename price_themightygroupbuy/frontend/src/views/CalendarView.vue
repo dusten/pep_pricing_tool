@@ -49,6 +49,9 @@
               <span class="text-muted">— {{ featured[dayKey(selectedDay)].vendor }}</span>
             </div>
             <p v-if="featured[dayKey(selectedDay)].note" class="featured-note">{{ featured[dayKey(selectedDay)].note }}</p>
+            <RouterLink :to="`/comparison?products=${featured[dayKey(selectedDay)].product_id}`" class="featured-link">
+              See every vendor for this product →
+            </RouterLink>
           </div>
 
           <!-- All-time-low milestones — name-only teaser (backlog #19) -->
@@ -225,6 +228,7 @@ watch([viewYear, viewMonth], load)
 .featured-price { font-size: 13px; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
 .featured-price strong { font-size: 15px; }
 .featured-note { font-size: 12px; color: var(--text-secondary); margin: 8px 0 0; }
+.featured-link { display: inline-block; font-size: 12.5px; font-weight: 600; color: var(--accent); margin-top: 10px; }
 
 .milestones { margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; }
 .milestone { font-size: 12.5px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 6px 10px; }

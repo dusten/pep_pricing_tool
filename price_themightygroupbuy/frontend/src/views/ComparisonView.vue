@@ -236,26 +236,32 @@ function toggleClassification(id) {
   else selectedClassifications.value.splice(i, 1)
 }
 
+const queryProducts = ref([])
+
 function runSearch() {
   comparison.search({
     classificationIds: selectedClassifications.value, vendors: selectedVendors.value,
     multiOnly: multiOnly.value, verifiedOnly: verifiedOnly.value, rawMaterialOnly: rawMaterialOnly.value,
-    tier: selectedTier.value,
+    tier: selectedTier.value, products: queryProducts.value,
   })
 }
 
 const route = useRoute()
 // Preload filter state from URL query — lets the admin query-log "Open" action
 // deep-link a logged user's exact comparison (classifications/vendors/tier/toggles)
-// for investigation. Product/spec IDs aren't reflected here because the live UI
-// never sets them (real logged queries always have those empty).
+// for investigation, and lets the public Calendar's featured-product card
+// deep-link straight to that product's full vendor list. Spec IDs aren't
+// reflected here because the live UI never sets them (real logged queries
+// always have those empty).
 function initFromQuery() {
   const q = route.query
   const arr = v => v == null ? [] : (Array.isArray(v) ? v : [v]).map(Number)
   const cls = arr(q.classification_ids)
   const ven = arr(q.vendors)
+  const prod = arr(q.products)
   if (cls.length) selectedClassifications.value = cls
   if (ven.length) selectedVendors.value = ven
+  if (prod.length) { queryProducts.value = prod; viewMode.value = 'list' }
   if (q.tier) selectedTier.value = Number(q.tier)
   multiOnly.value       = q.multi_only === '1'
   verifiedOnly.value    = q.verified_only === '1'

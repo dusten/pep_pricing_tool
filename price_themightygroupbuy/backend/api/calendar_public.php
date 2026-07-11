@@ -121,6 +121,7 @@ $featured = cacheGet('pricing_data', "calendar_featured:$month", 300, function (
         $hist = $histStmt->fetch();
 
         $out[substr($f['feature_date'], 0, 10)] = [
+            'product_id' => (int)$best['product_id'],
             'product'   => $best['product'],
             'spec'      => $best['spec'],
             'vendor'    => $best['vendor'],

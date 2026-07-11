@@ -426,3 +426,10 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Admin COA queue was next-pending-only (approve/reject); added a full list endpoint (`?list=1[&status=]`) and a `revoke` action, so any submission can move between pending/approved/rejected at any time, each transition audit-logged. ReviewQueueTab's COA tab gained a filterable full-submissions table under the existing single-card flow.
 - `runComparisonQuery()` now flags each vendor cell with `has_coa` (approved COA exists for that vendor+product); Comparison page shows a ★ next to the price in both table and list views.
 - Verified live: ran the query function directly against prod data (4 approved COAs already exist) — has_coa correctly true for the matching vendor/product.
+
+## [2026-07-12] feature | Calendar featured product deep-links to Comparison (list view, no extra filters)
+
+- `calendar_public.php`'s featured payload now includes `product_id` (was already selected in the SQL, just not returned). `CalendarView.vue`'s featured card gained a "See every vendor for this product" link to `/comparison?products={id}` — bare product ID, no other filters, per user decision (the point is showing the unfiltered full vendor list to back up the quoted price).
+- `ComparisonView.vue` gained real `products` query-param support: `initFromQuery()` now reads `q.products`, forces list view (matches the "every vendor for this row" ask), and `runSearch()` passes it through to the existing `comparison.search()`/`buildParams()` (which already supported a `products` filter for other callers, just never wired to the URL before).
+- `/comparison` requires auth; an anonymous visitor clicking the link bounces through `/login?redirect=...` (already-existing router guard behavior) and lands back on the right filtered comparison view post-login — no new redirect logic needed.
+- Verified live: `pc_calendar_features` has real entries (today = product 63, PT-141); `GET /api/calendar/public?month=2026-07` confirmed `product_id` present in the JSON for all three current features.
