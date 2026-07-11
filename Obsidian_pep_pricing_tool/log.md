@@ -476,3 +476,7 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Replaced all 22 alert(...) sites across 8 files (BackupTab, FilesTab, InventoryTab, ProductsTab, VendorsTab, ReviewQueueTab, ComparisonView, LoginView) -- error/success/info picked per message's actual nature (pure error, completed-action confirmation, or mixed batch summary).
 - Left confirm() and the one prompt() alone -- different UX role (blocking yes/no or text input), not in scope of "replace alert()".
 - Verified live: triggered VendorsTab's validation-error toast, confirmed render + auto-dismiss.
+
+## [2026-07-11] tweak | Toast notifications: centered instead of top-right
+
+- User asked to move the toast to the middle of the page (closer to where the old native alert() appeared). ToastStack.vue: `position: fixed; top/left: 50%; transform: translate(-50%,-50%)`, centered text, slightly larger padding/shadow. Verified live.
