@@ -88,8 +88,8 @@ const groups = [
   ] },
 ]
 
-const activeGroup = ref('system')          // land on Overview, as before
-const activeTab   = ref('overview')
+const activeGroup = ref('catalog')         // land on Vendor / Product Management → Vendors
+const activeTab   = ref('vendors')
 
 const currentTabs = computed(() => groups.find(g => g.id === activeGroup.value).tabs)
 
