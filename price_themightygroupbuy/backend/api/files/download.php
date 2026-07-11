@@ -4,7 +4,7 @@ require_once dirname(__DIR__, 2) . '/config.php';
 require_once dirname(__DIR__, 2) . '/helpers.php';
 
 method('GET');
-requireAdmin();
+$admin = requireAdmin();
 $id = (int)($PARAMS['id'] ?? 0);
 
 $stmt = db()->prepare('SELECT * FROM pc_vendor_files WHERE id = ? LIMIT 1');
@@ -14,6 +14,8 @@ if (!$file) jsonResponse(['error' => 'File not found.'], 404);
 
 $fullPath = dirname(__DIR__, 2) . '/storage/' . $file['stored_path'];
 if (!is_file($fullPath)) jsonResponse(['error' => 'File missing from storage.'], 404);
+
+logAdminAction((int)$admin['id'], 'download_vendor_file', ['file_id' => $id, 'filename' => $file['original_filename'], 'vendor_id' => (int)$file['vendor_id']]);
 
 // A fetch()'d blob's .type comes straight from this header — a browser
 // won't decode a blob URL as an <img> if the declared type isn't image/*,

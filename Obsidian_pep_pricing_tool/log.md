@@ -412,3 +412,7 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - GET /admin/users/{id}/activity (new endpoint + route) returns the user's audit entries + last 20 logins. UsersTab gained an "Activity" expander next to "Referrals" (refactored expand state to {id,type} so one panel opens at a time) showing an actions table + login list. me/export.php now includes the user's own activity_log in their GDPR-style dump and logs the export.
 - Verified live: logUserAction round-trips through the admin query with JSON details intact; test row cleaned up.
 - Also (user request, same turn): System-tab memcache card now shows "Cached objects" (curr_items) — the "cache barely used" impression was from low bytes (small payloads), not low usage; object count + 97.7% hit rate show it's working.
+
+## [2026-07-11] fix | Admin exports audit-log gap closed (files/download.php)
+
+- Swept every file-streaming endpoint (Content-Disposition/readfile/fputcsv/writeToStdOut). Correction to prior note: waitlist CSV and slow-queries CSV were already logged (export_waitlist_csv / export_slow_queries_csv), as was backup (download_backup). The only unlogged admin download was files/download.php (vendor-file download). Added logAdminAction('download_vendor_file', {file_id, filename, vendor_id}). Now every admin data export/download is in pc_admin_audit_log; every user export is in pc_user_audit_log.
