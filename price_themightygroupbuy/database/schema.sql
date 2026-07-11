@@ -453,6 +453,9 @@ CREATE TABLE IF NOT EXISTS pc_maintenance_runs (
 -- Per-database slow-query capture — see migrations/005_slow_query_cache.sql
 -- for why this exists (mysql.slow_log is server-wide, shared with the grp
 -- app on this box) and the CREATE EVENT that feeds this table hourly.
+-- migrations/026 refined that event: it no longer ingests the slow-query
+-- plumbing's own queries, and only keeps rows that are genuinely slow
+-- (>=0.5s) or heavy (>=5000 rows examined) — not fast full-scans of tiny tables.
 CREATE TABLE IF NOT EXISTS pc_slow_query_cache (
   id                BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   query_hash        CHAR(64) NOT NULL UNIQUE,
