@@ -33,8 +33,8 @@
         </div>
 
         <div v-if="selectedDay && dayHasContent(selectedDay)" class="day-detail">
-          <!-- Featured product — admin-picked, fully revealed to anonymous visitors (backlog #18) -->
-          <div v-if="!auth.isAuthenticated && dayKey(selectedDay) in featured" class="featured-card">
+          <!-- Featured product — admin-picked, shown to everyone (backlog #18) -->
+          <div v-if="dayKey(selectedDay) in featured" class="featured-card">
             <div class="featured-tag">★ Featured</div>
             <div class="featured-name">
               {{ featured[dayKey(selectedDay)].product }}
@@ -55,7 +55,7 @@
           </div>
 
           <!-- All-time-low milestones — name-only teaser (backlog #19) -->
-          <div v-if="!auth.isAuthenticated && dayKey(selectedDay) in milestones" class="milestones">
+          <div v-if="dayKey(selectedDay) in milestones" class="milestones">
             <div v-for="(m, i) in milestones[dayKey(selectedDay)]" :key="i" class="milestone">
               🏆 <strong>All-time low</strong> — {{ m.product }} <span class="text-muted">{{ m.spec }}</span>
             </div>
@@ -134,8 +134,8 @@ const viewMonth   = ref(today.getMonth()) // 0-indexed
 const days        = ref({}) // { 'YYYY-MM-DD': [changes] } — shape differs by auth state, see template
 const approved    = ref({}) // { 'YYYY-MM-DD': [review-queue approvals] } — authenticated only
 const summary     = ref(null) // { total_changes, vendor_count, by_classification } — public only
-const featured    = ref({}) // { 'YYYY-MM-DD': {product,spec,vendor,price,old_price,note} } — public only
-const milestones  = ref({}) // { 'YYYY-MM-DD': [{product,spec}] } all-time lows — public only
+const featured    = ref({}) // { 'YYYY-MM-DD': {product,spec,vendor,price,old_price,note} } — both auth states
+const milestones  = ref({}) // { 'YYYY-MM-DD': [{product,spec}] } all-time lows — both auth states
 const loading     = ref(false)
 const selectedDay = ref(null)
 
@@ -174,8 +174,8 @@ async function load() {
       const res = await get(`/api/calendar?month=${month}`)
       days.value = res.days
       approved.value = res.approved
-      featured.value = {}
-      milestones.value = {}
+      featured.value = res.featured || {}
+      milestones.value = res.milestones || {}
     } else {
       const res = await get(`/api/calendar/public?month=${month}`)
       days.value = res.days

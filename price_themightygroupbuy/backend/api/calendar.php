@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/config.php';
 require_once dirname(__DIR__) . '/helpers.php';
+require_once dirname(__DIR__) . '/lib/calendar_featured.php';
 
 // GET /calendar?month=YYYY-MM — real price-change events grouped by day for
 // that month, from the pc_price_history ledger (backlog #3) rather than
@@ -74,4 +75,12 @@ $approvedByDay = cacheGet('pricing_data', "calendar_approved:$month", 300, funct
     return $byDay;
 });
 
-jsonResponse(['month' => $month, 'days' => $byDay, 'approved' => $approvedByDay]);
+// Featured product + all-time-low milestones (backlog #18/#19) were public-only
+// at first; signed-in users get them too now, same as everyone logged out.
+jsonResponse([
+    'month'      => $month,
+    'days'       => $byDay,
+    'approved'   => $approvedByDay,
+    'featured'   => getCalendarFeatured($month),
+    'milestones' => getCalendarMilestones($month),
+]);
