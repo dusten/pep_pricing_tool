@@ -12,3 +12,4 @@
 - [Archive migration scripts](feedback_archive_migration_scripts.md) — Any one-off server script for a bulk data operation goes in migration_scripts/ and gets committed, never deleted after running
 - [SSH key path](reference_ssh_key_path.md) — Prod server key is always at ~/projects/peptides_projects/pepcal_key.pem
 - [Archive diagnostic scripts](feedback_archive_diagnostic_scripts.md) — Read-only verification scripts go in diagnostic_scripts/ too, not just data-mutating ones, and get logged in the wiki
+- [Shared admin-table CSS](feedback_shared_admin_table_css.md) — Use global .admin-table/.actions classes for new tables; never put display:flex/grid directly on a td/th

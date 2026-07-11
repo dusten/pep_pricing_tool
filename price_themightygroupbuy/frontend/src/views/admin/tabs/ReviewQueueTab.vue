@@ -78,7 +78,7 @@
             <option value="rejected">Rejected</option>
           </select>
         </div>
-        <table v-if="coaList.length" class="coa-list-table">
+        <table v-if="coaList.length" class="admin-table">
           <thead>
             <tr><th>Submitted</th><th>Vendor</th><th>Product</th><th>COA</th><th>Status</th><th></th></tr>
           </thead>
@@ -89,7 +89,7 @@
               <td>{{ s.product_name || (s.custom_product_name + ' (custom)') }}</td>
               <td><a :href="s.coa_url" target="_blank" rel="noopener">View</a></td>
               <td><span class="badge" :class="'badge-coa-' + s.status">{{ s.status }}</span></td>
-              <td class="coa-list-actions">
+              <td class="actions">
                 <button v-if="s.status !== 'approved'" class="btn btn-ghost btn-sm" @click="setCoaStatus(s, 'approve')">Approve</button>
                 <button v-if="s.status !== 'rejected'" class="btn btn-ghost btn-sm" @click="setCoaStatus(s, 'reject')">Reject</button>
                 <button v-if="s.status !== 'pending'" class="btn btn-ghost btn-sm" @click="setCoaStatus(s, 'revoke')">Revoke</button>
@@ -219,9 +219,6 @@ onMounted(loadImport)
 
 .coa-list-card { margin-top: 20px; }
 .coa-list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-.coa-list-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.coa-list-table th, .coa-list-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
-.coa-list-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .badge-coa-pending  { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning); }
 .badge-coa-approved { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
 .badge-coa-rejected { background: var(--danger-bg);  color: var(--danger);  border: 1px solid var(--danger); }

@@ -27,6 +27,22 @@ if ($mc) {
             'uptime_sec'   => (int)($s['uptime'] ?? 0),
             'curr_items'   => (int)($s['curr_items'] ?? 0),
         ];
+
+        // curr_items counts every key, including ones that aren't really
+        // "cached app data" — version counters (cv:*, one per cache group,
+        // always present), rate-limit windows (rl_*), and the health probe.
+        // Split those out so the admin tile doesn't read as "barely
+        // anything is cached" when it's actually "traffic is light right
+        // now" — the housekeeping keys exist at a near-fixed floor
+        // regardless of usage. getAllKeys() needs the LRU crawler; if
+        // unsupported, just skip the breakdown rather than fail the tile.
+        $keys = $mc->getAllKeys();
+        if ($keys !== false) {
+            $dataItems = 0;
+            foreach ($keys as $k) if (str_starts_with($k, 'c:')) $dataItems++;
+            $cache['data_items']        = $dataItems;
+            $cache['housekeeping_items'] = count($keys) - $dataItems;
+        }
     }
 }
 

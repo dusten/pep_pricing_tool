@@ -301,6 +301,25 @@ input.error, select.error { border-color: var(--danger); }
 .badge-pro      { background: var(--accent-subtle); color: var(--accent); border: 1px solid var(--accent); }
 .badge-expert   { background: var(--primary);     color: #fff; }
 
+/* ── Admin data table ─────────────────────────────────────────────
+   The one shared definition for every admin-tab list table (users,
+   vendors, products, waitlist, COA submissions, etc). Every page used to
+   redefine its own `th, td { padding; border-bottom; }` in a scoped
+   <style> block — 17+ near-identical copies that could each drift, which
+   is exactly how the same alignment bug (a per-row actions cell breaking
+   the border-bottom by using `display: flex` directly on a <td>, which
+   drops it out of table-cell layout) kept reappearing on different pages.
+   Use `class="admin-table"` and `class="actions"` on the buttons cell
+   instead of reinventing this. `white-space: nowrap` (not flex) is the
+   correct way to keep a cell's action buttons on one line — flex/grid
+   directly on a <td> breaks its box participation in the row. */
+.admin-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.admin-table th, .admin-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.admin-table thead th { color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 10.5px; vertical-align: middle; }
+.admin-table .actions { white-space: nowrap; }
+.admin-table .actions .btn { margin-right: 6px; }
+.admin-table .actions .btn:last-child { margin-right: 0; }
+
 /* ── Divider ──────────────────────────────────────────────────── */
 .divider { height: 1px; background: var(--border); margin: 20px 0; }
 .divider-text {

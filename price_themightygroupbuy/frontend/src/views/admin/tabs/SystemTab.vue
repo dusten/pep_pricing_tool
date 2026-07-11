@@ -22,9 +22,12 @@
         <div class="stat-label">Cache memory used</div>
       </div>
       <div class="stat-tile">
-        <div class="stat-value">{{ sys.cache.available ? sys.cache.curr_items.toLocaleString() : 'n/a' }}</div>
+        <div class="stat-value">{{ sys.cache.available ? (sys.cache.data_items ?? sys.cache.curr_items).toLocaleString() : 'n/a' }}</div>
         <div class="stat-label">Cached objects</div>
-        <div class="stat-sublabel">live keys held right now</div>
+        <div class="stat-sublabel" v-if="sys.cache.available && sys.cache.housekeeping_items !== undefined">
+          data entries ({{ sys.cache.housekeeping_items }} housekeeping keys not counted — version counters, rate limits)
+        </div>
+        <div class="stat-sublabel" v-else>live keys held right now</div>
       </div>
       <div class="stat-tile"><div class="stat-value">{{ sys.database.connections }}</div><div class="stat-label">DB connections</div></div>
       <div class="stat-tile">
