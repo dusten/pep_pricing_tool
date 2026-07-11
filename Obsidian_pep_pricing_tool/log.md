@@ -416,3 +416,13 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 ## [2026-07-11] fix | Admin exports audit-log gap closed (files/download.php)
 
 - Swept every file-streaming endpoint (Content-Disposition/readfile/fputcsv/writeToStdOut). Correction to prior note: waitlist CSV and slow-queries CSV were already logged (export_waitlist_csv / export_slow_queries_csv), as was backup (download_backup). The only unlogged admin download was files/download.php (vendor-file download). Added logAdminAction('download_vendor_file', {file_id, filename, vendor_id}). Now every admin data export/download is in pc_admin_audit_log; every user export is in pc_user_audit_log.
+
+## [2026-07-11] tweak | Admin panel default tab
+
+- Landing tab changed from System/User Management -> Overview to Vendor/Product Management -> Vendors (`AdminView.vue` activeGroup/activeTab initial refs). Day-to-day admin work (vendor/price/product upkeep) is the common case; system stats are one click away.
+
+## [2026-07-11] feature | COA admin revoke/status + Comparison-page verified badge (#43)
+
+- Admin COA queue was next-pending-only (approve/reject); added a full list endpoint (`?list=1[&status=]`) and a `revoke` action, so any submission can move between pending/approved/rejected at any time, each transition audit-logged. ReviewQueueTab's COA tab gained a filterable full-submissions table under the existing single-card flow.
+- `runComparisonQuery()` now flags each vendor cell with `has_coa` (approved COA exists for that vendor+product); Comparison page shows a ★ next to the price in both table and list views.
+- Verified live: ran the query function directly against prod data (4 approved COAs already exist) — has_coa correctly true for the matching vendor/product.

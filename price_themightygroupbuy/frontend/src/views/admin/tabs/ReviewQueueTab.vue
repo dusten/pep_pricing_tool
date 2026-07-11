@@ -67,6 +67,38 @@
           <button class="btn btn-ghost btn-sm" @click="rejectCoa">Reject</button>
         </div>
       </div>
+
+      <div class="card coa-list-card">
+        <div class="coa-list-header">
+          <h4 style="margin:0">All COA submissions</h4>
+          <select v-model="coaStatusFilter" @change="loadCoaList">
+            <option value="">All statuses</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+        </div>
+        <table v-if="coaList.length" class="coa-list-table">
+          <thead>
+            <tr><th>Submitted</th><th>Vendor</th><th>Product</th><th>COA</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr v-for="s in coaList" :key="s.id">
+              <td>{{ s.submitted_by }}<br><span class="text-muted text-sm">{{ new Date(s.created_at).toLocaleDateString() }}</span></td>
+              <td>{{ s.vendor_name }}</td>
+              <td>{{ s.product_name || (s.custom_product_name + ' (custom)') }}</td>
+              <td><a :href="s.coa_url" target="_blank" rel="noopener">View</a></td>
+              <td><span class="badge" :class="'badge-coa-' + s.status">{{ s.status }}</span></td>
+              <td class="coa-list-actions">
+                <button v-if="s.status !== 'approved'" class="btn btn-ghost btn-sm" @click="setCoaStatus(s, 'approve')">Approve</button>
+                <button v-if="s.status !== 'rejected'" class="btn btn-ghost btn-sm" @click="setCoaStatus(s, 'reject')">Reject</button>
+                <button v-if="s.status !== 'pending'" class="btn btn-ghost btn-sm" @click="setCoaStatus(s, 'revoke')">Revoke</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p v-else class="text-muted text-sm" style="padding:12px 0">No submissions.</p>
+      </div>
     </div>
   </div>
 </template>
@@ -75,11 +107,13 @@
 import { ref, watch, onMounted } from 'vue'
 import { get, post } from '@/utils/api.js'
 
-const mode          = ref('imports')
-const importRow      = ref(null)
+const mode            = ref('imports')
+const importRow       = ref(null)
 const coaRow          = ref(null)
 const mapToCandidate  = ref(true)
 const approveMsg      = ref('')
+const coaList         = ref([])
+const coaStatusFilter = ref('')
 
 async function loadImport() {
   const res = await get('/api/vendors/pending-imports')
@@ -89,6 +123,22 @@ async function loadImport() {
 async function loadCoa() {
   const res = await get('/api/admin/coa-queue')
   coaRow.value = res.done ? null : res
+  await loadCoaList()
+}
+async function loadCoaList() {
+  const params = new URLSearchParams({ list: '1' })
+  if (coaStatusFilter.value) params.set('status', coaStatusFilter.value)
+  const res = await get(`/api/admin/coa-queue?${params.toString()}`)
+  coaList.value = res.rows
+}
+async function setCoaStatus(s, action) {
+  try {
+    await post(`/api/admin/coa-queue/${s.id}/${action}`, {})
+  } catch (err) {
+    alert(err.message)
+    return
+  }
+  await loadCoa()
 }
 
 function matchTypeLabel(t) {
@@ -166,4 +216,13 @@ onMounted(loadImport)
 .hint { margin: 10px 0; }
 .needs-review { border-color: var(--warning) !important; background: var(--warning-bg); }
 .approve-msg { margin-top: 12px; }
+
+.coa-list-card { margin-top: 20px; }
+.coa-list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.coa-list-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.coa-list-table th, .coa-list-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+.coa-list-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.badge-coa-pending  { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning); }
+.badge-coa-approved { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
+.badge-coa-rejected { background: var(--danger-bg);  color: var(--danger);  border: 1px solid var(--danger); }
 </style>

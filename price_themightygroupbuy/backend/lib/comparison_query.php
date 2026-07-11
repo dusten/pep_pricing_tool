@@ -56,6 +56,14 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
     $stmt = db()->prepare($sql);
     $stmt->execute($params);
 
+    // Approved COAs are keyed by vendor+product (a submission covers a
+    // vendor's whole listing, not one specific spec/tier) — cheap lookup
+    // set so every vendor cell can flag "has a verified COA".
+    $coaSet = [];
+    foreach (db()->query("SELECT vendor_id, product_id FROM pc_coa_submissions WHERE status = 'approved' AND product_id IS NOT NULL") as $c) {
+        $coaSet[$c['vendor_id'] . ':' . $c['product_id']] = true;
+    }
+
     $grouped = [];
     foreach ($stmt->fetchAll() as $r) {
         $key = $r['product_id'] . ':' . $r['specification_id'];
@@ -81,6 +89,7 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
             'non_standard_kit' => (bool)$r['non_standard_kit'],
             'source_file_id'   => $r['source_file_id'] !== null ? (int)$r['source_file_id'] : null,
             'vendor_sku'       => $r['vendor_sku'],
+            'has_coa'          => isset($coaSet[$r['vendor_id'] . ':' . $r['product_id']]),
         ];
     }
 

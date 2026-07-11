@@ -107,6 +107,7 @@
                     ${{ row.byVendor[v.id].price.toFixed(2) }}
                     <span v-if="row.byVendor[v.id].non_standard_kit" class="warn-icon"
                           :title="`Listed as ${row.byVendor[v.id].kit_vial_count}-vial kit — \$/unit may not be comparable.`">⚠</span>
+                    <span v-if="row.byVendor[v.id].has_coa" class="coa-star" title="Verified COA on file for this product">★</span>
                   </td>
                   <td v-if="showUnitPricing" :class="{ lowest: row.byVendor[v.id].is_lowest }">${{ row.byVendor[v.id].price_per_unit.toFixed(2) }}</td>
                 </template>
@@ -147,6 +148,7 @@
             <span class="list-vendor-price">
               ${{ v.price.toFixed(2) }}
               <span v-if="v.non_standard_kit" class="warn-icon" :title="`Listed as ${v.kit_vial_count}-vial kit — $/unit may not be comparable.`">⚠</span>
+              <span v-if="v.has_coa" class="coa-star" title="Verified COA on file for this product">★</span>
               <span v-if="showUnitPricing" class="list-ppu">${{ v.price_per_unit.toFixed(2) }}/unit</span>
             </span>
           </div>
@@ -351,6 +353,7 @@ tr.odd td:not(.sticky-col) { background: var(--surface-alt); }
 td.lowest { background: var(--success-bg); color: var(--success); font-weight: 700; }
 td.blank  { background: transparent; }
 .warn-icon { color: var(--warning); margin-left: 3px; cursor: help; }
+.coa-star { color: var(--accent); margin-left: 3px; cursor: help; }
 .stat-cell { color: var(--text-secondary); font-weight: 500; }
 
 /* Pin Avg + Median to the right edge so a row's summary stays visible while
