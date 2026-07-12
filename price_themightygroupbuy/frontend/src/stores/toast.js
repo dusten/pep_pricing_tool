@@ -22,8 +22,8 @@ export const useToastStore = defineStore('toast', () => {
   return {
     toasts,
     remove,
-    error:   (message) => push(message, 'error', 6000),
-    success: (message) => push(message, 'success', 4000),
-    info:    (message) => push(message, 'info', 4000),
+    error:   (message) => push(message, 'error', 3500),
+    success: (message) => push(message, 'success', 3500),
+    info:    (message) => push(message, 'info', 3500),
   }
 })
