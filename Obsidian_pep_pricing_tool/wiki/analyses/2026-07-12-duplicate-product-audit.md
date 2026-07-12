@@ -210,4 +210,69 @@ fragment (TB-500/B5, CAS 885340-08-9, ~889 Da) with the full 43aa peptide (Thymo
 CAS 77591-33-4, ~4,963 Da). This project's own variant-compounds watchlist explicitly documents
 these as different molecules. This looks like a pre-existing mislabeled alias from a past
 import, unrelated to the duplicate-detection task here — worth a separate look, not touched in
-this pass.
+this pass. **Update 2026-07-12**: user confirmed via [[wiki/entities/tb-500|TB-500]] research
+these are genuinely different molecules and explicitly held back merging `[2]` with the
+separately-cataloged fragment product `[359] "TB500(Frag)"`. The bad alias itself was removed
+(`migration_scripts/2026-07-12-fix_tb500_mislabeled_alias.php`) since it wasn't masking a real
+distinct product (no hidden higher-priced full-length listing found on product 2).
+
+## Follow-up: Lipo-C/MIC three-way entanglement, fully untangled (2026-07-12)
+
+The MEDIUM-confidence merge above (`[55]` ← `[36]`) turned out to be only half the story. The
+merged product's data included a `396/425/526mg` "FOCUS"/"FAT BLASTER" tier that actually
+belongs on the separate `[33] "Lipo-c"` product, not `[55]` — flagged as a caveat above but not
+untangled in the original pass. User asked to search the sources for what's known about the
+entanglement (found almost nothing dedicated in ingested sources), then, after confirming via
+`backend/lib/claude.php`'s `pc_claude_call_log` table that every Claude extraction call has been
+logged with its full raw JSON response since 2026-07-05 (and that all 8 pre-2026-07-05 calls
+were later re-processed and captured too), asked to reprocess every stored raw response
+mentioning Lipo-C/MIC to resolve the ambiguity from ground truth.
+
+**Method**: `diagnostic_scripts/2026-07-12-reprocess-lipoc-claude-json.php` queried
+`pc_claude_call_log.raw_response_text` for every row mentioning Lipo/MIC/FAT BLASTER/FOCUS (37
+rows found) and re-decoded each one's original extracted price entries. This revealed Claude's
+own `canonical_name` extraction is unreliable as an identity signal — proven directly: CALLA's
+identical LC425 SKU/price/vendor listing extracted as `"Lipo-c"` on one reprocessing run and
+`"MIC(lipo C with B12)"` on another, from the *same* vendor file. The **vendor SKU prefix**
+(`vendor_sku` on `pc_prices`, e.g. `LC120`, `LC216`, `LC396`, `LC425`, `LC526`) proved to be the
+reliable ground truth instead, corroborated by presence/absence of "B12" in each listing's full
+ingredient-breakdown `spec_label` text (pulled untruncated via
+`diagnostic_scripts/2026-07-12-lipoc-full-specs-dump.php`, working around `mysql -e`'s CLI
+VARCHAR truncation):
+
+| SKU prefix | Real identity | Correct product |
+|---|---|---|
+| `LC120` | Lipo-c, no B12 | `[33] Lipo-c` |
+| `LC216` | Lipo-C with B12 — real B12 in the recipe | `[55] Lipo-C with B12` |
+| `LC396`/`LC425`/`LC526` | The bigger "FOCUS"/"FAT BLASTER" blend — **no B12** in the recipe despite some runs mislabeling it "MIC(lipo C with B12)" | `[33] Lipo-c` (confirmed by Lucy's vendor file, which consistently names these tiers `Lipo-C[FOCUS]`/`Lipo-C[FAT BLASTER]` — both pre-existing aliases on 33) |
+
+User then authorized fixing everything found, broader than the originally-scoped single tier
+move ("yes make the fixes for all Lipo-C and MIC"). A systematic dedup pass
+(`diagnostic_scripts/2026-07-12-lipoc-find-all-dupes.php`, grouping every active price row on
+33/55 by vendor + normalized SKU + price) surfaced the full scope: 5 `LC216` (with-B12) rows
+stranded on product 33's generic "10ml" spec (should be on 55), and 9 exact-duplicate price rows
+from repeated reprocessing of the same vendor files over time — e.g. CALLA's $36 LC425 line item
+existed 4 times across near-identical specs with slightly different label text each time.
+
+**Fix** (`migration_scripts/2026-07-12-untangle_lipoc_mic_specs.php`):
+- Re-homed the 396mg tier and merged the 526mg tier onto product 33's existing specs.
+- Moved the 5 misplaced LC216 rows from product 33 onto product 55.
+- Deleted the 9 exact-duplicate price rows.
+- Repointed all affected cart/stack items (`repointCartAndStackItems()`) before deleting their
+  now-vacated specs.
+- Left bare-`MIC`-SKU vendor rows (Peptide Research Solutions, Zhongke, Norco — no dose info to
+  disambiguate which tier they mean) untouched on product 55 — genuinely unresolved, not guessed.
+
+**Self-caught bug**: the script's spec re-home step updated `pc_specifications.product_id` but
+missed the same price row's own denormalized `pc_prices.product_id` column (`pc_prices` has its
+*own* `product_id`, separate from its specification's — both must stay in sync or a row becomes
+structurally inconsistent). Caught via a proactive, database-wide consistency check (not scoped
+to just products 33/55) that found exactly one mismatched row anywhere in the database
+(`price_id=4966`), fixed directly, and folded back into the archived migration script so it
+reads correctly if ever consulted again.
+
+**Verification** (`diagnostic_scripts/2026-07-12-lipoc-verify-untangle.php`): zero
+`pc_prices.product_id` vs. `pc_specifications.product_id` mismatches anywhere in the database,
+zero dedup groups remaining on 33/55, zero orphaned specs, total catalog count unchanged at 196
+(pure data reshuffle, no product rows added or removed), and the previously-mismatched rows now
+show consistent product IDs end to end.
