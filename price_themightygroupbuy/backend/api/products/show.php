@@ -61,6 +61,14 @@ if (array_key_exists('notes', $d)) {
     $fields[] = 'notes = ?';
     $vals[]   = trim((string)$d['notes']) ?: null;
 }
+if (array_key_exists('cas_number', $d)) {
+    $fields[] = 'cas_number = ?';
+    $vals[]   = trim((string)$d['cas_number']) ?: null;
+}
+if (array_key_exists('molecular_weight', $d)) {
+    $fields[] = 'molecular_weight = ?';
+    $vals[]   = ($d['molecular_weight'] === '' || $d['molecular_weight'] === null) ? null : (float)$d['molecular_weight'];
+}
 if ($fields) {
     $vals[] = $id;
     db()->prepare('UPDATE pc_products SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);

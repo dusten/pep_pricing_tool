@@ -21,13 +21,23 @@
     </div>
 
     <table class="admin-table">
-      <thead><tr><th>Name</th><th>Classifications</th><th>Aliases</th><th>Vendors</th><th>Merge into</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>CAS / g·mol⁻¹</th><th>Classifications</th><th>Aliases</th><th>Vendors</th><th>Merge into</th><th></th></tr></thead>
       <tbody>
         <template v-for="p in products" :key="p.id">
         <tr>
           <td>
             <input v-if="editingId === p.id" v-model="editForm.canonical_name" />
             <template v-else>{{ p.canonical_name }}</template>
+          </td>
+          <td>
+            <template v-if="editingId === p.id">
+              <input v-model="editForm.cas_number" placeholder="CAS #" style="width:90px" />
+              <input v-model.number="editForm.molecular_weight" type="number" step="any" placeholder="g/mol" style="width:70px" />
+            </template>
+            <template v-else>
+              <a v-if="p.cas_number" :href="pubchemUrl(p.cas_number)" target="_blank" rel="noopener">{{ p.cas_number }}</a>
+              <span v-if="p.molecular_weight">{{ p.cas_number ? ' · ' : '' }}{{ p.molecular_weight }} g/mol</span>
+            </template>
           </td>
           <td>
             <template v-if="editingId === p.id">
@@ -66,7 +76,7 @@
           </td>
         </tr>
         <tr v-if="editingId === p.id" class="detail-row">
-          <td colspan="6">
+          <td colspan="7">
             <div class="label-sm">Versions / specs — edit the mg amount, or move one onto a different product if it doesn't actually belong here (e.g. a blend wrongly filed under a single-compound product). Price/vial-count edits per vendor live on the Inventory tab.</div>
             <div v-if="!specsFor(p).length" class="text-muted text-sm">No specs yet.</div>
             <div v-for="s in specsFor(p)" :key="s.id" class="spec-block">
@@ -108,7 +118,11 @@ const classifications = ref([]) // all available tags, for the pickers
 const showAdd  = ref(false)
 const form     = reactive({ canonical_name: '', classification_ids: [] })
 const editingId = ref(null)
-const editForm   = reactive({ canonical_name: '', classification_ids: [] })
+const editForm   = reactive({ canonical_name: '', classification_ids: [], cas_number: '', molecular_weight: null })
+
+function pubchemUrl(cas) {
+  return `https://pubchem.ncbi.nlm.nih.gov/#query=${encodeURIComponent(cas)}`
+}
 
 async function load() {
   const res = await get('/api/products')
@@ -153,6 +167,8 @@ function startEdit(p) {
   editingId.value = p.id
   editForm.canonical_name = p.canonical_name
   editForm.classification_ids = classificationsFor(p).map(c => c.id)
+  editForm.cas_number = p.cas_number || ''
+  editForm.molecular_weight = p.molecular_weight
   loadSpecs(p)
 }
 function cancelEdit() {
@@ -160,7 +176,12 @@ function cancelEdit() {
 }
 async function saveEdit(p) {
   if (!editForm.canonical_name.trim()) return
-  await put(`/api/products/${p.id}`, { canonical_name: editForm.canonical_name, classification_ids: editForm.classification_ids })
+  await put(`/api/products/${p.id}`, {
+    canonical_name: editForm.canonical_name,
+    classification_ids: editForm.classification_ids,
+    cas_number: editForm.cas_number,
+    molecular_weight: editForm.molecular_weight,
+  })
   editingId.value = null
   await load()
 }

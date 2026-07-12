@@ -55,7 +55,7 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
     if ($rawMaterialOnly) { $where[] = 's.is_raw_material = 1'; }
 
     $sql = "SELECT pr.vendor_id, v.display_name AS vendor_name, v.is_verified,
-                   pr.product_id, p.canonical_name,
+                   pr.product_id, p.canonical_name, p.cas_number, p.molecular_weight,
                    pr.specification_id, s.spec_label, s.numeric_value, s.unit, s.is_raw_material,
                    pr.price_usd, pr.price_per_unit, pr.kit_vial_count, pr.non_standard_kit, pr.source_file_id, pr.vendor_sku
             FROM pc_prices pr
@@ -91,6 +91,8 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
         if (!isset($grouped[$key])) {
             $grouped[$key] = [
                 'product'          => $r['canonical_name'],
+                'cas_number'       => $r['cas_number'],
+                'molecular_weight' => $r['molecular_weight'] !== null ? (float)$r['molecular_weight'] : null,
                 'product_id'       => (int)$r['product_id'],
                 'specification_id' => (int)$r['specification_id'],
                 'spec'             => $r['spec_label'],

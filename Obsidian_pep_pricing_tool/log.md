@@ -579,3 +579,9 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - User confirmed the previously-open ambiguous call: "Adipotide" [97] is the same compound as "Adipotide/FTPP" [86]. Ran migration_scripts/2026-07-12-merge_adipotide_ftpp.php, same products/merge.php transaction logic used all session -- 2mg/5mg specs matched exactly, product 97's unique 1g spec re-homed onto 86.
 - Catalog 196->195. Verified live: winner carries "Adipotide" as a new alias, combined 14 vendors/41 listings (7v/19L + 9v/25L, correctly deduped for overlapping vendors), zero pc_prices/pc_specifications product_id mismatches introduced.
 - Backlog #28 down to: SUPER SHRED vs. SHR - Shred Blend, the SU-400/Sustanon cluster (downgraded), and TB500(Frag)->TB-500 (explicitly held back).
+
+## [2026-07-12] feature | Per-product CAS number + molecular weight, linked to PubChem
+
+- User wanted a CAS registry number and g/mol added to each product (not per-spec) with the CAS number linking to a PubChem search when populated. Added migration 028_product_cas_mw.sql (cas_number VARCHAR(20), molecular_weight DECIMAL(10,3) on pc_products), extended products/show.php's PUT handler (same optional-field pattern as notes), and comparison_query.php to surface both at the product level.
+- Frontend: ComparisonView.vue shows "CAS ######## · ###.### g/mol" under the product name in both table and list views (CAS links to https://pubchem.ncbi.nlm.nih.gov/#query=<cas>, new tab); ProductsTab.vue admin gets an editable CAS/g-mol column.
+- Verified live: set BPC-157's real CAS (137525-51-0) and MW (1419.552), confirmed correct rendering on every BPC-157 row, PubChem link resolves to the correct compound (CID 9941957), and the admin edit form round-trips both fields correctly.

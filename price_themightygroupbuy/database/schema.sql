@@ -184,10 +184,12 @@ CREATE TABLE IF NOT EXISTS pc_app_settings (
 -- ------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS pc_products (
-  id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  canonical_name VARCHAR(200) NOT NULL UNIQUE,
-  notes          TEXT NULL,
-  created_at     DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  canonical_name    VARCHAR(200) NOT NULL UNIQUE,
+  cas_number        VARCHAR(20) NULL,
+  molecular_weight  DECIMAL(10,3) NULL,
+  notes             TEXT NULL,
+  created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pc_product_aliases (

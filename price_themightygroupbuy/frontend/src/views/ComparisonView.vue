@@ -99,7 +99,13 @@
                   {{ cartKeys.has(row.product_id + ':' + row.specification_id) ? 'Added' : '+ Cart' }}
                 </button>
               </td>
-              <td class="sticky-col col-product">{{ row.product }}</td>
+              <td class="sticky-col col-product">
+                {{ row.product }}
+                <div v-if="row.cas_number || row.molecular_weight" class="product-meta">
+                  <a v-if="row.cas_number" :href="pubchemUrl(row.cas_number)" target="_blank" rel="noopener" title="View on PubChem">CAS {{ row.cas_number }}</a>
+                  <span v-if="row.molecular_weight">{{ row.molecular_weight }} g/mol</span>
+                </div>
+              </td>
               <td class="sticky-col col-spec">
                 {{ row.spec }} <span v-if="row.is_raw_material" class="badge badge-free" title="Raw/bulk powder, not a finished vial">Raw</span>
                 <button v-if="qualifiesForDistribution(row)" class="dist-trigger" title="Price distribution across vendors" @click="openDistribution(row)">📊</button>
@@ -138,6 +144,10 @@
             {{ row.product }} <span class="list-spec">{{ row.spec }}</span>
             <span v-if="row.is_raw_material" class="badge badge-free" title="Raw/bulk powder, not a finished vial">Raw</span>
             <button v-if="qualifiesForDistribution(row)" class="dist-trigger" title="Price distribution across vendors" @click="openDistribution(row)">📊</button>
+            <div v-if="row.cas_number || row.molecular_weight" class="product-meta">
+              <a v-if="row.cas_number" :href="pubchemUrl(row.cas_number)" target="_blank" rel="noopener" title="View on PubChem">CAS {{ row.cas_number }}</a>
+              <span v-if="row.molecular_weight">{{ row.molecular_weight }} g/mol</span>
+            </div>
           </div>
           <button class="btn btn-ghost btn-sm" :disabled="cartKeys.has(row.product_id + ':' + row.specification_id)" @click="addToCart(row)">
             {{ cartKeys.has(row.product_id + ':' + row.specification_id) ? 'Added' : '+ Cart' }}
@@ -215,6 +225,10 @@ function openDistribution(row) { distributionRow.value = row }
 
 function addToCart(row) {
   cart.add(row.product_id, row.specification_id)
+}
+
+function pubchemUrl(cas) {
+  return `https://pubchem.ncbi.nlm.nih.gov/#query=${encodeURIComponent(cas)}`
 }
 
 const canExport = computed(() => auth.isAdmin || (auth.tierActive && ['pro', 'expert'].includes(auth.tier)))
@@ -385,6 +399,8 @@ const vendorColumns = computed(() => {
 .sticky-col { position: sticky; text-align: left !important; background: var(--surface); z-index: 2; }
 .col-cart    { left: 0; width: 90px; min-width: 90px; max-width: 90px; text-align: center !important; }
 .col-product { left: 90px; width: 170px; min-width: 170px; max-width: 170px; white-space: normal; word-break: break-word; font-weight: 600; }
+.product-meta { display: flex; flex-direction: column; gap: 1px; font-weight: 400; font-size: 11px; color: var(--text-muted); }
+.product-meta a { color: inherit; text-decoration: underline dotted; }
 .col-spec    { left: 260px; width: 80px; min-width: 80px; max-width: 80px; white-space: normal; word-break: break-word; color: var(--text-secondary); }
 /* Must out-specificity ".cmp-table thead tr:first-child th" (which also sets
    z-index) or this loses to it — the corner cells (rowspan=2, sticky on both
