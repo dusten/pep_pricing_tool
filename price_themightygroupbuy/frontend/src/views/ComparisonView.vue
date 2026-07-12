@@ -111,6 +111,8 @@
                     <span v-if="row.byVendor[v.id].non_standard_kit" class="warn-icon"
                           :title="`Listed as ${row.byVendor[v.id].kit_vial_count}-vial kit — \$/unit may not be comparable.`">⚠</span>
                     <span v-if="row.byVendor[v.id].has_coa" class="coa-star" title="Verified COA on file for this product">★</span>
+                    <span v-if="row.byVendor[v.id].has_history" class="history-icon" title="Price history available"
+                          @click.stop="openHistory(row, v.id, $event)">🕐</span>
                   </td>
                   <td v-if="showUnitPricing" :class="{ lowest: row.byVendor[v.id].is_lowest }">${{ row.byVendor[v.id].price_per_unit.toFixed(2) }}</td>
                 </template>
@@ -153,6 +155,8 @@
               ${{ v.price.toFixed(2) }}
               <span v-if="v.non_standard_kit" class="warn-icon" :title="`Listed as ${v.kit_vial_count}-vial kit — $/unit may not be comparable.`">⚠</span>
               <span v-if="v.has_coa" class="coa-star" title="Verified COA on file for this product">★</span>
+              <span v-if="v.has_history" class="history-icon" title="Price history available"
+                    @click.stop="openHistory(row, v.vendor_id, $event)">🕐</span>
               <span v-if="showUnitPricing" class="list-ppu">${{ v.price_per_unit.toFixed(2) }}/unit</span>
             </span>
           </div>
@@ -163,6 +167,9 @@
     <VendorCard v-if="openVendorId" :vendor-id="openVendorId" @close="openVendorId = null" />
     <DistributionModal v-if="distributionRow" :product-id="distributionRow.product_id"
                         :specification-id="distributionRow.specification_id" @close="distributionRow = null" />
+    <PriceHistoryPopover v-if="historyTarget" :vendor-id="historyTarget.vendorId" :product-id="historyTarget.productId"
+                         :specification-id="historyTarget.specificationId" :x="historyTarget.x" :y="historyTarget.y"
+                         @close="historyTarget = null" />
   </AppLayout>
 </template>
 
@@ -172,6 +179,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import VendorCard from '@/components/VendorCard.vue'
 import DistributionModal from '@/components/DistributionModal.vue'
+import PriceHistoryPopover from '@/components/PriceHistoryPopover.vue'
 import { useComparisonStore } from '@/stores/comparison.js'
 import { useCartStore } from '@/stores/cart.js'
 import { useAuthStore } from '@/stores/auth.js'
@@ -185,6 +193,14 @@ const cartKeys   = computed(() => new Set(cart.items.map(it => it.product_id + '
 
 const openVendorId = ref(null)
 function openVendorCard(id) { openVendorId.value = id }
+
+const historyTarget = ref(null) // { vendorId, productId, specificationId, x, y }
+function openHistory(row, vendorId, event) {
+  historyTarget.value = {
+    vendorId, productId: row.product_id, specificationId: row.specification_id,
+    x: Math.min(event.clientX, window.innerWidth - 330), y: event.clientY + 10,
+  }
+}
 
 // Price-distribution trigger — a row "qualifies" once its vendor coverage
 // clears the 75% floor (see wiki/analyses/2026-07-11-price-distribution-bell-curve-spec.md).
@@ -382,6 +398,8 @@ td.blank  { background: transparent; }
 .coa-star { color: var(--accent); margin-left: 3px; cursor: help; }
 .dist-trigger { background: none; border: none; padding: 0; margin-left: 4px; cursor: pointer; font-size: 13px; line-height: 1; vertical-align: middle; }
 .dist-trigger:hover { opacity: 0.7; }
+.history-icon { margin-left: 3px; cursor: pointer; }
+.history-icon:hover { opacity: 0.7; }
 .stat-cell { color: var(--text-secondary); font-weight: 500; }
 
 /* Pin Avg + Median to the right edge so a row's summary stays visible while

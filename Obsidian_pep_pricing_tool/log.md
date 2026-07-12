@@ -500,3 +500,15 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Built exactly to the spec filed earlier today: backend/lib/comparison_query.php gained unit_mean/unit_stdev + getActiveVendorCount(); new GET /comparison/distribution (Pro+ gated, reuses runComparisonQuery); new BellCurveChart.vue (hand-rolled SVG, no new dependency) + DistributionModal.vue (reuses the shared .view-backdrop/.view-card classes from today's earlier reuse sweep); ComparisonView.vue shows a trigger on any row with >=75% vendor coverage, both table and list views.
 - Verified: backend math cross-checked by hand for a real 100%-coverage item and a real 1-vendor item (coverage gate + null-stdev-below-n3 both correct); live in-browser test on 5-Amino-1MQ 5mg in both views, correct curve/dots/highlight.
 - Archived diagnostic_scripts/2026-07-11-verify-distribution-stats.php and 2026-07-11-verify-distribution-coverage-gate.php.
+
+## [2026-07-11] query | Full wiki evaluation + new feature suggestions
+
+- Ran a full read-through of the wiki (delivered features + open backlog + explicit non-goals), cross-checked against the live codebase via two parallel research agents, to answer "evaluate everything delivered and suggest new features not already asked for." Confirmed the user's own hunch: no per-vendor price history is shown anywhere today (pc_price_history only feeds the aggregate Calendar ledger).
+- Six new feature ideas surfaced (not previously on backlog): per-vendor price-history indicator, price-drop watchlist + email alert, historical price-trend chart per item, vendor scorecard, saved filter presets, proactive duplicate-listing detector for admins.
+- User picked #1 (price-history indicator) to build immediately -- see the #50 entry above. Then picked #4 (vendor scorecard, now #51 on the backlog) to build next, and asked the remaining four (#52-#55) to go on the backlog rather than being built now.
+
+## [2026-07-11] feature | Per-vendor price-history clock icon built (#50)
+
+- Built exactly to the spec worked out with a Plan agent: has_history flag added to runComparisonQuery() (same lookup-set pattern as has_coa, one level deeper), new ungated GET /comparison/price-history endpoint, new PriceHistoryPopover.vue (lightweight anchored popover, not a modal), 🕐 icon added next to existing warning/COA icons in both Comparison views.
+- Verified: real highest-volume history triple confirmed has_history=true for the right vendor and false for a different vendor on the same row; raw DB rows matched what the popover displayed; outside-click dismiss confirmed live.
+- Archived diagnostic_scripts/2026-07-11-verify-price-history-icon.php.

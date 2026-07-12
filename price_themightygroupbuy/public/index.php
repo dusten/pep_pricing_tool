@@ -138,6 +138,7 @@ $ROUTES = [
     'comparison'           => 'comparison/index.php',
     'comparison/filters'   => 'comparison/filters.php',
     'comparison/distribution' => 'comparison/distribution.php',
+    'comparison/price-history' => 'comparison/price_history.php',
     'comparison/export/csv'  => 'comparison/export_csv.php',
     'comparison/export/xlsx' => 'comparison/export_xlsx.php',
     'export/full'          => 'export_full.php',
