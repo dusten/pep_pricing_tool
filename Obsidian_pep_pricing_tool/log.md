@@ -480,3 +480,7 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 ## [2026-07-11] tweak | Toast notifications: centered instead of top-right
 
 - User asked to move the toast to the middle of the page (closer to where the old native alert() appeared). ToastStack.vue: `position: fixed; top/left: 50%; transform: translate(-50%,-50%)`, centered text, slightly larger padding/shadow. Verified live.
+
+## [2026-07-11] tweak | Toast auto-dismiss shortened to 3.5s (all types)
+
+- User: "6 seconds is a little long can we make it 3.5 seconds." Unified error/success/info to the same 3500ms duration (was 6000/4000/4000) in stores/toast.js -- simplest fix, one consistent timing instead of three different ones. Deployed and verified.
