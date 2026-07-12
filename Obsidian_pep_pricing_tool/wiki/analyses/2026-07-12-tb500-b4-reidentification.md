@@ -103,3 +103,50 @@ auto-restored here.
   `CAS 77591-33-4 · 4963.4 g/mol`; Lucy's product-2 rows (5mg/10mg/20mg, $85/$169/$310) are
   unaffected and correctly still B4; her fragment row is gone from product 2's 2mg column
   (moved to 359).
+
+## Root cause: preventing recurrence for future vendor imports
+
+User asked how to keep these two products correctly labeled going forward. Two real,
+grounded mechanisms explain how the original misassignment happened and now propagate to
+future imports:
+
+1. **`backend/lib/claude.php`'s extraction system prompt had the wrong assumption baked in**
+   (rule 8): *"TB-500" usually means the 7aa fragment, not full Thymosin Beta-4* — the exact
+   claim this analysis disproves. Worse, this likely nudged Claude toward the actual bug
+   observed in the CALLA/Golden Age flip-flop: instead of transcribing the vendor's literal
+   text (rule 7 requires this), Claude sometimes appended a guessed qualifier —
+   `"TB-500(Frag/B5/889/17-23)"` — that wasn't present in the source document.
+2. **That hallucinated annotation only "stuck" because of how import matching works.**
+   `findExactProductMatch()` (`backend/lib/price_import.php`) matches a new listing's
+   `canonical_name` against `pc_products.canonical_name` **or any existing alias**, and
+   auto-commits on a hit with no human review. Product 2 held those exact fragment-describing
+   aliases at the time, so even Claude's fabricated annotation auto-committed straight back to
+   product 2 — silently, because it counted as an "exact" match.
+
+**Fixed**: rewrote rule 8 in `backend/lib/claude.php` to (a) drop the wrong default-assumption
+claim, (b) explicitly reinforce that `canonical_name` must stay exactly as the vendor wrote it
+for watchlisted names too — no inline qualifier, ever, since an annotated name gets matched as
+if it were a distinct product instead of being flagged for review — and (c) instruct Claude to
+extract both lines untouched when a vendor genuinely lists two watchlisted-name rows. Also
+added `"warning"` to the response shape's per-price example object — it was already being set
+inconsistently (sometimes `"warning"`, sometimes `"warnings"` as an array) because the schema
+example never defined it, so the app had no stable key to read even if it wanted to. Deployed
+live, `php -l` clean, smoke check passed.
+
+**The alias-hygiene fix already made in this session (moving product 2's 3 fragment aliases
+onto 359) is the more durable fix long-term**: as long as each product's alias list only
+contains names that truly describe that molecule, future imports route correctly on exact-match
+even if Claude's naming drifts again — the routing doesn't depend on the prompt being perfect.
+
+**Not yet done, worth a decision**: the per-price `warning` field Claude generates (e.g. "TB-500
+name ambiguity, no CAS given") is never surfaced anywhere today — not in `ReviewQueueTab.vue`
+(which renders name/spec/price/tier fields from the same `raw_json` blob but never
+`raw_json.warning`), and not at all for rows that auto-commit via exact match (which is exactly
+the path every TB-500 listing takes, since "TB-500" exact-matches product 2's own
+`canonical_name` — it never reaches the review queue regardless of any warning attached). Two
+options if this open finding is worth acting on later: (a) show the warning inline in the
+review queue for pending rows (cheap, data's already client-side), and/or (b) route any
+listing whose extraction carries a `warning` on a watchlisted name to the pending queue instead
+of auto-committing it, forcing a human look. Not implemented here since (b) especially is a
+bigger behavioral change to ongoing import review load, left as an open question rather than
+assumed.

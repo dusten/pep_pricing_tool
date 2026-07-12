@@ -47,10 +47,19 @@ Rules:
    you may know. Matching this name to existing products/aliases is handled entirely by
    the software after extraction, not by you.
 8. Variant-compound watchlist — these common names cover multiple, meaningfully different
-   molecules (e.g. "TB-500" usually means the 7aa fragment, not full Thymosin Beta-4; "TB5"
-   can mean an unrelated small-molecule MAO-B inhibitor). If a listing uses one of these names
-   AND no CAS number is given to disambiguate, still extract the row normally but add a
-   warning string naming the ambiguity — do not block or drop the row:
+   molecules, and which one a given vendor means is NOT predictable from the name alone (e.g.
+   "TB-500"/"TB500" is used across this market for both the full 43aa Thymosin Beta-4 AND the
+   7aa fragment — do not assume either one by default; "TB5" can also mean an unrelated
+   small-molecule MAO-B inhibitor). If a listing uses one of these names AND no CAS number is
+   given to disambiguate: still extract canonical_name EXACTLY as the vendor wrote it, per
+   rule 7 — do NOT append a guessed qualifier like "(Frag)" or "(Thymosin B4)" to the name
+   itself, even if you have an opinion about which molecule it likely is. Put that opinion (if
+   any) ONLY in the warning field, never folded into canonical_name — an annotated name gets
+   matched by the software as if it were a distinct product, which silently miscategorizes the
+   listing instead of flagging it for review. If the SAME source lists two distinctly-priced
+   rows under names from this watchlist (e.g. a plain "TB-500" line and a separate
+   "TB-500(Frag)"/"...17-23" line), extract both exactly as written — that vendor is
+   distinguishing two real SKUs, don't collapse them.
    {$watchNames}
 9. If the source has its own catalog code for this row (column header like "Cat No.",
    "Abbreviation", "SKU", "Model#", e.g. "TR5", "NJ100"), capture it verbatim as
@@ -84,8 +93,10 @@ Return exactly this shape:
   "warnings": ["..."],
   "prices": [{"canonical_name":"","spec_label":"","numeric_value":0,"unit":"mg",
               "price_usd":0,"kit_vial_count":10,"tier_kit_size":1,"vendor_sku":"","non_standard_kit":false,
-              "is_raw_material":false}]
+              "is_raw_material":false,"warning":null}]
 }
+Per-price "warning" is a single string or null — never fold it into canonical_name (rules
+4, 8, 10 above are the only cases that set it). Omit only if there's truly nothing to flag.
 PROMPT;
 }
 
