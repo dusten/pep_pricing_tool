@@ -519,3 +519,9 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Root-cause fix found while wiring this up: admin/coa_queue.php's approve/reject/revoke never busted comparison_data -- meaning the COA star badge (#43) and now this scorecard's approval count could both show stale data for up to 10 minutes after an admin action. Fixed rather than building around it.
 - Verified: competitiveness/COA math cross-checked against manual queries for a real vendor (exact match); live in-browser check on Jenny Peptide showed correct real numbers (35/197 listings cheapest, 4/5 COAs approved, 203 price changes).
 - Archived diagnostic_scripts/2026-07-11-verify-vendor-scorecard.php.
+
+## [2026-07-11] fix | Slow-query log alignment bug + admin tables' missing mobile scroll wrapper (#56)
+
+- Same class of bug as the earlier COA table fix, different CSS property: SystemTab.vue's .mono (applied to a <td> for the truncated query-SQL column) had display:block, breaking table-cell participation. OverviewTab.vue's near-identical .mono (no display:block) already proved the fix -- removed the property to match.
+- User flagged it "could be mobile only" -- found the app has zero @media breakpoints anywhere, and admin tables have no horizontal-scroll wrapper (unlike Comparison's .table-scroll). Fixed with one line on .admin-body (the shared ancestor of every admin tab, in AdminView.vue) -- overflow-x: auto -- covering all 17 tabs at once.
+- Verified the .mono fix live. Mobile-scroll fix couldn't be screenshot-verified this session (browser-automation resize was flaky), but confirmed safe: no height/max-height on .admin-body means the overflow-x/overflow-y CSS coupling quirk is a no-op.

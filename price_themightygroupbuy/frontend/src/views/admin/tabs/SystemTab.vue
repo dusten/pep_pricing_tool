@@ -267,7 +267,7 @@ async function rerun(q) {
 .toggle-row input { width: auto; }
 
 .section-title { margin: 24px 0 10px; font-size: 13.5px; }
-.mono { font-family: var(--font-mono); max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.mono { font-family: var(--font-mono); max-width: 420px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .text-danger { color: var(--danger); font-weight: 700; }
 
 .rerun-result { margin-top: 12px; padding: 10px 14px; background: var(--surface-alt); border-radius: var(--radius); font-size: 13px; }

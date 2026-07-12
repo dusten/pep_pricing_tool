@@ -142,5 +142,11 @@ function selectGroup(id) {
 .admin-tab:hover  { border-color: var(--accent); color: var(--accent); }
 .admin-tab.active { background: var(--accent); border-color: var(--accent); color: var(--text-on-accent); }
 
-.admin-body { }
+/* No @media breakpoints exist in this app's CSS — admin tables (.admin-table,
+   width:100%, several columns) have no per-table scroll wrapper like the
+   Comparison page's .table-scroll, so on a narrow/mobile viewport they'd
+   otherwise overflow with nothing to contain them. This is the one shared
+   ancestor of every admin tab's content, so scrolling here fixes it for all
+   17 tabs at once instead of adding a wrapper div to each table individually. */
+.admin-body { overflow-x: auto; }
 </style>
