@@ -174,12 +174,6 @@ spec/vendor/listing numbers were pulled fresh.
 
 ### STILL GENUINELY AMBIGUOUS (not resolvable from data or general knowledge alone)
 
-- **`[97] "Adipotide"` vs. `[86]`/`[87]` "Adipotide/FTPP"/"FTPP Adipotide"`** — plausible these
-  are the same real compound (FTPP is sometimes used as another name for Adipotide in this
-  market), but genuinely not certain enough to call from data alone — unlike the salt-form cases
-  above, this isn't a settled naming convention. Spec overlap (`2mg`/`5mg` on both) doesn't
-  discriminate either way since those are common doses across unrelated peptides too. Still your
-  call, same as the original #28 framing.
 - **`[319] "SUPER SHRED"` vs. `[193] "SHR - Shred Blend"`** — unchanged from the first pass.
   `553mg/ml` vs. `350.25mg/ml` — a real, fairly large concentration gap (58% higher) that could
   mean a genuinely different formulation, not measurement noise. No CAS or ingredient-breakdown
@@ -276,3 +270,14 @@ reads correctly if ever consulted again.
 zero dedup groups remaining on 33/55, zero orphaned specs, total catalog count unchanged at 196
 (pure data reshuffle, no product rows added or removed), and the previously-mismatched rows now
 show consistent product IDs end to end.
+
+## Follow-up: Adipotide/FTPP merge (2026-07-12)
+
+User confirmed the previously-open "still genuinely ambiguous" call: `[97] "Adipotide"` is the
+same real compound as `[86] "Adipotide/FTPP"` (itself already a merge of `[87] "FTPP Adipotide"`
+from the HIGH/MEDIUM pass). Merged via `migration_scripts/2026-07-12-merge_adipotide_ftpp.php`,
+same `products/merge.php` transaction template used throughout this session — `2mg`/`5mg` specs
+matched exactly and combined; product 97's unique `1g` spec re-homed onto 86 since no equivalent
+existed there. Catalog 196→195. Verified live: winner carries `"Adipotide"` as a new alias,
+combined 14 vendors/41 listings (from 7v/19L + 9v/25L, correctly deduped for vendors selling
+under both names), zero `pc_prices`/`pc_specifications` product_id mismatches introduced.

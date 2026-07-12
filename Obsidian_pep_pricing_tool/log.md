@@ -573,3 +573,9 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Ran migration_scripts/2026-07-12-untangle_lipoc_mic_specs.php: re-homed/merged the 396/526mg tiers onto product 33, moved the 5 misplaced LC216 rows onto product 55, deleted the 9 duplicate price rows, repointed all affected cart/stack items before deleting vacated specs. Left bare-"MIC"-SKU vendor rows (no dose info to disambiguate) untouched on product 55, genuinely unresolved.
 - Self-caught a bug: the migration's spec re-home step updated pc_specifications.product_id but missed the same price row's own denormalized pc_prices.product_id column. Caught via a database-wide consistency check (not just products 33/55), fixed directly, and folded the fix back into the archived migration script.
 - Verified live via diagnostic_scripts/2026-07-12-lipoc-verify-untangle.php: zero product_id mismatches anywhere in the database, zero dedup groups on 33/55, zero orphaned specs, catalog count unchanged at 196.
+
+## [2026-07-12] fix | Merged Adipotide into Adipotide/FTPP (backlog #28)
+
+- User confirmed the previously-open ambiguous call: "Adipotide" [97] is the same compound as "Adipotide/FTPP" [86]. Ran migration_scripts/2026-07-12-merge_adipotide_ftpp.php, same products/merge.php transaction logic used all session -- 2mg/5mg specs matched exactly, product 97's unique 1g spec re-homed onto 86.
+- Catalog 196->195. Verified live: winner carries "Adipotide" as a new alias, combined 14 vendors/41 listings (7v/19L + 9v/25L, correctly deduped for overlapping vendors), zero pc_prices/pc_specifications product_id mismatches introduced.
+- Backlog #28 down to: SUPER SHRED vs. SHR - Shred Blend, the SU-400/Sustanon cluster (downgraded), and TB500(Frag)->TB-500 (explicitly held back).
