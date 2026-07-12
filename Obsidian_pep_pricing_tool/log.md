@@ -484,3 +484,9 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 ## [2026-07-11] tweak | Toast auto-dismiss shortened to 3.5s (all types)
 
 - User: "6 seconds is a little long can we make it 3.5 seconds." Unified error/success/info to the same 3500ms duration (was 6000/4000/4000) in stores/toast.js -- simplest fix, one consistent timing instead of three different ones. Deployed and verified.
+
+## [2026-07-11] analysis | Bell-curve price-distribution feature: spec discussion started
+
+- User wants a bell-curve/distribution view of vendor prices per (product, spec), gated to items with >=75-80% vendor coverage so the curve is statistically meaningful (not 2-3 points). Ran a coverage check against live data before designing anything: 20 active vendors, 594 (product,spec) pairs with any price data, 90 pairs clear a >=75% coverage floor (79 at >=80%) -- confirmed the feature would apply broadly, not a near-empty edge case. Archived as diagnostic_scripts/2026-07-11-bell-curve-coverage-check.php.
+- Decisions made via direct questions (not yet built): coverage rule is a >=75% minimum floor (not a strict 75-80% band -- a 100%-covered item like Retatrutide should absolutely qualify); chart shows a fitted curve with real vendor prices plotted as dots on it; lives both as an expandable inline preview on the Comparison page AND a dedicated deeper product-detail view; gated Pro+ like exports already are.
+- Not yet decided: exact price basis (planned default: price_per_unit at tier_kit_size=1, matching how Avg/Median/lowest-highlight already work), which specific product/spec pairs to launch with, caching group (comparison_data, following the existing convention).
