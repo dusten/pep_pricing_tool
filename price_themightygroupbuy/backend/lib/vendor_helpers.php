@@ -91,3 +91,58 @@ function loadVendorPhonesAndPaymentMethods(PDO $pdo, int $vendorId): array {
         'payment_methods' => $methods->fetchAll(PDO::FETCH_COLUMN),
     ];
 }
+
+/**
+ * Vendor scorecard (backlog #51) — synthesizes signals from three features
+ * that already exist separately (bell-curve-style $/unit competitiveness,
+ * COA approval, price-history activity) into one "should I trust/buy from
+ * this vendor" view, shown on VendorCard.vue alongside contact info.
+ */
+function getVendorScorecard(PDO $pdo, int $vendorId): array {
+    // Competitiveness: of this vendor's own active 1-kit listings, what
+    // share are the cheapest $/unit among ALL active vendors carrying that
+    // exact (product, spec)? Same "min $/unit per (product,spec)" logic
+    // runComparisonQuery() already does per-row, aggregated per vendor
+    // instead of per row.
+    $stmt = $pdo->prepare(
+        "SELECT COUNT(*) AS total_listings,
+                SUM(CASE WHEN pr.price_per_unit <= m.min_ppu + 0.000001 THEN 1 ELSE 0 END) AS cheapest_count
+         FROM pc_prices pr
+         JOIN (
+             SELECT pr2.product_id, pr2.specification_id, MIN(pr2.price_per_unit) AS min_ppu
+             FROM pc_prices pr2
+             JOIN pc_vendors v2 ON v2.id = pr2.vendor_id AND v2.is_active = 1
+             WHERE pr2.is_active = 1 AND pr2.tier_kit_size = 1
+             GROUP BY pr2.product_id, pr2.specification_id
+         ) m ON m.product_id = pr.product_id AND m.specification_id = pr.specification_id
+         WHERE pr.vendor_id = ? AND pr.is_active = 1 AND pr.tier_kit_size = 1"
+    );
+    $stmt->execute([$vendorId]);
+    $competitiveness = $stmt->fetch();
+    $totalListings   = (int)($competitiveness['total_listings'] ?? 0);
+    $cheapestCount   = (int)($competitiveness['cheapest_count'] ?? 0);
+
+    $coaStmt = $pdo->prepare(
+        "SELECT COUNT(*) AS total, SUM(status = 'approved') AS approved
+         FROM pc_coa_submissions WHERE vendor_id = ?"
+    );
+    $coaStmt->execute([$vendorId]);
+    $coa = $coaStmt->fetch();
+
+    $historyStmt = $pdo->prepare(
+        'SELECT COUNT(*) AS changes, MAX(changed_at) AS last_changed_at
+         FROM pc_price_history WHERE vendor_id = ?'
+    );
+    $historyStmt->execute([$vendorId]);
+    $history = $historyStmt->fetch();
+
+    return [
+        'total_listings'      => $totalListings,
+        'cheapest_count'      => $cheapestCount,
+        'cheapest_pct'        => $totalListings > 0 ? round($cheapestCount / $totalListings * 100, 1) : null,
+        'coa_approved_count'  => (int)($coa['approved'] ?? 0),
+        'coa_submitted_count' => (int)($coa['total'] ?? 0),
+        'price_change_count'  => (int)($history['changes'] ?? 0),
+        'last_price_change'   => $history['last_changed_at'] ?? null,
+    ];
+}

@@ -12,6 +12,21 @@
         </h3>
         <p v-if="vendor.contact_name" class="text-muted text-sm" style="margin-bottom:14px">{{ vendor.contact_name }}</p>
 
+        <div v-if="hasScorecard" class="vc-scorecard">
+          <div v-if="vendor.scorecard.total_listings > 0" class="vc-score-row">
+            <span class="vc-score-label">Competitiveness</span>
+            <span>Cheapest on {{ vendor.scorecard.cheapest_count }} of {{ vendor.scorecard.total_listings }} listings ({{ vendor.scorecard.cheapest_pct }}%)</span>
+          </div>
+          <div v-if="vendor.scorecard.coa_submitted_count > 0" class="vc-score-row">
+            <span class="vc-score-label">COAs</span>
+            <span>{{ vendor.scorecard.coa_approved_count }} of {{ vendor.scorecard.coa_submitted_count }} submissions approved</span>
+          </div>
+          <div v-if="vendor.scorecard.price_change_count > 0" class="vc-score-row">
+            <span class="vc-score-label">Price activity</span>
+            <span>{{ vendor.scorecard.price_change_count }} change{{ vendor.scorecard.price_change_count !== 1 ? 's' : '' }} logged, last {{ formatDate(vendor.scorecard.last_price_change) }}</span>
+          </div>
+        </div>
+
         <div class="vc-rows">
           <a v-if="vendor.whatsapp" class="vc-row vc-link" :href="whatsappUrl" target="_blank" rel="noopener">
             <span class="vc-label">WhatsApp</span>
@@ -68,6 +83,14 @@ const hasAnyContact = computed(() => vendor.value && (
   vendor.value.discord || vendor.value.telegram || vendor.value.website
 ))
 
+// Backlog #51 — synthesizes bell-curve competitiveness + COA approval +
+// price-history activity into one "should I trust/buy from this vendor" view.
+const hasScorecard = computed(() => vendor.value?.scorecard && (
+  vendor.value.scorecard.total_listings > 0 || vendor.value.scorecard.coa_submitted_count > 0 ||
+  vendor.value.scorecard.price_change_count > 0
+))
+function formatDate(d) { return new Date(d).toLocaleDateString() }
+
 const whatsappUrl = computed(() => {
   if (!vendor.value?.whatsapp) return ''
   // Some vendors list more than one number ("+852 111/+852 222") — only the
@@ -95,6 +118,12 @@ const whatsappUrl = computed(() => {
   font-size: 22px; line-height: 1; color: var(--text-secondary); cursor: pointer;
 }
 .vc-name { font-size: 17px; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+.vc-scorecard {
+  background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 12px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px;
+}
+.vc-score-row { display: flex; flex-direction: column; font-size: 12.5px; }
+.vc-score-label { color: var(--text-secondary); font-weight: 600; font-size: 11px; text-transform: uppercase; }
 .vc-rows { display: flex; flex-direction: column; gap: 2px; }
 .vc-row {
   display: flex; justify-content: space-between; gap: 12px; padding: 9px 0;

@@ -23,5 +23,8 @@ if (!$vendor) jsonResponse(['error' => 'Vendor not found.'], 404);
 $vendor['id']          = (int)$vendor['id'];
 $vendor['is_verified'] = (bool)$vendor['is_verified'];
 $vendor = array_merge($vendor, loadVendorPhonesAndPaymentMethods(db(), $id));
+// Backlog #51 — synthesizes bell-curve competitiveness + COA approval +
+// price-history activity into one "should I trust/buy from this vendor" view.
+$vendor['scorecard'] = cacheGet('comparison_data', "vendor_scorecard:$id", 600, fn() => getVendorScorecard(db(), $id));
 
 jsonResponse($vendor);

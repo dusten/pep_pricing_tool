@@ -72,5 +72,10 @@ $newStatus = ['approve' => 'approved', 'reject' => 'rejected', 'revoke' => 'pend
 db()->prepare('UPDATE pc_coa_submissions SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?')
     ->execute([$newStatus, $admin['id'], $id]);
 
+// A status change here feeds two things cached under comparison_data: the
+// per-row "has_coa" star badge (runComparisonQuery's $coaSet) and the vendor
+// scorecard's coa_approved_count — both would otherwise show stale data for
+// up to the cache's 600s TTL.
+cacheBust('comparison_data');
 logAdminAction((int)$admin['id'], "{$action}_coa_submission", ['submission_id' => $id, 'new_status' => $newStatus]);
 jsonResponse(['message' => ['approve' => 'Approved.', 'reject' => 'Rejected.', 'revoke' => 'Sent back to pending.'][$action]]);

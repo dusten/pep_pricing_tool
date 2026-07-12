@@ -512,3 +512,10 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Built exactly to the spec worked out with a Plan agent: has_history flag added to runComparisonQuery() (same lookup-set pattern as has_coa, one level deeper), new ungated GET /comparison/price-history endpoint, new PriceHistoryPopover.vue (lightweight anchored popover, not a modal), 🕐 icon added next to existing warning/COA icons in both Comparison views.
 - Verified: real highest-volume history triple confirmed has_history=true for the right vendor and false for a different vendor on the same row; raw DB rows matched what the popover displayed; outside-click dismiss confirmed live.
 - Archived diagnostic_scripts/2026-07-11-verify-price-history-icon.php.
+
+## [2026-07-11] feature | Vendor scorecard built (#51)
+
+- Extended VendorCard.vue (used from Comparison + Cart) instead of a new view -- "click vendor name" was already the interaction. New getVendorScorecard() helper in vendor_helpers.php computes competitiveness (% of vendor's own listings that are cheapest $/unit, same logic runComparisonQuery already uses per-row), COA approval counts, and price-change activity (count + last-changed date, feeding off #50's price_history work). Wired into GET /vendors/{id}/contact, cached under comparison_data per-vendor.
+- Root-cause fix found while wiring this up: admin/coa_queue.php's approve/reject/revoke never busted comparison_data -- meaning the COA star badge (#43) and now this scorecard's approval count could both show stale data for up to 10 minutes after an admin action. Fixed rather than building around it.
+- Verified: competitiveness/COA math cross-checked against manual queries for a real vendor (exact match); live in-browser check on Jenny Peptide showed correct real numbers (35/197 listings cheapest, 4/5 COAs approved, 203 price changes).
+- Archived diagnostic_scripts/2026-07-11-verify-vendor-scorecard.php.
