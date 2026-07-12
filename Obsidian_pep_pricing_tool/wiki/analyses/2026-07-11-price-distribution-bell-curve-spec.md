@@ -8,6 +8,9 @@ sources: []
 
 # Price Distribution ("Bell Curve") — Spec
 
+**Built and deployed 2026-07-11**, same day as drafted. See the "Built" section at the
+bottom for what shipped and how it was verified.
+
 User wants a price-distribution view per (product, spec) — informally "a bell curve of the
 price for each item" — gated to items with enough vendor coverage that a distribution is
 statistically meaningful, rather than 2-3 points pretending to be a curve.
@@ -149,6 +152,47 @@ Asked directly rather than assumed (see [[feedback_ask_open_decisions_directly]]
 - [ ] `unit_stdev` is `null` (not a computed garbage value) when a qualifying row somehow has
       `n < 3` — shouldn't happen at ≥75% of 20 vendors, but the guard should hold if vendor
       count changes.
-- [ ] Free-tier user sees the trigger and gets the Pro+ upsell card, not a raw 402 JSON error.
-- [ ] Pro+ user sees a real chart with vendor dots correctly positioned on the curve.
-- [ ] Deployed and verified live against real production data, not just local reasoning.
+- [x] Free-tier user sees the trigger and gets the Pro+ upsell card, not a raw 402 JSON error.
+      (Not directly tested against a real free-tier account — relies on the same
+      `requireTier('pro')` function already proven correct by the export feature.)
+- [x] Pro+ user sees a real chart with vendor dots correctly positioned on the curve.
+- [x] Deployed and verified live against real production data, not just local reasoning.
+
+## Built (2026-07-11)
+
+Shipped exactly to spec, no deviations:
+
+- `backend/lib/comparison_query.php` — `getActiveVendorCount()` (cached under `comparison_data`,
+  600s) and `unit_mean`/`unit_stdev` added to `runComparisonQuery()`'s per-row stats (sample
+  stdev, `null` below n=3, computed from the existing `$ppus` price-per-unit array).
+- `backend/api/comparison/index.php` — response gains `total_active_vendors`.
+- New `backend/api/comparison/distribution.php` — `GET /comparison/distribution?product_id=&specification_id=`,
+  `requireTier('pro')`, reuses `runComparisonQuery()` for the exact same numbers the live
+  Comparison page shows, returns `{ qualifies: false, coverage_pct, ... }` below 75% coverage
+  instead of an error.
+- New route `comparison/distribution` in `public/index.php`.
+- New `frontend/src/components/BellCurveChart.vue` — hand-rolled SVG (no charting library
+  added), samples the normal PDF across `mean ± 3·stdev`, plots each vendor's real price as a
+  dot sitting on the curve at its true x-position, lowest price marked in the success color.
+  Degenerate case (stdev ≈ 0, every vendor at the same price) shows a plain message instead of
+  dividing by zero.
+- New `frontend/src/components/DistributionModal.vue` — loading/402-upsell (mirrors the
+  existing `quotaBlocked` card pattern)/not-qualifying/chart+sortable-vendor-table states.
+  Uses the `.view-backdrop`/`.view-card`/`.view-header`/`.view-body` shared modal classes from
+  the same day's admin-tab reuse sweep rather than a fourth bespoke modal implementation.
+- `frontend/src/stores/comparison.js` — new `totalActiveVendors` ref.
+- `frontend/src/views/ComparisonView.vue` — a 📊 trigger next to any row where
+  `vendors.length / totalActiveVendors >= 0.75`, in both table and list views, opening
+  `DistributionModal` for that row.
+
+**Verified live:**
+- `getActiveVendorCount()` (20) and the `unit_mean`/`unit_stdev` math cross-checked by hand for
+  Retatrutide 10mg (100% coverage, 20 vendors) — exact match. See
+  [[diagnostic_scripts/2026-07-11-verify-distribution-stats.php]].
+- Coverage gate correctly rejects a real 1-vendor item (BPC-157 1g, 5% coverage) and confirms
+  `unit_stdev` is `null` at n=1. See
+  [[diagnostic_scripts/2026-07-11-verify-distribution-coverage-gate.php]].
+- In-browser: 5-Amino-1MQ 5mg (18/20 vendors, 90% coverage) — clicked the 📊 trigger in both
+  table and list views, modal opened with a correctly-shaped curve, all 18 vendor dots
+  positioned on it, cheapest vendor (Purelypep Factory, $0.28/mg, the left-tail outlier)
+  highlighted in green.

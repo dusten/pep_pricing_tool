@@ -494,3 +494,9 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 ## [2026-07-11] spec | Price distribution ("bell curve") spec drafted, building next
 
 - Filed wiki/analyses/2026-07-11-price-distribution-bell-curve-spec.md after walking through the value case and open decisions with the user: coverage rule is a >=75% minimum floor (not a strict 75-80% band), chart is a fitted curve with real vendor dots, one modal serves both the inline-trigger and deep-dive roles (skipping a separate routed page as duplication), Pro+ gated like exports. Updated index.md.
+
+## [2026-07-11] feature | Price distribution ("bell curve") chart built (#49)
+
+- Built exactly to the spec filed earlier today: backend/lib/comparison_query.php gained unit_mean/unit_stdev + getActiveVendorCount(); new GET /comparison/distribution (Pro+ gated, reuses runComparisonQuery); new BellCurveChart.vue (hand-rolled SVG, no new dependency) + DistributionModal.vue (reuses the shared .view-backdrop/.view-card classes from today's earlier reuse sweep); ComparisonView.vue shows a trigger on any row with >=75% vendor coverage, both table and list views.
+- Verified: backend math cross-checked by hand for a real 100%-coverage item and a real 1-vendor item (coverage gate + null-stdev-below-n3 both correct); live in-browser test on 5-Amino-1MQ 5mg in both views, correct curve/dots/highlight.
+- Archived diagnostic_scripts/2026-07-11-verify-distribution-stats.php and 2026-07-11-verify-distribution-coverage-gate.php.

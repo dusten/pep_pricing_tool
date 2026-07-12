@@ -100,7 +100,10 @@
                 </button>
               </td>
               <td class="sticky-col col-product">{{ row.product }}</td>
-              <td class="sticky-col col-spec">{{ row.spec }} <span v-if="row.is_raw_material" class="badge badge-free" title="Raw/bulk powder, not a finished vial">Raw</span></td>
+              <td class="sticky-col col-spec">
+                {{ row.spec }} <span v-if="row.is_raw_material" class="badge badge-free" title="Raw/bulk powder, not a finished vial">Raw</span>
+                <button v-if="qualifiesForDistribution(row)" class="dist-trigger" title="Price distribution across vendors" @click="openDistribution(row)">📊</button>
+              </td>
               <template v-for="v in vendorColumns" :key="v.id">
                 <template v-if="row.byVendor[v.id]">
                   <td class="vendor-divider" :class="{ lowest: row.byVendor[v.id].is_lowest }" :title="row.byVendor[v.id].vendor_sku ? `Cat No.: ${row.byVendor[v.id].vendor_sku}` : ''">
@@ -132,6 +135,7 @@
           <div class="list-title">
             {{ row.product }} <span class="list-spec">{{ row.spec }}</span>
             <span v-if="row.is_raw_material" class="badge badge-free" title="Raw/bulk powder, not a finished vial">Raw</span>
+            <button v-if="qualifiesForDistribution(row)" class="dist-trigger" title="Price distribution across vendors" @click="openDistribution(row)">📊</button>
           </div>
           <button class="btn btn-ghost btn-sm" :disabled="cartKeys.has(row.product_id + ':' + row.specification_id)" @click="addToCart(row)">
             {{ cartKeys.has(row.product_id + ':' + row.specification_id) ? 'Added' : '+ Cart' }}
@@ -157,6 +161,8 @@
     </div>
 
     <VendorCard v-if="openVendorId" :vendor-id="openVendorId" @close="openVendorId = null" />
+    <DistributionModal v-if="distributionRow" :product-id="distributionRow.product_id"
+                        :specification-id="distributionRow.specification_id" @close="distributionRow = null" />
   </AppLayout>
 </template>
 
@@ -165,6 +171,7 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
 import VendorCard from '@/components/VendorCard.vue'
+import DistributionModal from '@/components/DistributionModal.vue'
 import { useComparisonStore } from '@/stores/comparison.js'
 import { useCartStore } from '@/stores/cart.js'
 import { useAuthStore } from '@/stores/auth.js'
@@ -178,6 +185,17 @@ const cartKeys   = computed(() => new Set(cart.items.map(it => it.product_id + '
 
 const openVendorId = ref(null)
 function openVendorCard(id) { openVendorId.value = id }
+
+// Price-distribution trigger — a row "qualifies" once its vendor coverage
+// clears the 75% floor (see wiki/analyses/2026-07-11-price-distribution-bell-curve-spec.md).
+// Only needs the count already in the payload, not a request per row.
+const DISTRIBUTION_MIN_COVERAGE = 0.75
+function qualifiesForDistribution(row) {
+  return comparison.totalActiveVendors > 0 &&
+    row.vendors.length / comparison.totalActiveVendors >= DISTRIBUTION_MIN_COVERAGE
+}
+const distributionRow = ref(null) // { product_id, specification_id } while the modal is open
+function openDistribution(row) { distributionRow.value = row }
 
 function addToCart(row) {
   cart.add(row.product_id, row.specification_id)
@@ -362,6 +380,8 @@ td.lowest { background: var(--success-bg); color: var(--success); font-weight: 7
 td.blank  { background: transparent; }
 .warn-icon { color: var(--warning); margin-left: 3px; cursor: help; }
 .coa-star { color: var(--accent); margin-left: 3px; cursor: help; }
+.dist-trigger { background: none; border: none; padding: 0; margin-left: 4px; cursor: pointer; font-size: 13px; line-height: 1; vertical-align: middle; }
+.dist-trigger:hover { opacity: 0.7; }
 .stat-cell { color: var(--text-secondary); font-weight: 500; }
 
 /* Pin Avg + Median to the right edge so a row's summary stays visible while

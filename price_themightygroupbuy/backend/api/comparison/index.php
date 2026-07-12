@@ -67,4 +67,7 @@ db()->prepare(
     $durationMs > 1500 ? 1 : 0,
 ]);
 
-jsonResponse(['rows' => $rows]);
+// Lets the frontend compute each row's vendor-coverage % client-side (for the
+// price-distribution feature's trigger) without a request per row — just a
+// count, no per-vendor data, so it's fine to expose to every tier.
+jsonResponse(['rows' => $rows, 'total_active_vendors' => getActiveVendorCount()]);

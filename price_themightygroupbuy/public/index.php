@@ -137,6 +137,7 @@ $ROUTES = [
     'admin/stacks'         => 'admin/stacks/index.php',
     'comparison'           => 'comparison/index.php',
     'comparison/filters'   => 'comparison/filters.php',
+    'comparison/distribution' => 'comparison/distribution.php',
     'comparison/export/csv'  => 'comparison/export_csv.php',
     'comparison/export/xlsx' => 'comparison/export_xlsx.php',
     'export/full'          => 'export_full.php',

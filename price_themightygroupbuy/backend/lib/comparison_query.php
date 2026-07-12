@@ -20,6 +20,18 @@ function parseComparisonFiltersFromGet(): array {
 }
 
 /**
+ * Active-vendor count, cached — used both to expose "how many vendors
+ * could carry this" to the frontend (so it can compute per-row coverage %
+ * without a request per row) and by the distribution endpoint's own
+ * coverage check.
+ */
+function getActiveVendorCount(): int {
+    return (int)cacheGet('comparison_data', 'active_vendor_count', 600, function () {
+        return (int)db()->query('SELECT COUNT(*) FROM pc_vendors WHERE is_active = 1')->fetchColumn();
+    });
+}
+
+/**
  * Shared by the comparison endpoint and the admin query-log "re-run" tool —
  * one place for the query shape so the two never drift out of sync.
  */
@@ -119,11 +131,26 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
             ? ($n % 2 === 0 ? ($prices[$n / 2 - 1] + $prices[$n / 2]) / 2 : $prices[(int)floor($n / 2)])
             : null;
 
+        // unit_mean/unit_stdev feed the price-distribution chart (backlog spec
+        // 2026-07-11) — computed from $ppus (price_per_unit), the same basis
+        // as is_lowest/min/max, NOT the price_usd basis avg/median use above.
+        // Sample stdev (n-1): vendors are a sample of "the market," not its
+        // full population. Needs 3+ vendors for the same reason median does —
+        // below that, spread is noise, not signal.
+        $unitMean  = array_sum($ppus) / $n;
+        $unitStdev = null;
+        if ($n >= 3) {
+            $variance  = array_sum(array_map(fn($v) => ($v - $unitMean) ** 2, $ppus)) / ($n - 1);
+            $unitStdev = sqrt($variance);
+        }
+
         $row['stats'] = [
-            'avg'    => round(array_sum($prices) / $n, 6),
-            'median' => $priceMedian === null ? null : round($priceMedian, 6),
-            'min'    => $min,
-            'max'    => max($ppus),
+            'avg'         => round(array_sum($prices) / $n, 6),
+            'median'      => $priceMedian === null ? null : round($priceMedian, 6),
+            'min'         => $min,
+            'max'         => max($ppus),
+            'unit_mean'   => round($unitMean, 6),
+            'unit_stdev'  => $unitStdev === null ? null : round($unitStdev, 6),
         ];
         $rows[] = $row;
     }
