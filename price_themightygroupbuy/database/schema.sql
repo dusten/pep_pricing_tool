@@ -371,6 +371,7 @@ CREATE TABLE IF NOT EXISTS pc_price_history (
   vendor_id          INT UNSIGNED NOT NULL,
   product_id         INT UNSIGNED NOT NULL,
   specification_id   INT UNSIGNED NOT NULL,
+  tier_kit_size      SMALLINT UNSIGNED NULL,        -- which kit-size tier changed; NULL only for pre-migration rows that can't be safely attributed
   old_price_usd      DECIMAL(10,2) NULL,           -- NULL = brand-new price line, no prior value
   old_price_per_unit DECIMAL(12,6) NULL,
   old_kit_vial_count SMALLINT UNSIGNED NULL,

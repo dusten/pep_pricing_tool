@@ -38,10 +38,13 @@ function getCalendarFeatured(string $month): array {
             $best = $priceStmt->fetch();
             if (!$best) continue; // featured product has no current listing — show nothing rather than a broken card
 
-            // Delta: most recent recorded change for this exact product+spec.
+            // Delta: most recent recorded change for this exact product+spec,
+            // tier 1 only (matching the "best" query above) -- otherwise a
+            // bulk-tier vendor's own history could be shown as this card's
+            // delta even though the displayed price/vendor is tier-1.
             $histStmt = db()->prepare(
                 "SELECT old_price_usd, new_price_usd FROM pc_price_history
-                 WHERE product_id = ? AND specification_id = ? ORDER BY changed_at DESC LIMIT 1"
+                 WHERE product_id = ? AND specification_id = ? AND tier_kit_size = 1 ORDER BY changed_at DESC LIMIT 1"
             );
             $histStmt->execute([(int)$best['product_id'], (int)$best['specification_id']]);
             $hist = $histStmt->fetch();
@@ -62,10 +65,12 @@ function getCalendarFeatured(string $month): array {
 
 function getCalendarMilestones(string $month): array {
     return cacheGet('calendar_data', "calendar_milestones:$month", 600, function () use ($month) {
-        // Every (product, spec) pair that changed this month.
+        // Every (product, spec) pair that changed this month, tier 1 only --
+        // otherwise a bulk-tier price (trivially lower than a 1-kit price)
+        // would register as a fake "all-time low" milestone.
         $pairsStmt = db()->prepare(
             "SELECT DISTINCT product_id, specification_id FROM pc_price_history
-             WHERE DATE_FORMAT(changed_at, '%Y-%m') = ?"
+             WHERE DATE_FORMAT(changed_at, '%Y-%m') = ? AND tier_kit_size = 1"
         );
         $pairsStmt->execute([$month]);
         $pairs = $pairsStmt->fetchAll();
@@ -74,7 +79,7 @@ function getCalendarMilestones(string $month): array {
         $byDay   = [];
         $histAll = db()->prepare(
             "SELECT new_price_usd, changed_at FROM pc_price_history
-             WHERE product_id = ? AND specification_id = ? ORDER BY changed_at ASC"
+             WHERE product_id = ? AND specification_id = ? AND tier_kit_size = 1 ORDER BY changed_at ASC"
         );
         $nameStmt = db()->prepare(
             "SELECT p.canonical_name AS product, s.spec_label AS spec

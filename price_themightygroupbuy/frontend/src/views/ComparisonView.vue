@@ -178,7 +178,8 @@
     <DistributionModal v-if="distributionRow" :product-id="distributionRow.product_id"
                         :specification-id="distributionRow.specification_id" @close="distributionRow = null" />
     <PriceHistoryPopover v-if="historyTarget" :vendor-id="historyTarget.vendorId" :product-id="historyTarget.productId"
-                         :specification-id="historyTarget.specificationId" :x="historyTarget.x" :y="historyTarget.y"
+                         :specification-id="historyTarget.specificationId" :tier-kit-size="historyTarget.tierKitSize"
+                         :x="historyTarget.x" :y="historyTarget.y"
                          @close="historyTarget = null" />
   </AppLayout>
 </template>
@@ -204,10 +205,10 @@ const cartKeys   = computed(() => new Set(cart.items.map(it => it.product_id + '
 const openVendorId = ref(null)
 function openVendorCard(id) { openVendorId.value = id }
 
-const historyTarget = ref(null) // { vendorId, productId, specificationId, x, y }
+const historyTarget = ref(null) // { vendorId, productId, specificationId, tierKitSize, x, y }
 function openHistory(row, vendorId, event) {
   historyTarget.value = {
-    vendorId, productId: row.product_id, specificationId: row.specification_id,
+    vendorId, productId: row.product_id, specificationId: row.specification_id, tierKitSize: selectedTier.value,
     x: Math.min(event.clientX, window.innerWidth - 330), y: event.clientY + 10,
   }
 }

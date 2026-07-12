@@ -78,18 +78,18 @@ function findOrCreateSpec(PDO $pdo, int $productId, string $label, float $value,
  * means this is a brand-new price line (no prior value to diff against).
  */
 function logPriceHistory(
-    PDO $pdo, int $vendorId, int $productId, int $specId,
+    PDO $pdo, int $vendorId, int $productId, int $specId, int $tierKitSize,
     ?float $oldPrice, ?float $oldPricePerUnit, ?int $oldKitCount,
     float $newPrice, float $newPricePerUnit, int $newKitCount,
     string $source, ?int $changedBy = null
 ): void {
     $pdo->prepare(
         'INSERT INTO pc_price_history
-           (vendor_id, product_id, specification_id, old_price_usd, old_price_per_unit, old_kit_vial_count,
+           (vendor_id, product_id, specification_id, tier_kit_size, old_price_usd, old_price_per_unit, old_kit_vial_count,
             new_price_usd, new_price_per_unit, new_kit_vial_count, source, changed_by)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
     )->execute([
-        $vendorId, $productId, $specId, $oldPrice, $oldPricePerUnit, $oldKitCount,
+        $vendorId, $productId, $specId, $tierKitSize, $oldPrice, $oldPricePerUnit, $oldKitCount,
         $newPrice, $newPricePerUnit, $newKitCount, $source, $changedBy,
     ]);
 }
@@ -132,7 +132,7 @@ function commitPriceRow(
         || (int)$prior['kit_vial_count'] !== $kitCount;
     if ($priceChanged) {
         logPriceHistory(
-            $pdo, $vendorId, $productId, $specId,
+            $pdo, $vendorId, $productId, $specId, $tierKitSize,
             $prior ? (float)$prior['price_usd'] : null,
             $prior ? (float)$prior['price_per_unit'] : null,
             $prior ? (int)$prior['kit_vial_count'] : null,

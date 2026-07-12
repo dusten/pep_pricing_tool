@@ -76,7 +76,7 @@ $priceActuallyChanged = ($newPrice !== null && $newPrice !== (float)$price['pric
     || ($newKit !== null && $newKit !== (int)$price['kit_vial_count']);
 if ($priceActuallyChanged) {
     logPriceHistory(
-        db(), (int)$price['vendor_id'], (int)$price['product_id'], (int)$price['specification_id'],
+        db(), (int)$price['vendor_id'], (int)$price['product_id'], (int)$price['specification_id'], (int)$price['tier_kit_size'],
         (float)$price['price_usd'], (float)$price['price_per_unit'], (int)$price['kit_vial_count'],
         $newPrice ?? (float)$price['price_usd'],
         pricePerUnit($newPrice ?? (float)$price['price_usd'], $newKit ?? (int)$price['kit_vial_count'], (float)$price['numeric_value']),

@@ -76,13 +76,17 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
         $coaSet[$c['vendor_id'] . ':' . $c['product_id']] = true;
     }
 
-    // Which (vendor, product, spec) triples have ever had a real price
-    // change — same lookup-set pattern as $coaSet above, one level deeper
-    // since history is per-spec, not per-product. Feeds the price-history
-    // clock icon on the Comparison page.
+    // Which (vendor, product, spec, tier) quadruples have ever had a real
+    // price change — same lookup-set pattern as $coaSet above, keyed down to
+    // tier_kit_size so a vendor selling multiple kit-size tiers (e.g. 1/10/50)
+    // doesn't have one tier's history icon light up for another tier's
+    // changes. Pre-migration rows with an unrecoverable NULL tier simply
+    // never match any key here (safe -- no false positive), so the icon just
+    // won't show for those until a new, correctly-tagged change occurs.
+    // Feeds the price-history clock icon on the Comparison page.
     $historySet = [];
-    foreach (db()->query('SELECT DISTINCT vendor_id, product_id, specification_id FROM pc_price_history') as $h) {
-        $historySet[$h['vendor_id'] . ':' . $h['product_id'] . ':' . $h['specification_id']] = true;
+    foreach (db()->query('SELECT DISTINCT vendor_id, product_id, specification_id, tier_kit_size FROM pc_price_history') as $h) {
+        $historySet[$h['vendor_id'] . ':' . $h['product_id'] . ':' . $h['specification_id'] . ':' . $h['tier_kit_size']] = true;
     }
 
     $grouped = [];
@@ -113,7 +117,7 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
             'source_file_id'   => $r['source_file_id'] !== null ? (int)$r['source_file_id'] : null,
             'vendor_sku'       => $r['vendor_sku'],
             'has_coa'          => isset($coaSet[$r['vendor_id'] . ':' . $r['product_id']]),
-            'has_history'      => isset($historySet[$r['vendor_id'] . ':' . $r['product_id'] . ':' . $r['specification_id']]),
+            'has_history'      => isset($historySet[$r['vendor_id'] . ':' . $r['product_id'] . ':' . $r['specification_id'] . ':' . $tierKitSize]),
         ];
     }
 

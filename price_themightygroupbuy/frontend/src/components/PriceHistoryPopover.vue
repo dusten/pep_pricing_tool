@@ -29,6 +29,7 @@ const props = defineProps({
   vendorId: { type: Number, required: true },
   productId: { type: Number, required: true },
   specificationId: { type: Number, required: true },
+  tierKitSize: { type: Number, default: 1 },
   x: { type: Number, default: 0 },
   y: { type: Number, default: 0 },
 })
@@ -49,7 +50,7 @@ onMounted(async () => {
   document.addEventListener('click', onDocClick)
   document.addEventListener('keydown', onEscape)
   try {
-    const res = await get(`/api/comparison/price-history?vendor_id=${props.vendorId}&product_id=${props.productId}&specification_id=${props.specificationId}`)
+    const res = await get(`/api/comparison/price-history?vendor_id=${props.vendorId}&product_id=${props.productId}&specification_id=${props.specificationId}&tier_kit_size=${props.tierKitSize}`)
     changes.value = res.changes
   } finally {
     loading.value = false
