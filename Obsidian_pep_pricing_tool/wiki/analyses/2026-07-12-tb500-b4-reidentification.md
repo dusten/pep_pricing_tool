@@ -138,15 +138,14 @@ onto 359) is the more durable fix long-term**: as long as each product's alias l
 contains names that truly describe that molecule, future imports route correctly on exact-match
 even if Claude's naming drifts again — the routing doesn't depend on the prompt being perfect.
 
-**Not yet done, worth a decision**: the per-price `warning` field Claude generates (e.g. "TB-500
-name ambiguity, no CAS given") is never surfaced anywhere today — not in `ReviewQueueTab.vue`
-(which renders name/spec/price/tier fields from the same `raw_json` blob but never
-`raw_json.warning`), and not at all for rows that auto-commit via exact match (which is exactly
-the path every TB-500 listing takes, since "TB-500" exact-matches product 2's own
-`canonical_name` — it never reaches the review queue regardless of any warning attached). Two
-options if this open finding is worth acting on later: (a) show the warning inline in the
-review queue for pending rows (cheap, data's already client-side), and/or (b) route any
-listing whose extraction carries a `warning` on a watchlisted name to the pending queue instead
-of auto-committing it, forcing a human look. Not implemented here since (b) especially is a
-bigger behavioral change to ongoing import review load, left as an open question rather than
-assumed.
+**User decided**: show warnings in the Review Queue, skip the auto-commit routing change (b).
+`ReviewQueueTab.vue` now renders a `⚠` badge above the editable fields whenever
+`raw_json.warning` (or the older `raw_json.warnings` array, for rows extracted before the
+schema was standardized) is present — reusing the existing `.badge-coa-pending` style, so an
+admin reviewing a pending row sees Claude's own ambiguity flag before approving it. This still
+only covers rows that reach the pending queue (`new_product`/`new_spec`/`name_mismatch`) — a
+listing that exact-matches an existing product/alias (like every plain "TB-500" line, which
+matches product 2's own `canonical_name`) still auto-commits with no review, same as before;
+that's the deliberately-skipped option (b). Verified: `php -l`/`npm run build` clean, deployed,
+confirmed live on a real pending row (no warning present, badge correctly absent — the
+`v-if` guard works as intended).

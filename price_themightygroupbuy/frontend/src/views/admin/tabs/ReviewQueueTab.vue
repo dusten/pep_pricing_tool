@@ -18,6 +18,7 @@
         <div class="review-row" v-if="importRow.candidate_name">
           <span class="label-sm">Closest existing match</span> {{ importRow.candidate_name }}
         </div>
+        <div class="review-row" v-if="importWarning"><span class="badge badge-coa-pending">⚠ {{ importWarning }}</span></div>
 
         <p class="text-muted text-sm hint">Values below are exactly what Claude extracted. A red border means it came back empty — everything else only needs a look, not an edit.</p>
 
@@ -104,13 +105,23 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, computed, onMounted } from 'vue'
 import { get, post } from '@/utils/api.js'
 import { useToastStore } from '@/stores/toast.js'
 
 const toast           = useToastStore()
 const mode            = ref('imports')
 const importRow       = ref(null)
+// Claude's per-price ambiguity flag (e.g. "TB-500 name ambiguity, no CAS given") — schema
+// key is "warning" (singular string), but rows extracted before that was standardized may
+// still carry the older "warnings" array shape.
+const importWarning = computed(() => {
+  const raw = importRow.value?.raw_json
+  if (!raw) return ''
+  if (raw.warning) return raw.warning
+  if (Array.isArray(raw.warnings) && raw.warnings.length) return raw.warnings.join('; ')
+  return ''
+})
 const coaRow          = ref(null)
 const mapToCandidate  = ref(true)
 const approveMsg      = ref('')
