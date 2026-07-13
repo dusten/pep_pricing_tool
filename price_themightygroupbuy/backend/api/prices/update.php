@@ -42,13 +42,15 @@ if (array_key_exists('kit_vial_count', $d) && (int)$d['kit_vial_count'] >= 1 && 
 }
 // price_per_unit is computed at write-time (not a generated column) and depends
 // on both price and kit_vial_count — recompute if either one changed.
+$newPricePerUnit = (float)$price['price_per_unit'];
 if ($newPrice !== null || $newKit !== null) {
-    $fields[] = 'price_per_unit = ?';
-    $vals[]   = pricePerUnit(
+    $newPricePerUnit = pricePerUnit(
         $newPrice ?? (float)$price['price_usd'],
         $newKit   ?? (int)$price['kit_vial_count'],
         (float)$price['numeric_value']
     );
+    $fields[] = 'price_per_unit = ?';
+    $vals[]   = $newPricePerUnit;
 }
 if (array_key_exists('tier_kit_size', $d) && (int)$d['tier_kit_size'] >= 1 && (int)$d['tier_kit_size'] <= 65535) {
     $fields[] = 'tier_kit_size = ?';
@@ -85,9 +87,7 @@ if ($priceActuallyChanged) {
     logPriceHistory(
         db(), (int)$price['vendor_id'], (int)$price['product_id'], (int)$price['specification_id'], (int)$price['tier_kit_size'],
         (float)$price['price_usd'], (float)$price['price_per_unit'], (int)$price['kit_vial_count'],
-        $newPrice ?? (float)$price['price_usd'],
-        pricePerUnit($newPrice ?? (float)$price['price_usd'], $newKit ?? (int)$price['kit_vial_count'], (float)$price['numeric_value']),
-        $newKit ?? (int)$price['kit_vial_count'],
+        $newPrice ?? (float)$price['price_usd'], $newPricePerUnit, $newKit ?? (int)$price['kit_vial_count'],
         'manual_edit', (int)$admin['id']
     );
 }
@@ -95,4 +95,4 @@ if ($priceActuallyChanged) {
 cacheBust('comparison_data');
 cacheBust('calendar_data'); // a price edit that changes the price also writes a pc_price_history row
 logAdminAction((int)$admin['id'], 'update_price', ['price_id' => $id, 'fields' => array_keys($d)]);
-jsonResponse(['message' => 'Price updated.']);
+jsonResponse(['message' => 'Price updated.', 'price_per_unit' => $newPricePerUnit]);

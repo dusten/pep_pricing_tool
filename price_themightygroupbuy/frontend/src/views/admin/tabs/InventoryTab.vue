@@ -19,7 +19,7 @@
     <table v-else class="admin-table">
       <thead>
         <tr>
-          <th>Product</th><th>Spec</th><th>Tier</th><th>Price</th><th>Vials/kit</th><th>SKU</th><th>Non-standard</th><th>Active</th>
+          <th>Product</th><th>Spec</th><th>Tier</th><th>Price</th><th>$/unit</th><th>Vials/kit</th><th>SKU</th><th>Non-standard</th><th>Active</th>
         </tr>
       </thead>
       <tbody>
@@ -28,6 +28,7 @@
           <td>{{ pr.spec_label }}</td>
           <td><input v-model.number="pr.tier_kit_size" type="number" min="1" max="255" style="width:55px" @change="save(pr)" /></td>
           <td>$<input v-model.number="pr.price_usd" type="number" step="any" min="0.01" style="width:75px" @change="save(pr)" /></td>
+          <td class="text-muted text-sm">${{ pr.price_per_unit.toFixed(2) }}</td>
           <td><input v-model.number="pr.kit_vial_count" type="number" min="1" max="255" style="width:55px" @change="save(pr)" /></td>
           <td><input v-model="pr.vendor_sku" placeholder="—" style="width:90px" @change="save(pr)" /></td>
           <td><input type="checkbox" v-model="pr.non_standard_kit" @change="save(pr)" /></td>
@@ -60,11 +61,12 @@ async function loadVendor() {
 }
 async function save(pr) {
   try {
-    await put(`/api/prices/${pr.id}`, {
+    const res = await put(`/api/prices/${pr.id}`, {
       price_usd: pr.price_usd, kit_vial_count: pr.kit_vial_count,
       vendor_sku: pr.vendor_sku, tier_kit_size: pr.tier_kit_size, non_standard_kit: pr.non_standard_kit,
       is_active: pr.is_active,
     })
+    pr.price_per_unit = res.price_per_unit // price/kit-count edits recompute this server-side
   } catch (err) {
     toast.error(err.message)
     await loadVendor() // revert the edited field back to server state on failure

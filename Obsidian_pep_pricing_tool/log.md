@@ -637,3 +637,10 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Added: vendors/show.php returns every price row regardless of is_active (was filtering them out, which would've hidden a hidden row from the only place an admin could un-hide it); prices/update.php accepts is_active in its PUT body; InventoryTab.vue gets an "Active" checkbox column with a dimmed row style when unchecked.
 - Critical fix: commitPriceRow()'s ON DUPLICATE KEY UPDATE was unconditionally forcing is_active=1 on every reimport -- removed, so hiding a line survives the vendor's file being reprocessed instead of silently resetting.
 - Verified live end-to-end on Purelypep's KPV 10mg tier-1 row: toggled off via Inventory tab, confirmed only that one row changed in the DB, confirmed it disappeared from the Comparison page's KPV 10mg listing while KPV 5mg was unaffected, restored it afterward.
+
+## [2026-07-12] feature | Show $/unit on the Inventory tab
+
+- User asked to add $/unit to the vendor Inventory page. Added pr.price_per_unit to vendors/show.php's price query and a read-only $/unit column in InventoryTab.vue.
+- Caught and fixed a real bug during verification: PDO returns DECIMAL columns as strings, and price_per_unit.toFixed() threw a TypeError that crashed the whole AdminView render tree (price_usd never hit this because v-model.number happened to coerce it). Cast price_per_unit to float server-side.
+- Also made $/unit stay fresh after a price/kit-count edit: prices/update.php now returns the recomputed price_per_unit in its response, InventoryTab.vue applies it back to the row instead of leaving it stale until a manual reload.
+- Verified live on Purelypep Factory's KPV rows: $0.42/$0.35/$0.26 for the 10mg 1/10/50-kit tiers, matching price_usd/(kit_vial_count*dose); confirmed no console errors after the fix.

@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // query, which does) — a hidden line still needs to show up so an admin
     // can find and un-hide it later.
     $prices = db()->prepare(
-        'SELECT pr.id, p.canonical_name, s.spec_label, pr.tier_kit_size, pr.price_usd, pr.vendor_sku,
+        'SELECT pr.id, p.canonical_name, s.spec_label, pr.tier_kit_size, pr.price_usd, pr.price_per_unit, pr.vendor_sku,
                 pr.kit_vial_count, pr.non_standard_kit, pr.is_active
          FROM pc_prices pr
          JOIN pc_products p ON p.id = pr.product_id
@@ -35,7 +35,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     );
     $prices->execute([$id]);
     $prices = $prices->fetchAll();
-    foreach ($prices as &$p) $p['is_active'] = (bool)$p['is_active'];
+    // PDO returns DECIMAL columns as strings — price_usd's string form worked
+    // by accident (v-model.number coerces it), but price_per_unit is rendered
+    // read-only with .toFixed(), which throws on a string.
+    foreach ($prices as &$p) {
+        $p['is_active']      = (bool)$p['is_active'];
+        $p['price_per_unit'] = (float)$p['price_per_unit'];
+    }
     unset($p);
     $vendor['prices']       = $prices;
 
