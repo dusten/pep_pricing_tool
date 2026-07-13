@@ -60,7 +60,25 @@ approve/reject — but the Review Queue only had those two options, so reaching 
 scrolling past every prior row again on each visit. See [[wiki/entities/phase-roadmap]] #66
 for the fix (a proper "Skip" action, `last_skipped_at` column, FIFO-with-defer ordering).
 
+## Resolved: LC1201 misfiling (2026-07-13)
+
+Fixed via existing, already-tested endpoints rather than raw SQL — `spec_move.php`
+(spec 1158 → product 55) and the pending-imports approve action's field-override support
+(row 2835, with `spec_label`/`numeric_value` explicitly matched to spec 1158's exact
+wording so both vendors converge on the same spec instead of fragmenting):
+
+- Bonus find while fixing: it wasn't just the pending row at risk — an *already-approved*
+  price from vendor **Lucy** (same `LC1201` sku, $80) had previously been misfiled onto
+  product 33 the same way. Moving spec 1158 wholesale (not just re-targeting the pending
+  row) fixed both at once.
+- Result: product 33 ("Lipo-c", no-B12) no longer has any "121"-labeled spec; product 55
+  ("Lipo-C with B12") now correctly holds spec 1158 ("121mg/ml, 10ml") with both Lucy's and
+  Jenny Peptide's `LC1201` listings attached.
+- Verified with a database-wide check (`pc_prices.product_id != pc_specifications.product_id`
+  across all active rows, not just products 33/55): 0 mismatches.
+
 ## Not yet acted on
 
-None of the findings above were fixed as part of this pass — this was a read-only review.
-Flagged to the user for a decision on each.
+The remaining findings (Semax duplicate, generic "water" entries, botched "1mg/ml"→B12
+extraction, "Adamax" 1032 Da lead) are still open — flagged to the user for a decision on
+each, not acted on unless asked.
