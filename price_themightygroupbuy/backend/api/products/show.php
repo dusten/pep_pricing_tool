@@ -43,6 +43,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     );
     $classifications->execute([$id]);
 
+    // Same DECIMAL-as-string cast every other endpoint applies — PDO returns
+    // DECIMAL columns as strings regardless of prepare mode, which is a
+    // crash risk the moment a template calls a Number-only method on one
+    // (see the price_per_unit fix on the Inventory tab).
+    $product['molecular_weight'] = $product['molecular_weight'] !== null ? (float)$product['molecular_weight'] : null;
+    foreach ($specRows as &$spec) {
+        $spec['numeric_value'] = (float)$spec['numeric_value'];
+        foreach ($spec['prices'] as &$price) $price['price_usd'] = (float)$price['price_usd'];
+        unset($price);
+    }
+    unset($spec);
+
     $product['aliases']       = $aliases->fetchAll();
     $product['specifications'] = $specRows;
     $product['classifications'] = $classifications->fetchAll();

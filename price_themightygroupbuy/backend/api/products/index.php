@@ -20,6 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $rows[$i]['id']              = (int)$r['id'];
             $rows[$i]['alias_count']     = (int)$r['alias_count'];
             $rows[$i]['vendor_count']    = (int)$r['vendor_count'];
+            // PDO always returns DECIMAL columns as strings regardless of
+            // prepare mode — left uncast, this displays with DECIMAL's fixed
+            // trailing precision ("403.930" instead of "403.93") and is a
+            // crash risk the moment a template calls a Number-only method on
+            // it (exactly what happened to price_per_unit on the Inventory tab).
+            $rows[$i]['molecular_weight'] = $r['molecular_weight'] !== null ? (float)$r['molecular_weight'] : null;
             $rows[$i]['aliases']         = [];
             $rows[$i]['classifications'] = [];
             $byId[(int)$r['id']]         = $i;
