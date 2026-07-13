@@ -4,10 +4,13 @@ require_once dirname(__DIR__, 2) . '/config.php';
 require_once dirname(__DIR__, 2) . '/helpers.php';
 require_once dirname(__DIR__, 2) . '/lib/price_import.php';
 
-// PUT /prices/{id}  body: { price_usd?, kit_vial_count?, vendor_sku?, tier_kit_size?, non_standard_kit? }
+// PUT /prices/{id}  body: { price_usd?, kit_vial_count?, vendor_sku?, tier_kit_size?, non_standard_kit?, is_active? }
 // Edits one vendor's existing price line directly (Inventory tab) — does not
 // reassign which product/spec the line belongs to; see products/spec_move.php
 // for moving a whole spec (and everyone's prices under it) to a different product.
+// is_active=false ("hide") excludes the row from every calculation query
+// (comparison, cart, stacks, calendar) without deleting it — reimporting the
+// same vendor file later won't silently un-hide it (see commitPriceRow()).
 method('PUT');
 $admin = requireAdmin();
 $id    = (int)($PARAMS['id'] ?? 0);
@@ -58,6 +61,10 @@ if (array_key_exists('vendor_sku', $d)) {
 if (array_key_exists('non_standard_kit', $d)) {
     $fields[] = 'non_standard_kit = ?';
     $vals[]   = !empty($d['non_standard_kit']) ? 1 : 0;
+}
+if (array_key_exists('is_active', $d)) {
+    $fields[] = 'is_active = ?';
+    $vals[]   = !empty($d['is_active']) ? 1 : 0;
 }
 if (!$fields) jsonResponse(['error' => 'Nothing to update.'], 422);
 

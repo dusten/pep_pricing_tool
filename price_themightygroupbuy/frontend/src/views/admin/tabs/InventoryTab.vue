@@ -14,16 +14,16 @@
       Select a vendor to view and edit their price lines.
     </div>
     <div v-else-if="!prices.length" class="card" style="text-align:center;padding:32px;color:var(--text-secondary)">
-      No active prices for this vendor.
+      No prices for this vendor.
     </div>
     <table v-else class="admin-table">
       <thead>
         <tr>
-          <th>Product</th><th>Spec</th><th>Tier</th><th>Price</th><th>Vials/kit</th><th>SKU</th><th>Non-standard</th>
+          <th>Product</th><th>Spec</th><th>Tier</th><th>Price</th><th>Vials/kit</th><th>SKU</th><th>Non-standard</th><th>Active</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="pr in prices" :key="pr.id">
+        <tr v-for="pr in prices" :key="pr.id" :class="{ 'hidden-row': !pr.is_active }">
           <td>{{ pr.canonical_name }}</td>
           <td>{{ pr.spec_label }}</td>
           <td><input v-model.number="pr.tier_kit_size" type="number" min="1" max="255" style="width:55px" @change="save(pr)" /></td>
@@ -31,6 +31,7 @@
           <td><input v-model.number="pr.kit_vial_count" type="number" min="1" max="255" style="width:55px" @change="save(pr)" /></td>
           <td><input v-model="pr.vendor_sku" placeholder="—" style="width:90px" @change="save(pr)" /></td>
           <td><input type="checkbox" v-model="pr.non_standard_kit" @change="save(pr)" /></td>
+          <td><input type="checkbox" v-model="pr.is_active" title="Uncheck to hide this line from every calculation (comparison, cart, stacks) without deleting it" @change="save(pr)" /></td>
         </tr>
       </tbody>
     </table>
@@ -62,6 +63,7 @@ async function save(pr) {
     await put(`/api/prices/${pr.id}`, {
       price_usd: pr.price_usd, kit_vial_count: pr.kit_vial_count,
       vendor_sku: pr.vendor_sku, tier_kit_size: pr.tier_kit_size, non_standard_kit: pr.non_standard_kit,
+      is_active: pr.is_active,
     })
   } catch (err) {
     toast.error(err.message)
@@ -83,3 +85,7 @@ async function recalc() {
 
 onMounted(loadVendors)
 </script>
+
+<style scoped>
+.hidden-row { opacity: 0.5; }
+</style>

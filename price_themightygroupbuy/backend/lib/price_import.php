@@ -120,12 +120,16 @@ function commitPriceRow(
 
     $newPricePerUnit = pricePerUnit($price, $kitCount, $numericValue);
 
+    // Deliberately NOT setting is_active in the UPDATE branch — an admin's
+    // "hide" decision (Inventory tab) must survive a reimport of the same
+    // vendor file, or hiding a line would be pointless. New rows still start
+    // active (the literal 1 in the INSERT's VALUES list below).
     $pdo->prepare(
         'INSERT INTO pc_prices (vendor_id, product_id, specification_id, price_usd, price_per_unit, kit_vial_count, tier_kit_size, vendor_sku, non_standard_kit, source_file_id, is_active)
          VALUES (?,?,?,?,?,?,?,?,?,?,1)
          ON DUPLICATE KEY UPDATE price_usd = VALUES(price_usd), price_per_unit = VALUES(price_per_unit),
            kit_vial_count = VALUES(kit_vial_count), non_standard_kit = VALUES(non_standard_kit),
-           source_file_id = VALUES(source_file_id), is_active = 1, created_at = NOW()'
+           source_file_id = VALUES(source_file_id), created_at = NOW()'
     )->execute([
         $vendorId, $productId, $specId, $price, $newPricePerUnit,
         $kitCount, $tierKitSize, $vendorSku, $nonStandard ? 1 : 0, $sourceFileId,

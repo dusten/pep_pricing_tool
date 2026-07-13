@@ -21,17 +21,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // vendor_sku lives here (pc_prices), not on pc_products — it's per
     // vendor+spec+tier, e.g. AOD9604 5mg is "5AD" but 10mg is "10AD" for the
     // same vendor. No admin view listed individual price rows before this.
+    // Deliberately NOT filtering is_active here (unlike every calculation
+    // query, which does) — a hidden line still needs to show up so an admin
+    // can find and un-hide it later.
     $prices = db()->prepare(
         'SELECT pr.id, p.canonical_name, s.spec_label, pr.tier_kit_size, pr.price_usd, pr.vendor_sku,
-                pr.kit_vial_count, pr.non_standard_kit
+                pr.kit_vial_count, pr.non_standard_kit, pr.is_active
          FROM pc_prices pr
          JOIN pc_products p ON p.id = pr.product_id
          JOIN pc_specifications s ON s.id = pr.specification_id
-         WHERE pr.vendor_id = ? AND pr.is_active = 1
+         WHERE pr.vendor_id = ?
          ORDER BY p.canonical_name, s.numeric_value, pr.tier_kit_size'
     );
     $prices->execute([$id]);
-    $vendor['prices']       = $prices->fetchAll();
+    $prices = $prices->fetchAll();
+    foreach ($prices as &$p) $p['is_active'] = (bool)$p['is_active'];
+    unset($p);
+    $vendor['prices']       = $prices;
 
     $vendor['is_active']    = (bool)$vendor['is_active'];
     $vendor['is_verified']  = (bool)$vendor['is_verified'];
