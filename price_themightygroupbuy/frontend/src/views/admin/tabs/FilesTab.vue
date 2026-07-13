@@ -41,6 +41,26 @@
           <div v-else-if="viewing.file_type === 'pdf'" ref="pdfContainer" class="pdf-pages">
             <canvas v-for="p in pdfPageCount" :key="p" :ref="el => setPdfCanvasRef(el, p - 1)"></canvas>
           </div>
+          <div v-else-if="viewing.file_type === 'xlsx' && xlsxLoading" class="text-muted">Parsing spreadsheet…</div>
+          <div v-else-if="viewing.file_type === 'xlsx'" class="xlsx-view">
+            <div v-if="xlsxSheets.length > 1" class="xlsx-tabs">
+              <button v-for="(s, i) in xlsxSheets" :key="s.name"
+                      :class="['btn', 'btn-ghost', 'btn-sm', { active: i === xlsxActiveSheet }]"
+                      @click="xlsxActiveSheet = i">{{ s.name }}</button>
+            </div>
+            <div class="xlsx-table-wrap">
+              <table class="admin-table xlsx-table">
+                <thead v-if="xlsxSheets[xlsxActiveSheet]?.rows.length">
+                  <tr><th v-for="(cell, ci) in xlsxSheets[xlsxActiveSheet].rows[0]" :key="ci">{{ cell }}</th></tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(row, ri) in xlsxSheets[xlsxActiveSheet]?.rows.slice(1)" :key="ri">
+                    <td v-for="(cell, ci) in row" :key="ci">{{ cell }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
           <pre v-else-if="viewText !== null" class="view-text">{{ viewText }}</pre>
           <p v-else class="text-muted">No inline preview for {{ viewing.file_type }} files — use Download.</p>
         </div>
@@ -85,6 +105,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { get, post, del } from '@/utils/api.js'
 import { useToastStore } from '@/stores/toast.js'
 import * as pdfjsLib from 'pdfjs-dist'
+import ExcelJS from 'exceljs'
 
 const toast = useToastStore()
 
@@ -115,6 +136,43 @@ const pdfPageCount = ref(0)
 const pdfContainer = ref(null)
 let pdfDoc = null
 let pdfCanvasEls = []
+
+const xlsxSheets       = ref([]) // [{ name, rows: string[][] }]
+const xlsxActiveSheet  = ref(0)
+const xlsxLoading      = ref(false) // a few hundred rows can take a couple seconds to parse client-side
+
+// ExcelJS cell values aren't always plain scalars — formulas carry
+// {formula, result}, rich text carries {richText: [...]}, hyperlinks carry
+// {text, hyperlink} — normalize all of them to the text a preview should show.
+function cellText(v) {
+  if (v === null || v === undefined) return ''
+  if (v instanceof Date) return v.toLocaleDateString()
+  if (typeof v === 'object') {
+    if ('result' in v) return cellText(v.result)
+    if ('richText' in v) return v.richText.map(r => r.text).join('')
+    if ('text' in v) return v.text
+  }
+  return String(v)
+}
+
+async function renderXlsx(blob) {
+  xlsxLoading.value = true
+  try {
+    const arrayBuffer = await blob.arrayBuffer()
+    const wb = new ExcelJS.Workbook()
+    await wb.xlsx.load(arrayBuffer)
+    xlsxSheets.value = wb.worksheets.map(ws => {
+      const rows = []
+      ws.eachRow({ includeEmpty: false }, row => {
+        rows.push(row.values.slice(1).map(cellText)) // row.values[0] is always undefined (ExcelJS 1-indexes columns)
+      })
+      return { name: ws.name, rows }
+    })
+    xlsxActiveSheet.value = 0
+  } finally {
+    xlsxLoading.value = false
+  }
+}
 
 function setPdfCanvasRef(el, index) {
   if (el) pdfCanvasEls[index] = el
@@ -248,6 +306,8 @@ async function viewFile(f) {
     viewUrl.value      = null
     viewText.value     = null
     pdfPageCount.value = 0
+    xlsxSheets.value   = []
+    xlsxLoading.value  = false
     if (f.file_type === 'image') {
       viewUrl.value = URL.createObjectURL(blob)
     } else if (f.file_type === 'csv') {
@@ -255,6 +315,7 @@ async function viewFile(f) {
     }
     viewing.value = f
     if (f.file_type === 'pdf') await renderPdf(blob)
+    if (f.file_type === 'xlsx') await renderXlsx(blob)
   } catch (err) {
     toast.error(err.message)
   }
@@ -265,6 +326,7 @@ function closeView() {
   if (pdfDoc) { pdfDoc.destroy(); pdfDoc = null }
   pdfCanvasEls = []
   pdfPageCount.value = 0
+  xlsxSheets.value = []
   viewing.value  = null
   viewUrl.value  = null
   viewText.value = null
@@ -295,6 +357,18 @@ function closeView() {
   display: flex; flex-direction: column; align-items: center; gap: 12px;
 }
 .pdf-pages canvas { max-width: 100%; box-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+
+/* Same fill/scroll approach as .pdf-pages — spreadsheets are frequently
+   wider than the card, so this scrolls both directions instead of centering
+   (which would squash a wide table into the middle of the card). */
+.xlsx-view {
+  position: absolute; inset: 0; overflow: auto; padding: 12px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 8px;
+}
+.xlsx-tabs { display: flex; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
+.xlsx-tabs .active { background: var(--surface-alt); font-weight: 600; }
+.xlsx-table-wrap { overflow: auto; max-width: 100%; }
+.xlsx-table th, .xlsx-table td { white-space: nowrap; }
 .view-text { align-self: stretch; white-space: pre-wrap; font-size: 12px; font-family: monospace; padding: 8px; }
 
 .manual-card { height: min(85vh, 700px); }

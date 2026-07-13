@@ -644,3 +644,18 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Caught and fixed a real bug during verification: PDO returns DECIMAL columns as strings, and price_per_unit.toFixed() threw a TypeError that crashed the whole AdminView render tree (price_usd never hit this because v-model.number happened to coerce it). Cast price_per_unit to float server-side.
 - Also made $/unit stay fresh after a price/kit-count edit: prices/update.php now returns the recomputed price_per_unit in its response, InventoryTab.vue applies it back to the row instead of leaving it stale until a manual reload.
 - Verified live on Purelypep Factory's KPV rows: $0.42/$0.35/$0.26 for the 10mg 1/10/50-kit tiers, matching price_usd/(kit_vial_count*dose); confirmed no console errors after the fix.
+
+## [2026-07-12] feature | Inline XLSX preview on the Files tab (backlog #62)
+
+- User noted xlsx (already a supported file_type) had no in-browser preview on the Files tab, unlike pdf/image/csv, and pointed at the export-side php_xlsxwriter dependency as the reason to expect this was possible -- that library only writes xlsx, doesn't help read an uploaded one.
+- Followed the same pattern already established for PDF preview (pdfjs-dist, client-side npm library rendering into the shared .view-card modal): added a client-side xlsx parser and a new branch in FilesTab.vue's viewFile(), rendering each sheet as an HTML table with a tab switcher for multi-sheet workbooks.
+- Security check before picking a library: the npm-registry xlsx (SheetJS) package is stuck at 0.18.5 with 2 unpatched HIGH-severity advisories (prototype pollution, ReDoS) -- SheetJS only ships fixes via their own CDN now. Chose exceljs instead (MIT, actively maintained, npm audit clean besides a pre-existing dev-only Vite/esbuild issue) since this parses vendor-submitted, semi-untrusted files.
+- Debugged a real timing issue during verification: a ~26KB/342-row file took ~8-9 seconds to parse client-side; checking too early made it look completely broken with no error. Added a "Parsing spreadsheet..." loading state.
+- Verified live on 2 real vendor files: a single-sheet workbook rendered its full product table correctly; a 2-sheet workbook (one sheet hidden in Excel) showed both sheet tabs with real content once parsing completed.
+
+## [2026-07-12] feature | $/unit on Inventory tab, self-caught admin-panel crash (backlog #61)
+
+- User asked to add $/unit display to the Inventory tab. price_per_unit already existed on pc_prices and was already computed correctly on write, just never selected/shown. Added to vendors/show.php's query and a new column in InventoryTab.vue.
+- Self-caught bug: PDO returns DECIMAL columns as strings, and the new price_per_unit.toFixed() call threw, crashing the entire AdminView render tree (price_usd never hit this since its v-model.number binding coerces strings; a read-only display has no such coercion). Fixed by casting to float server-side.
+- Also kept the column fresh after edits: prices/update.php now returns the recomputed price_per_unit, InventoryTab.vue applies it back to the row instead of going stale until reload.
+- Verified live on Purelypep's KPV rows and confirmed no console errors remained.
