@@ -53,7 +53,7 @@ if (array_key_exists('tier_kit_size', $d) && (int)$d['tier_kit_size'] >= 1 && (i
 }
 if (array_key_exists('vendor_sku', $d)) {
     $fields[] = 'vendor_sku = ?';
-    $vals[]   = trim((string)$d['vendor_sku']) ?: null;
+    $vals[]   = trim((string)$d['vendor_sku']);
 }
 if (array_key_exists('non_standard_kit', $d)) {
     $fields[] = 'non_standard_kit = ?';
@@ -65,9 +65,9 @@ $vals[] = $id;
 try {
     db()->prepare('UPDATE pc_prices SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);
 } catch (Throwable $e) {
-    // Most likely uq_price (vendor_id, product_id, specification_id, tier_kit_size)
-    // if the edited tier_kit_size collides with another existing line.
-    jsonResponse(['error' => 'Update failed — check for a duplicate tier size on this vendor/spec.', 'message' => $e->getMessage()], 409);
+    // Most likely uq_price (vendor_id, product_id, specification_id, tier_kit_size, vendor_sku)
+    // if the edited tier_kit_size/vendor_sku collides with another existing line.
+    jsonResponse(['error' => 'Update failed — check for a duplicate tier size/SKU on this vendor/spec.', 'message' => $e->getMessage()], 409);
 }
 
 // Only a real price/kit-count change is a history event — a re-save of the

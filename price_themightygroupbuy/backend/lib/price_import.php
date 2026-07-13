@@ -102,16 +102,20 @@ function logPriceHistory(
 function commitPriceRow(
     PDO $pdo, int $vendorId, int $productId, int $specId,
     float $price, float $numericValue, int $kitCount, int $tierKitSize, bool $nonStandard, ?int $sourceFileId,
-    ?string $vendorSku = null
+    string $vendorSku = ''
 ): bool {
     // Snapshot the pre-overwrite state before the upsert destroys it — this
-    // is the exact match the UNIQUE key (vendor, product, spec, tier) would
-    // update, so it's also the row a "price changed" event is relative to.
+    // is the exact match the UNIQUE key (vendor, product, spec, tier, sku)
+    // would update, so it's also the row a "price changed" event is relative
+    // to. vendor_sku is part of the match: two different real SKUs at the
+    // same product/spec/tier (a vendor genuinely listing an item twice under
+    // different catalog codes) are different listings, not one flapping
+    // price — without this, the second one silently overwrote the first.
     $existing = $pdo->prepare(
         'SELECT price_usd, price_per_unit, kit_vial_count FROM pc_prices
-         WHERE vendor_id = ? AND product_id = ? AND specification_id = ? AND tier_kit_size = ? LIMIT 1'
+         WHERE vendor_id = ? AND product_id = ? AND specification_id = ? AND tier_kit_size = ? AND vendor_sku = ? LIMIT 1'
     );
-    $existing->execute([$vendorId, $productId, $specId, $tierKitSize]);
+    $existing->execute([$vendorId, $productId, $specId, $tierKitSize, $vendorSku]);
     $prior = $existing->fetch();
 
     $newPricePerUnit = pricePerUnit($price, $kitCount, $numericValue);
@@ -120,11 +124,11 @@ function commitPriceRow(
         'INSERT INTO pc_prices (vendor_id, product_id, specification_id, price_usd, price_per_unit, kit_vial_count, tier_kit_size, vendor_sku, non_standard_kit, source_file_id, is_active)
          VALUES (?,?,?,?,?,?,?,?,?,?,1)
          ON DUPLICATE KEY UPDATE price_usd = VALUES(price_usd), price_per_unit = VALUES(price_per_unit),
-           kit_vial_count = VALUES(kit_vial_count), vendor_sku = VALUES(vendor_sku), non_standard_kit = VALUES(non_standard_kit),
+           kit_vial_count = VALUES(kit_vial_count), non_standard_kit = VALUES(non_standard_kit),
            source_file_id = VALUES(source_file_id), is_active = 1, created_at = NOW()'
     )->execute([
         $vendorId, $productId, $specId, $price, $newPricePerUnit,
-        $kitCount, $tierKitSize, $vendorSku ?: null, $nonStandard ? 1 : 0, $sourceFileId,
+        $kitCount, $tierKitSize, $vendorSku, $nonStandard ? 1 : 0, $sourceFileId,
     ]);
 
     $priceChanged = !$prior

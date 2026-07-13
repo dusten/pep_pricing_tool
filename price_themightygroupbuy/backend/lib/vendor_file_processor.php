@@ -135,7 +135,7 @@ function commitExtractionResult(array $file, array $result): array {
             // overwriting or losing the genuine tier-1 price). Column is a plain
             // SMALLINT UNSIGNED — just floor/ceiling it to that range.
             $tierSize    = min(65535, max(1, (int)($p['tier_kit_size'] ?? 1)));
-            $vendorSku   = trim((string)($p['vendor_sku'] ?? '')) ?: null;
+            $vendorSku   = trim((string)($p['vendor_sku'] ?? ''));
             $nonStandard = !empty($p['non_standard_kit']);
 
             $productId = findExactProductMatch($pdo, $name);

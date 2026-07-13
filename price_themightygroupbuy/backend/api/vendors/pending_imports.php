@@ -76,7 +76,7 @@ $kitCount     = (int)$field('kit_vial_count', 10);
 // See vendor_file_processor.php — tier breakpoints are vendor-defined, not
 // fixed to 1/10/100; clamp to the SMALLINT UNSIGNED column range only.
 $tierSize     = min(65535, max(1, (int)$field('tier_kit_size', 1)));
-$vendorSku    = trim((string)$field('vendor_sku', '')) ?: null;
+$vendorSku    = trim((string)$field('vendor_sku', ''));
 $nonStandard  = !empty($field('non_standard_kit', false));
 $isRawMaterial = !empty($field('is_raw_material', false));
 $mappedProduct = (int)($body['product_id'] ?? 0) ?: null;
@@ -146,7 +146,7 @@ foreach ($others->fetchAll() as $other) {
             $oPrice, $oValue, (int)($o['kit_vial_count'] ?? 10),
             min(65535, max(1, (int)($o['tier_kit_size'] ?? 1))),
             !empty($o['non_standard_kit']), (int)$other['vendor_file_id'],
-            trim((string)($o['vendor_sku'] ?? '')) ?: null
+            trim((string)($o['vendor_sku'] ?? ''))
         );
         $pdo->prepare('UPDATE pc_pending_imports SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?')
             ->execute(['approved', $admin['id'], $other['id']]);
