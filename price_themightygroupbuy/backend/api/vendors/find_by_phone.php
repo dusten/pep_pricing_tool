@@ -4,14 +4,14 @@ require_once dirname(__DIR__, 2) . '/config.php';
 require_once dirname(__DIR__, 2) . '/helpers.php';
 require_once dirname(__DIR__, 2) . '/lib/vendor_helpers.php';
 
-// GET /vendors/find-by-phone?phone=... — reuses the same phone-match helper
-// already powering parse-intake's "this looks like an existing vendor"
-// check, as a standalone lookup for the Vendors tab's phone search box.
+// GET /vendors/find-by-phone?phone=... — substring match on digits (e.g. last 4)
+// for the Vendors tab's manual search box. Returns every vendor whose phone
+// contains the query; the caller auto-selects on a single match and shows a
+// picker otherwise.
 method('GET');
 requireAdmin();
 
 $phone = trim((string)($_GET['phone'] ?? ''));
 if ($phone === '') jsonResponse(['error' => 'phone is required.'], 422);
 
-$vendor = findVendorByPhone(db(), [$phone]);
-jsonResponse(['vendor' => $vendor]);
+jsonResponse(['vendors' => findVendorsByPhoneSubstring(db(), $phone)]);

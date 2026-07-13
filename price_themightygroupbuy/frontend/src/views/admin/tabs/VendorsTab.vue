@@ -8,6 +8,13 @@
       </button>
     </div>
 
+    <div class="card" v-if="phoneMatches.length" style="max-width:320px">
+      <div style="margin-bottom:4px; font-size:12.5px; color:var(--text-secondary)">{{ phoneMatches.length }} vendors match:</div>
+      <button v-for="v in phoneMatches" :key="v.id" class="btn btn-ghost btn-sm" style="display:block;width:100%;text-align:left" @click="pickPhoneMatch(v)">
+        {{ v.display_name }} — {{ v.phone }}
+      </button>
+    </div>
+
     <div class="card intake-form">
       <div class="field-row">
         <select v-model="selectedVendorId" @change="onSelectVendor">
@@ -208,6 +215,7 @@ const prices              = ref([])
 const showHidden          = ref(false)
 const phoneSearch          = ref('')
 const searchingPhone       = ref(false)
+const phoneMatches         = ref([])
 
 async function load() {
   const res = await get(`/api/vendors${showHidden.value ? '?include_hidden=1' : ''}`)
@@ -253,24 +261,34 @@ async function onSelectVendor() {
   parseNote.value = ''
 }
 
-// Reuses the same phone-match helper already powering parse-intake's
-// "this looks like an existing vendor" check, as a standalone lookup.
+// Substring match (e.g. last 4 digits) so a partial number is enough — auto-loads
+// on a single hit, shows a small picker when the digits match more than one vendor.
 async function searchByPhone() {
   const phone = phoneSearch.value.trim()
   if (!phone) return
   searchingPhone.value = true
+  phoneMatches.value = []
   try {
     const res = await get(`/api/vendors/find-by-phone?phone=${encodeURIComponent(phone)}`)
-    if (res.vendor) {
-      selectedVendorId.value = res.vendor.id
+    if (res.vendors.length === 1) {
+      selectedVendorId.value = res.vendors[0].id
       await onSelectVendor()
       phoneSearch.value = ''
+    } else if (res.vendors.length > 1) {
+      phoneMatches.value = res.vendors
     } else {
       toast.push('No vendor found for that phone number.', 'info', 2500)
     }
   } finally {
     searchingPhone.value = false
   }
+}
+
+async function pickPhoneMatch(v) {
+  selectedVendorId.value = v.id
+  await onSelectVendor()
+  phoneSearch.value = ''
+  phoneMatches.value = []
 }
 
 async function copyTemplate() {

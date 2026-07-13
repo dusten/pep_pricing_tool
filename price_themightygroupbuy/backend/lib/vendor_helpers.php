@@ -80,6 +80,28 @@ function findVendorByPhone(PDO $pdo, array $phones): ?array {
     return null;
 }
 
+/**
+ * Substring match on digits only (e.g. last 4 of a phone number) — separate from
+ * findVendorByPhone()'s exact last-10-digit match, which import dedup relies on and
+ * must stay strict. This is for the Vendors tab's manual search box, where a partial
+ * number is expected and multiple hits are fine (caller shows a picker).
+ */
+function findVendorsByPhoneSubstring(PDO $pdo, string $query): array {
+    $digits = preg_replace('/\D+/', '', $query) ?? '';
+    if (strlen($digits) < 3) return [];
+
+    $rows = $pdo->query('SELECT vp.phone, v.id, v.display_name FROM pc_vendor_phones vp JOIN pc_vendors v ON v.id = vp.vendor_id ORDER BY v.display_name')->fetchAll();
+    $matches = [];
+    $seen = [];
+    foreach ($rows as $row) {
+        if (str_contains(preg_replace('/\D+/', '', $row['phone']) ?? '', $digits) && !isset($seen[$row['id']])) {
+            $matches[] = ['id' => (int)$row['id'], 'display_name' => $row['display_name'], 'phone' => $row['phone']];
+            $seen[$row['id']] = true;
+        }
+    }
+    return $matches;
+}
+
 /** Fetches a vendor's phone numbers and payment methods for a show/detail response. */
 function loadVendorPhonesAndPaymentMethods(PDO $pdo, int $vendorId): array {
     $phones = $pdo->prepare('SELECT phone FROM pc_vendor_phones WHERE vendor_id = ? ORDER BY id');
