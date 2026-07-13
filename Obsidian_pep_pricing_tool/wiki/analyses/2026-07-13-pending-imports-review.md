@@ -77,8 +77,24 @@ wording so both vendors converge on the same spec instead of fragmenting):
 - Verified with a database-wide check (`pc_prices.product_id != pc_specifications.product_id`
   across all active rows, not just products 33/55): 0 mismatches.
 
+## Resolved: N-Acetyl Semax Amidate duplicate (2026-07-13)
+
+Confirmed genuinely the same molecule, not just a wording coincidence: the pending rows'
+own vendor (Changsha Xjun, `id 27`) carried no CAS number, but existing product 367 "NA
+Semax amidate" has CAS `2920938-90-3`, which matches the earlier CAS/MW research that
+identified this exact compound — and no other `%semax%` product in the catalog fit
+(`46 "Semax"` is the un-acetylated parent compound, a distinct molecule; `313 "Semax +
+Selank combo"` is unrelated).
+
+Approved both pending rows (2891 "5mg" $50, 2892 "10mg" $75) via the pending-imports
+approve endpoint with `product_id` overridden to 367 and `canonical_name` normalized to
+match the existing product exactly. Product 367 had no existing 5mg/10mg specs, so these
+landed as clean new specs (1308, 1309) rather than needing a `spec_move.php` merge — no
+duplicate product was created, confirmed by re-querying for any `%N-Acetyl%`/`%semax%`
+product afterward.
+
 ## Not yet acted on
 
-The remaining findings (Semax duplicate, generic "water" entries, botched "1mg/ml"→B12
-extraction, "Adamax" 1032 Da lead) are still open — flagged to the user for a decision on
-each, not acted on unless asked.
+The remaining findings (generic "water" entries, botched "1mg/ml"→B12 extraction, "Adamax"
+1032 Da lead) are still open — flagged to the user for a decision on each, not acted on
+unless asked.
