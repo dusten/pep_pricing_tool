@@ -47,6 +47,7 @@
           </label>
           <button class="btn btn-primary btn-sm" @click="approveImport">Approve</button>
           <button class="btn btn-ghost btn-sm" @click="rejectImport">Reject</button>
+          <button class="btn btn-ghost btn-sm" title="Come back to this one later — moves it to the back of the queue instead of approving or rejecting" @click="skipImport">Skip</button>
         </div>
       </div>
       <p v-if="approveMsg" class="text-sm text-success approve-msg">{{ approveMsg }}</p>
@@ -182,6 +183,15 @@ async function approveImport() {
 async function rejectImport() {
   try {
     await post(`/api/vendors/pending-imports/${importRow.value.id}/reject`, {})
+  } catch (err) {
+    toast.error(err.message)
+    return
+  }
+  await loadImport()
+}
+async function skipImport() {
+  try {
+    await post(`/api/vendors/pending-imports/${importRow.value.id}/skip`, {})
   } catch (err) {
     toast.error(err.message)
     return

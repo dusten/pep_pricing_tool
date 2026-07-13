@@ -409,6 +409,7 @@ CREATE TABLE IF NOT EXISTS pc_pending_imports (
   reviewed_by          INT UNSIGNED NULL,
   reviewed_at          DATETIME NULL,
   created_at           DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_skipped_at      DATETIME NULL,        -- "Skip" sends this row to the back of the FIFO queue instead of resolving it
   FOREIGN KEY (vendor_file_id) REFERENCES pc_vendor_files(id) ON DELETE CASCADE,
   FOREIGN KEY (vendor_id) REFERENCES pc_vendors(id) ON DELETE CASCADE,
   INDEX (status, created_at)

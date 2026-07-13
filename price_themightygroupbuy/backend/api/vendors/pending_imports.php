@@ -10,6 +10,10 @@ require_once dirname(__DIR__, 2) . '/lib/price_import.php';
 //   — product_id: existing product to map onto, omit to create/match by canonical_name.
 //   — everything else: admin edits from the review card; omit a key to keep the extracted value.
 // POST /vendors/pending-imports/{id}/reject
+// POST /vendors/pending-imports/{id}/skip — defers the decision: row stays
+//   'pending' (still counts toward "remaining") but drops to the back of
+//   the queue via last_skipped_at, so the next GET shows a different row
+//   instead of the identical one.
 method('GET', 'POST');
 $admin  = requireAdmin();
 $id     = isset($PARAMS['id']) ? (int)$PARAMS['id'] : null;
@@ -26,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
          JOIN pc_vendor_files vf ON vf.id = pi.vendor_file_id
          LEFT JOIN pc_products cp ON cp.id = pi.candidate_product_id
          WHERE pi.status = 'pending'
-         ORDER BY pi.created_at ASC
+         ORDER BY (pi.last_skipped_at IS NOT NULL) ASC, pi.last_skipped_at ASC, pi.created_at ASC
          LIMIT 1"
     );
     $stmt->execute();
@@ -41,8 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     jsonResponse($row);
 }
 
-// ── POST approve/reject ──────────────────────────────────────────
-if (!$id || !in_array($action, ['approve', 'reject'], true)) {
+// ── POST approve/reject/skip ─────────────────────────────────────
+if (!$id || !in_array($action, ['approve', 'reject', 'skip'], true)) {
     jsonResponse(['error' => 'Not found.'], 404);
 }
 
@@ -58,6 +62,12 @@ if ($action === 'reject') {
         ->execute(['rejected', $admin['id'], $id]);
     logAdminAction((int)$admin['id'], 'reject_pending_import', ['pending_import_id' => $id]);
     jsonResponse(['message' => 'Rejected.']);
+}
+
+if ($action === 'skip') {
+    $pdo->prepare('UPDATE pc_pending_imports SET last_skipped_at = NOW() WHERE id = ?')->execute([$id]);
+    logAdminAction((int)$admin['id'], 'skip_pending_import', ['pending_import_id' => $id]);
+    jsonResponse(['message' => 'Skipped — moved to the back of the queue.']);
 }
 
 // approve — body may include edited values (admin corrected something in the
