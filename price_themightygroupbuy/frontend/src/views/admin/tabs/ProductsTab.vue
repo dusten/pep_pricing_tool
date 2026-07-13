@@ -58,7 +58,11 @@
             <span v-for="a in aliasesFor(p)" :key="a.id" class="chip">
               {{ a.alias }} <button class="chip-x" @click="removeAlias(p, a)">×</button>
             </span>
-            <button class="btn btn-ghost btn-sm" @click="addAlias(p)">+ alias</button>
+            <template v-if="addingAliasFor === p.id">
+              <input ref="aliasInputEl" v-model="newAliasText" placeholder="alias…" style="width:110px"
+                     @keyup.enter="submitAlias(p)" @keyup.esc="cancelAlias" @blur="submitAlias(p)" />
+            </template>
+            <button v-else class="btn btn-ghost btn-sm" @click="startAlias(p)">+ alias</button>
           </td>
           <td>{{ p.vendor_count }}</td>
           <td>
@@ -107,7 +111,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, nextTick } from 'vue'
 import { get, post, put, del } from '@/utils/api.js'
 import { useToastStore } from '@/stores/toast.js'
 
@@ -230,8 +234,26 @@ async function mergeSpec(spec, targetSpecId) {
   await refreshEditingSpecs()
 }
 
-async function addAlias(p) {
-  const alias = prompt('New alias for ' + p.canonical_name + ':')
+// Inline text input in place of the "+ alias" button, matching how every
+// other field on this tab edits in-place — a native prompt() can't be
+// styled, blocks the tab, and looks out of place next to the rest of the row.
+const addingAliasFor = ref(null) // product id currently showing the input, or null
+const newAliasText   = ref('')
+const aliasInputEl    = ref(null)
+
+async function startAlias(p) {
+  addingAliasFor.value = p.id
+  newAliasText.value = ''
+  await nextTick()
+  aliasInputEl.value?.[0]?.focus() // v-for + ref gives an array; only one is ever rendered at a time
+}
+function cancelAlias() {
+  addingAliasFor.value = null
+}
+async function submitAlias(p) {
+  if (addingAliasFor.value !== p.id) return // already closed via Escape or a prior Enter — avoid double-submit from the trailing blur
+  const alias = newAliasText.value.trim()
+  addingAliasFor.value = null
   if (!alias) return
   await post(`/api/products/${p.id}/aliases`, { alias })
   await load()
