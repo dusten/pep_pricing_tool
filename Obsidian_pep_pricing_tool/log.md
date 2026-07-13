@@ -673,3 +673,8 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Replaced with an inline text input: clicking "+ alias" swaps the button for a focused text input in the same cell, Enter submits, Escape cancels, blur also submits (so clicking away doesn't lose typed text) -- guarded against a double-submit race between Enter and its trailing blur by checking the row is still the active one before committing.
 - Noted but not fixed (same file): addNewClassification()'s "+ new tag" flow uses the identical prompt() pattern, out of the scope actually asked.
 - Verified live: added and confirmed a test alias via Enter, confirmed Escape discards without saving, cleaned up afterward.
+
+## [2026-07-12] feature | Replace native prompt() with inline input for "+ new tag" too
+
+- User confirmed converting addNewClassification()'s "+ new tag" flow to the same inline-input pattern just built for aliases. Only shows inside editingId===p.id (one row edits at a time), so a plain boolean state sufficed rather than per-product keying. Same Enter/Escape/blur handling; reset on startEdit()/cancelEdit() so an unfinished tag input can't leak between rows.
+- Verified live: created a test classification via Enter, confirmed it appeared as a selectable chip, cancelled the edit (discards the product assignment without a DB write), then deleted the now-orphaned classification row directly since no DELETE endpoint exists for classifications (creating one is committed immediately via POST, independent of Save/Cancel on the product edit).

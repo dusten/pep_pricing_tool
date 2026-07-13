@@ -48,7 +48,9 @@
                 <option value="">+ classification…</option>
                 <option v-for="c in classifications.filter(c => !editForm.classification_ids.includes(c.id))" :key="c.id" :value="c.id">{{ c.name }}</option>
               </select>
-              <button class="btn btn-ghost btn-sm" @click="addNewClassification">+ new tag</button>
+              <input v-if="addingTag" ref="tagInputEl" v-model="newTagText" placeholder="new tag…" style="width:100px"
+                     @keyup.enter="submitTag" @keyup.esc="cancelTag" @blur="submitTag" />
+              <button v-else class="btn btn-ghost btn-sm" @click="startTag">+ new tag</button>
             </template>
             <template v-else>
               <span v-for="c in classificationsFor(p)" :key="c.id" class="chip">{{ c.name }}</span>
@@ -150,8 +152,25 @@ function specsFor(p) { return detail[p.id]?.specifications || [] }
 function classificationsFor(p) { return detail[p.id]?.classifications || [] }
 function classificationName(id) { return classifications.value.find(c => c.id === id)?.name || '…' }
 
-async function addNewClassification() {
-  const name = prompt('New classification name:')
+// Same inline-input replacement as the alias "+" button — only one row can
+// be in edit mode at a time (editingId), so a plain boolean is enough here.
+const addingTag = ref(false)
+const newTagText = ref('')
+const tagInputEl  = ref(null)
+
+async function startTag() {
+  addingTag.value = true
+  newTagText.value = ''
+  await nextTick()
+  tagInputEl.value?.[0]?.focus()
+}
+function cancelTag() {
+  addingTag.value = false
+}
+async function submitTag() {
+  if (!addingTag.value) return // already closed via Escape — avoid double-submit from the trailing blur
+  const name = newTagText.value.trim()
+  addingTag.value = false
   if (!name) return
   const res = await post('/api/classifications', { name })
   await loadClassifications()
@@ -173,10 +192,12 @@ function startEdit(p) {
   editForm.classification_ids = classificationsFor(p).map(c => c.id)
   editForm.cas_number = p.cas_number || ''
   editForm.molecular_weight = p.molecular_weight
+  addingTag.value = false // a previous row's unfinished "+ new tag" input shouldn't carry over
   loadSpecs(p)
 }
 function cancelEdit() {
   editingId.value = null
+  addingTag.value = false
 }
 async function saveEdit(p) {
   if (!editForm.canonical_name.trim()) return
