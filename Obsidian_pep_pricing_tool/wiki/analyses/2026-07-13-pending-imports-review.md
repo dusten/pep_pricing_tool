@@ -39,13 +39,16 @@ same day, **Changsha Xjun Techonology** (`id 27`, one file: `USD最新4.0.xlsx`)
 - **Botched extraction**: one row's `canonical_name` is literally `"1mg/ml"` (a concentration
   string, not a product name), but its own `vendor_sku` is `"B12"` — almost certainly meant
   to map onto the existing B12 product, just extracted wrong.
-- **New research lead for an old open question**: `wiki/analyses/2026-07-12-product-cas-mw-research.md`
-  flagged "Adamax" as genuinely unidentifiable (conflicting vendor descriptions — sometimes
-  a Semax-adamantane analog, sometimes a proprietary GH-secretagogue blend). This pending
-  row's own text includes `"1032 da"` (1032 Daltons) — a real, previously-unavailable data
-  point that could help resolve that identity question with a future targeted search.
+- **New research lead for an old open question — resolved 2026-07-13**:
+  `wiki/analyses/2026-07-12-product-cas-mw-research.md` flagged "Adamax" as genuinely
+  unidentifiable (conflicting vendor descriptions — sometimes a Semax-adamantane analog,
+  sometimes a proprietary GH-secretagogue blend). This pending row's own text included
+  `"1032 da"` (1032 Daltons), which turned out to be exactly the data point needed:
+  confirmed via a Janoshik COA-verification article as a Semax-adamantane analog, MW
+  1032.24. See [[wiki/analyses/2026-07-13-product-cas-mw-followup]].
 - **Genuinely new compound**, not a data-quality issue: `Eloralintide` (10mg/15mg) — a real
-  amylin-analog peptide (CagriSema-adjacent, Novo Nordisk), not yet in the catalog at all.
+  amylin-analog peptide (CagriSema-adjacent). Corrected in the CAS/MW follow-up pass: it's
+  an Eli Lilly compound (LY3841136), not Novo Nordisk as first noted here.
 - Everything else in Changsha Xjun's `name_mismatch` batch is OCR-style typos already
   correctly caught by the fuzzy matcher (`SS·31`→SS-31, `MelanotanI`/`Melanotan Il`→Melanotan
   1/2, `Kisspetin-10`→Kisspeptin-10, `Triptorelln Acetate`→Triptorelin Acetate, `Slupp-322`→

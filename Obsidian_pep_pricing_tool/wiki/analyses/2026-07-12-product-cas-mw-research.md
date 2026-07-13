@@ -107,3 +107,40 @@ products — worth a look next time a duplicate-cleanup pass runs.
 Verified live: `SELECT COUNT(*) ... SUM(cas_number IS NOT NULL), SUM(molecular_weight IS
 NOT NULL)` → 117 / 116 across 195 total products; spot-checked the GHK-Cu/GHK basic
 distinction and several other rows directly on the Comparison page.
+
+## Follow-up pass (2026-07-13) — new products since this pass, + a near-miss
+
+The catalog grew from 195 to 232 products between this pass and 2026-07-13 (mostly the
+Changsha Xjun vendor import and several steroid-ester additions), leaving 116 products
+missing CAS/MW again — this time from a fresh gap, not a re-opening of anything above.
+
+A forked research pass (triggered by [[wiki/analyses/2026-07-13-pending-imports-review]]'s
+"Adamax 1032 Da" lead) went through all 116, filtered out blends/diluents/biologics the
+same way this page already established, and returned ~35 confident single-compound
+matches. **Before writing, cross-referencing against this page caught 19 of those as
+direct conflicts with the more careful research already done above** — the new pass used
+weaker "vendor consensus" sourcing and re-proposed exactly the values this page's dedicated
+research had already investigated and rejected: MGF, CJC-1295 with DAC, P21/P021,
+N-Acetyl Epitalon Amidate (would have reused Epitalon's own CAS again), the entire
+Khavinson bioregulator family (Cardiogen/Cortagen/Crystagen/Bronchogen/Testagen/
+Pancragen/Prostamax/Chonluten/Ovagen/Vesugen/Cartalax), DHB (same base-vs-ester CAS/MW
+conflation this page already flagged), NA Selank amidate, Thymalin (this page had
+classified it as a multi-peptide extract mixture, not a single compound), and B12
+(vendor form ambiguous — cyanocobalamin vs. methylcobalamin, unresolved here too). All 19
+were written and then reverted to NULL/NULL within the same session once caught — no bad
+data persisted. **Lesson for next time: check this page (or an index of it) before
+re-running fresh CAS/MW research, not after.**
+
+The remaining 31 were genuinely new (steroid esters added after this pass — Nandrolone
+Decanoate, Methenolone Enanthate, Stanozolol, Boldenone Undecylenate/Cypionate,
+Trenbolone Acetate/Enanthate, Superdrol, Metribolone, Estradiol Cypionate, Testosterone
+Propionate — plus B12, NAD+, Eloralintide, KPV, TB500(Thymosin B4 Acetate), Thymosin
+Beta-4 Fragment 17-23, HCG/HMG/Cerebrolysin/hyaluronic acid/ACE-031 CAS-only, and Adamax)
+and were written with no conflict against this page. Full details, sourcing, and the
+Adamax/Follistatin identity resolutions in
+[[wiki/analyses/2026-07-13-product-cas-mw-followup]].
+
+Also surfaced, not acted on: id 405 "Thymosin Beta-4 Fragment 17-23" (MW 889.02) may be a
+third catalog entry for the same real fragment molecule already harmonized across ids 2
+"TB-500" and 359 "TB500(Frag)" above — worth a duplicate-merge look, same pattern as the
+Semax and FST-344 cases from [[wiki/analyses/2026-07-13-pending-imports-review]].
