@@ -703,6 +703,13 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Added pc_pending_imports.last_skipped_at (migration 031) and a new skip action alongside approve/reject -- status stays 'pending' (Remaining count correctly unaffected) but last_skipped_at=NOW() sends it to the back. Reordered the GET query so never-skipped rows always surface first in original order, previously-skipped rows come after oldest-skip-first, so the queue cycles back around instead of a skip becoming permanent.
 - Verified live: skipping the oldest pending row advanced the queue to the next one, Remaining stayed at 108, and a DB check confirmed the skipped row kept status='pending' with last_skipped_at set.
 
+## [2026-07-13] feature | Substring phone search on the Vendors tab
+
+- User wanted to search by just the last 4 digits of a vendor's phone (backlog #65's exact-last-10-digit match was too strict for manual search).
+- findVendorByPhone() (used by parse-intake's dedup check) had to stay exact -- loosening it to substring would risk false-positive vendor matches during automated import. Added a separate findVendorsByPhoneSubstring() helper (min 3 digits, LIKE-style digit-only substring match) instead of changing the shared one.
+- find-by-phone.php now returns a list of every matching vendor rather than a single result. Frontend: 0 matches -> toast, 1 match -> auto-loads as before, 2+ matches -> a small picker list appears under the search box.
+- Verified live: searching a vendor's last 4 digits ("2602") auto-loaded the correct vendor; searching a shared prefix ("852") showed a 12-vendor picker, and clicking an entry loaded it correctly.
+
 ## [2026-07-13] fix | LC1201 Lipo-C misfiling (flagged in the pending-imports review above)
 
 - Acted on the "real risk of repeating the Lipo-C misfiling bug" finding from the same-day queue review: pending row 2835 (Jenny Peptide, LC1201, $80) suggested product 33 "Lipo-c" (no-B12), but LC1201's own ingredient list includes B12 -- belongs on product 55 "Lipo-C with B12" instead.
