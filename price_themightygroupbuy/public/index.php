@@ -125,6 +125,7 @@ $ROUTES = [
     'perf'                 => 'perf.php',
     'vendors'                 => 'vendors/index.php',
     'vendors/parse-intake'    => 'vendors/parse_intake.php',
+    'vendors/find-by-phone'   => 'vendors/find_by_phone.php',
     'vendors/pending-imports' => 'vendors/pending_imports.php',
     'files/process-all'      => 'files/process_all.php',
     'coa/submit'              => 'coa/submit.php',

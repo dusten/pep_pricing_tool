@@ -22,6 +22,7 @@ export const useToastStore = defineStore('toast', () => {
   return {
     toasts,
     remove,
+    push, // exposed for callers that need a non-default duration
     error:   (message) => push(message, 'error', 3500),
     success: (message) => push(message, 'success', 3500),
     info:    (message) => push(message, 'info', 3500),

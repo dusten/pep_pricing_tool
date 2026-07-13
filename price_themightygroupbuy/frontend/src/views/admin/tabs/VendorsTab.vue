@@ -2,6 +2,10 @@
   <div>
     <div class="toolbar">
       <button class="btn btn-accent btn-sm" @click="startNew">+ New vendor</button>
+      <input v-model="phoneSearch" placeholder="Search by phone…" style="max-width:160px" @keyup.enter="searchByPhone" />
+      <button class="btn btn-ghost btn-sm" :disabled="!phoneSearch.trim() || searchingPhone" @click="searchByPhone">
+        {{ searchingPhone ? 'Searching…' : 'Search' }}
+      </button>
     </div>
 
     <div class="card intake-form">
@@ -202,6 +206,8 @@ const uploadDone         = ref(0)
 const files              = ref([])
 const prices              = ref([])
 const showHidden          = ref(false)
+const phoneSearch          = ref('')
+const searchingPhone       = ref(false)
 
 async function load() {
   const res = await get(`/api/vendors${showHidden.value ? '?include_hidden=1' : ''}`)
@@ -245,6 +251,26 @@ async function onSelectVendor() {
   await loadVendorIntoForm(selectedVendorId.value)
   pasteText.value = ''
   parseNote.value = ''
+}
+
+// Reuses the same phone-match helper already powering parse-intake's
+// "this looks like an existing vendor" check, as a standalone lookup.
+async function searchByPhone() {
+  const phone = phoneSearch.value.trim()
+  if (!phone) return
+  searchingPhone.value = true
+  try {
+    const res = await get(`/api/vendors/find-by-phone?phone=${encodeURIComponent(phone)}`)
+    if (res.vendor) {
+      selectedVendorId.value = res.vendor.id
+      await onSelectVendor()
+      phoneSearch.value = ''
+    } else {
+      toast.push('No vendor found for that phone number.', 'info', 2500)
+    }
+  } finally {
+    searchingPhone.value = false
+  }
 }
 
 async function copyTemplate() {
