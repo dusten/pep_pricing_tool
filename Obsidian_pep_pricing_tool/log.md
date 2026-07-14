@@ -793,3 +793,9 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Added a checkmark to the vendor-checks "Verified" text badge for consistency with the new emoji accents elsewhere.
 - Verified live in both table and list view: chips show emoji, dots render per product, filter bar stays pinned on scroll in both views.
 - Reverted same day: user reported the sticky filter bar doesn't work on mobile. Removed the `position: sticky` from `.filter-bar`, kept the category-chip emoji and per-product dots (those weren't affected).
+
+## [2026-07-14] feature | Comparison List view restructured into a product/spec/vendor accordion
+
+- User wanted List view collapsed to one card per product, click to reveal its specs, click a spec to reveal the vendor list -- was previously a flat card per (product, spec) row with vendors always visible.
+- Added a `groupedProducts` computed (groups filteredRows by product_id), two reactive Sets (expandedProducts/expandedSpecs, keyed by product_id/specification_id so re-filtering doesn't collapse an already-open one), toggleProduct()/toggleSpec(). Moved the +Cart button and avg/median/vendor-count summary down to the spec level (they're per-spec, not per-product). Table (matrix) view untouched -- this only applies to List view, which is the paradigm the request actually matched.
+- Verified live: product card shows spec count collapsed, expands to per-spec summary rows, each spec expands to its vendor list with all the existing icons (⚠ non-standard kit, ★ COA, 🕐 history) intact.
