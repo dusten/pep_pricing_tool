@@ -4,7 +4,7 @@ declare(strict_types=1);
 const VENDOR_PAYMENT_METHODS = [
     'usdt_sol','usdc_sol','usdt_trc20','usdc_trc20','usdt_erc20','usdc_erc20',
     'btc','eth','sol','paypal','wise','alipay','alibaba','wire','western_union',
-    'zelle','cashapp','credit_card','remitly',
+    'zelle','cashapp','credit_card','remitly','pyusd',
 ];
 
 /** Replaces a vendor's phone/payment-method rows from a create/update payload. Shared by vendors/index.php + show.php. */

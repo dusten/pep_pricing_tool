@@ -37,7 +37,7 @@ const VENDOR_PAYMENT_LABEL_ALIASES = [
     'sol' => 'sol', 'solana' => 'sol', 'wise' => 'wise', 'alipay' => 'alipay', 'alibaba' => 'alibaba',
     'wire' => 'wire', 'wire transfer' => 'wire', 'western union' => 'western_union', 'zelle' => 'zelle',
     'cashapp' => 'cashapp', 'cash app' => 'cashapp', 'credit card' => 'credit_card', 'card' => 'credit_card',
-    'remitly' => 'remitly',
+    'remitly' => 'remitly', 'pyusd' => 'pyusd',
 ];
 
 // Tokens vendors use to mean "not applicable" for a field they left blank on
@@ -69,6 +69,7 @@ const VENDOR_PAYMENT_KEYWORDS = [
     'cashapp'      => ['cashapp', 'cash app'],
     'credit_card'  => ['credit card', 'card'],
     'remitly'      => ['remitly'],
+    'pyusd'        => ['pyusd'],
 ];
 
 /** Strips punctuation/parenthetical detail off a template label for lookup. */

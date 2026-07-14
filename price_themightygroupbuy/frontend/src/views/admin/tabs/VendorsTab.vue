@@ -175,7 +175,7 @@ const PAYMENT_METHODS = [
   { value: 'alibaba', label: 'Alibaba' }, { value: 'wire', label: 'Wire transfer' },
   { value: 'western_union', label: 'Western Union' }, { value: 'zelle', label: 'Zelle' },
   { value: 'cashapp', label: 'CashApp' }, { value: 'credit_card', label: 'Credit card' },
-  { value: 'remitly', label: 'Remitly' },
+  { value: 'remitly', label: 'Remitly' }, { value: 'pyusd', label: 'PayPal(PYUSD)' },
 ]
 
 const INTAKE_TEMPLATE = `Vendor Name:
@@ -187,7 +187,7 @@ Telegram:
 Website:
 Phone Number(s):
 Payment Methods (list all that apply — USDT/USDC Solana, USDT/USDC Tron, USDT/USDC ERC20,
-  BTC, ETH, SOL, PayPal, Wise, Alipay, Alibaba, Wire Transfer, Western Union, Zelle, CashApp, Credit Card, Remitly):
+  BTC, ETH, SOL, PayPal, PayPal(PYUSD), Wise, Alipay, Alibaba, Wire Transfer, Western Union, Zelle, CashApp, Credit Card, Remitly):
 Shipping Note (carrier, timeframe, cost tiers):`
 
 function emptyForm() {
