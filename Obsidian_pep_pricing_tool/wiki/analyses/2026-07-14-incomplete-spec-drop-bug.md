@@ -122,3 +122,21 @@ Two real missteps happened while working this, both corrected:
 `pc_pending_imports` `incomplete_spec` rows: 3 (ids for CU50+KPV5, and the two FST 344
 instances) — the actual bug-fix deliverable, sitting in the Review Queue for the user to
 supply a correct spec_label/numeric_value before approving, exactly as the fix intends.
+
+## Second wave of fallout (same day) — garbled product names
+
+The duplicate rows this mishap resurrected weren't all inert clutter — some carried a
+long-standing, separate data-quality issue: a handful of historical extractions (predating
+this session by over a week) had a canonical_name that accumulated every alias variant
+Claude had ever produced across repeated re-processing runs, e.g. `"KLOW (KLOW
+(BPC-157+GHK-Cu+TB-500+KPV), KLOW (TB-500+BPC-157+GHK-Cu+KPV), ...)"` instead of plain
+`"KLOW"`. While the user was actively working through the restored queue, a few of these
+got approved as-is (the review card allows editing the name pre-approval, but these went
+through unedited), creating 3 new duplicate products with garbled names. Found via
+`pc_products.created_at` (all stamped the same day, confirming they were fresh, not
+pre-existing) and fixed via `products/merge.php` back onto the correct existing clean
+products. The remaining still-pending garbled/duplicate rows (12 more, spanning the same
+double-processed files) were individually verified against active `pc_prices` by exact
+vendor+sku+price match before rejecting — all were already-captured duplicates, none a
+genuine gap. See `log.md`'s 2026-07-14 "Garbled product names from the reprocess mishap,
+second wave" entry for the full id list.
