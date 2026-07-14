@@ -134,41 +134,55 @@
       </div>
     </div>
 
-    <!-- Compact list view — each row shows only the vendors that carry it,
-         cheapest first. Far more readable on a phone and for sparse rows than
-         the wide matrix. -->
+    <!-- Compact list view — collapsed to one card per product; click to reveal
+         its specs, click a spec to reveal the vendors carrying it. Far more
+         readable on a phone and for a product with many specs than either the
+         wide matrix or a flat card per spec. -->
     <div v-else class="list-view">
-      <div v-for="row in filteredRows" :key="row.product_id + ':' + row.spec" class="card list-row">
-        <div class="list-head">
+      <div v-for="p in groupedProducts" :key="p.product_id" class="card list-row">
+        <div class="list-head product-head" @click="toggleProduct(p.product_id)">
           <div class="list-title">
-            <span class="product-dot" :style="{ backgroundColor: productDotColor(row.product_id) }"></span>{{ row.product }} <span class="list-spec">{{ row.spec }}</span>
-            <span v-if="row.is_raw_material" class="badge badge-free" title="Raw/bulk powder, not a finished vial">Raw</span>
-            <button v-if="qualifiesForDistribution(row)" class="dist-trigger" title="Price distribution across vendors" @click="openDistribution(row)">📊</button>
-            <div v-if="row.cas_number || row.molecular_weight" class="product-meta">
-              <a v-if="row.cas_number" :href="pubchemUrl(row.cas_number)" target="_blank" rel="noopener" title="View on PubChem">CAS {{ row.cas_number }}</a>
-              <span v-if="row.molecular_weight">{{ row.molecular_weight }} g/mol</span>
+            <span class="product-dot" :style="{ backgroundColor: productDotColor(p.product_id) }"></span>{{ p.product }}
+            <span class="list-spec">{{ p.specs.length }} spec{{ p.specs.length !== 1 ? 's' : '' }}</span>
+            <div v-if="p.cas_number || p.molecular_weight" class="product-meta">
+              <a v-if="p.cas_number" :href="pubchemUrl(p.cas_number)" target="_blank" rel="noopener" title="View on PubChem" @click.stop>CAS {{ p.cas_number }}</a>
+              <span v-if="p.molecular_weight">{{ p.molecular_weight }} g/mol</span>
             </div>
           </div>
-          <button class="btn btn-ghost btn-sm" :disabled="cartKeys.has(row.product_id + ':' + row.specification_id)" @click="addToCart(row)">
-            {{ cartKeys.has(row.product_id + ':' + row.specification_id) ? 'Added' : '+ Cart' }}
-          </button>
+          <span class="expand-arrow">{{ expandedProducts.has(p.product_id) ? '▲' : '▼' }}</span>
         </div>
-        <div class="list-summary">
-          Avg <strong>${{ row.stats.avg.toFixed(2) }}</strong>
-          &nbsp;·&nbsp; Median <strong>{{ row.stats.median === null ? '—' : '$' + row.stats.median.toFixed(2) }}</strong>
-          <span class="list-count">{{ row.vendors.length }} vendor{{ row.vendors.length !== 1 ? 's' : '' }}</span>
-        </div>
-        <div class="list-vendors">
-          <div v-for="v in sortedVendors(row)" :key="v.vendor_id" :class="['list-vendor', { lowest: v.is_lowest }]">
-            <button class="vendor-name-btn list-vendor-name" :title="v.name" @click="openVendorCard(v.vendor_id)">{{ v.name }}</button>
-            <span class="list-vendor-price">
-              ${{ v.price.toFixed(2) }}
-              <span v-if="v.non_standard_kit" class="warn-icon" :title="`Listed as ${v.kit_vial_count}-vial kit — $/unit may not be comparable.`">⚠</span>
-              <span v-if="v.has_coa" class="coa-star" title="Verified COA on file for this product">★</span>
-              <span v-if="v.has_history" class="history-icon" title="Price history available"
-                    @click.stop="openHistory(row, v.vendor_id, $event)">🕐</span>
-              <span v-if="showUnitPricing" class="list-ppu">${{ v.price_per_unit.toFixed(2) }}/unit</span>
-            </span>
+
+        <div v-if="expandedProducts.has(p.product_id)" class="spec-list">
+          <div v-for="row in p.specs" :key="row.specification_id" class="spec-row">
+            <div class="list-summary spec-head" @click="toggleSpec(row.specification_id)">
+              <span>
+                {{ row.spec }}
+                <span v-if="row.is_raw_material" class="badge badge-free" title="Raw/bulk powder, not a finished vial">Raw</span>
+                <button v-if="qualifiesForDistribution(row)" class="dist-trigger" title="Price distribution across vendors" @click.stop="openDistribution(row)">📊</button>
+                &nbsp;·&nbsp; Avg <strong>${{ row.stats.avg.toFixed(2) }}</strong>
+                &nbsp;·&nbsp; Median <strong>{{ row.stats.median === null ? '—' : '$' + row.stats.median.toFixed(2) }}</strong>
+                <span class="list-count">{{ row.vendors.length }} vendor{{ row.vendors.length !== 1 ? 's' : '' }}</span>
+              </span>
+              <span class="spec-head-actions">
+                <button class="btn btn-ghost btn-sm" :disabled="cartKeys.has(row.product_id + ':' + row.specification_id)" @click.stop="addToCart(row)">
+                  {{ cartKeys.has(row.product_id + ':' + row.specification_id) ? 'Added' : '+ Cart' }}
+                </button>
+                <span class="expand-arrow">{{ expandedSpecs.has(row.specification_id) ? '▲' : '▼' }}</span>
+              </span>
+            </div>
+            <div v-if="expandedSpecs.has(row.specification_id)" class="list-vendors">
+              <div v-for="v in sortedVendors(row)" :key="v.vendor_id" :class="['list-vendor', { lowest: v.is_lowest }]">
+                <button class="vendor-name-btn list-vendor-name" :title="v.name" @click="openVendorCard(v.vendor_id)">{{ v.name }}</button>
+                <span class="list-vendor-price">
+                  ${{ v.price.toFixed(2) }}
+                  <span v-if="v.non_standard_kit" class="warn-icon" :title="`Listed as ${v.kit_vial_count}-vial kit — $/unit may not be comparable.`">⚠</span>
+                  <span v-if="v.has_coa" class="coa-star" title="Verified COA on file for this product">★</span>
+                  <span v-if="v.has_history" class="history-icon" title="Price history available"
+                        @click.stop="openHistory(row, v.vendor_id, $event)">🕐</span>
+                  <span v-if="showUnitPricing" class="list-ppu">${{ v.price_per_unit.toFixed(2) }}/unit</span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -280,6 +294,34 @@ watch(viewMode, v => localStorage.setItem('cmp_view', v))
 function sortedVendors(row) {
   return [...row.vendors].sort((a, b) => a.price_per_unit - b.price_per_unit)
 }
+
+// List view is a 3-level accordion: product (collapsed) -> its specs
+// (collapsed) -> that spec's vendors. Both levels start collapsed; state is
+// keyed by id so re-filtering doesn't reset an already-open product/spec.
+const expandedProducts = ref(new Set())
+const expandedSpecs    = ref(new Set())
+function toggleProduct(id) {
+  if (expandedProducts.value.has(id)) expandedProducts.value.delete(id)
+  else expandedProducts.value.add(id)
+}
+function toggleSpec(id) {
+  if (expandedSpecs.value.has(id)) expandedSpecs.value.delete(id)
+  else expandedSpecs.value.add(id)
+}
+const groupedProducts = computed(() => {
+  const map = new Map()
+  for (const row of filteredRows.value) {
+    if (!map.has(row.product_id)) {
+      map.set(row.product_id, {
+        product_id: row.product_id, product: row.product,
+        cas_number: row.cas_number, molecular_weight: row.molecular_weight,
+        specs: [],
+      })
+    }
+    map.get(row.product_id).specs.push(row)
+  }
+  return [...map.values()]
+})
 
 function toggleClassification(id) {
   const i = selectedClassifications.value.indexOf(id)
@@ -456,15 +498,20 @@ tr.odd td.col-avg, tr.odd td.col-median { background: var(--surface-alt); }
 .view-btn { padding: 5px 14px; border: none; background: var(--surface); cursor: pointer; font-size: 12.5px; font-weight: 500; color: var(--text-secondary); }
 .view-btn.active { background: var(--primary); color: var(--text-on-primary); }
 
-/* Compact list view */
+/* Compact list view — 3-level accordion: product -> spec -> vendors */
 .list-view { display: flex; flex-direction: column; gap: 12px; }
 .list-row { padding: 14px 16px; }
-.list-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.list-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.product-head { cursor: pointer; }
 .list-title { font-size: 14.5px; font-weight: 600; }
 .list-spec { color: var(--text-secondary); font-weight: 500; margin-left: 4px; }
-.list-summary { font-size: 12.5px; color: var(--text-secondary); margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
-.list-count { float: right; }
-.list-vendors { display: flex; flex-direction: column; gap: 6px; }
+.expand-arrow { color: var(--text-muted); font-size: 11px; margin-left: 8px; flex-shrink: 0; }
+.spec-list { display: flex; flex-direction: column; margin-top: 10px; padding-top: 4px; border-top: 1px solid var(--border); }
+.spec-row + .spec-row { border-top: 1px solid var(--border); }
+.spec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; padding: 8px 0; font-size: 12.5px; color: var(--text-secondary); }
+.spec-head-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.list-count { margin-left: 8px; }
+.list-vendors { display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; }
 .list-vendor { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; padding: 4px 8px; border-radius: var(--radius-sm); }
 .list-vendor.lowest { background: var(--success-bg); }
 .list-vendor.lowest .list-vendor-price { color: var(--success); font-weight: 700; }
