@@ -140,3 +140,21 @@ double-processed files) were individually verified against active `pc_prices` by
 vendor+sku+price match before rejecting — all were already-captured duplicates, none a
 genuine gap. See `log.md`'s 2026-07-14 "Garbled product names from the reprocess mishap,
 second wave" entry for the full id list.
+
+## Third wave — duplicate active prices via a different vendor_sku
+
+A failure mode neither of the first two waves checked for: when a product+spec **already
+existed** (exact name match), the reprocess never touched `pc_pending_imports` at all — it
+went straight through the exact-match commit path, which keys on `(vendor, product, spec,
+tier, vendor_sku)` per migration 030. Re-extracting an already-committed file sometimes
+produced a different SKU abbreviation for the exact same real listing (e.g. `BC5` vs `BP5`,
+both BPC-157 5mg from Purelypep Factory), which migration 030's own uniqueness design
+treats as a genuinely different listing — inserting a second active price row instead of
+updating the first. User caught this via a vendor appearing twice on the Comparison page.
+Found 24 such groups; 22 matched this pattern across 8 vendors and were fixed (kept the
+lowest-id row per group, deactivated the rest — see `log.md`'s "third wave" entry and
+`migration_scripts/2026-07-14-deactivate_reprocess_duplicate_skus.php`); 2 were a different,
+unrelated issue and left alone. This wave is the clearest evidence yet that a full
+"reprocess every file" sweep has more failure surface than just the pending-queue
+duplication already documented above — a future need to bulk-reprocess should check
+straight-through commits too, not just the pending queue.
