@@ -710,6 +710,16 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - find-by-phone.php now returns a list of every matching vendor rather than a single result. Frontend: 0 matches -> toast, 1 match -> auto-loads as before, 2+ matches -> a small picker list appears under the search box.
 - Verified live: searching a vendor's last 4 digits ("2602") auto-loaded the correct vendor; searching a shared prefix ("852") showed a 12-vendor picker, and clicking an entry loaded it correctly.
 
+## [2026-07-13] audit | Checked other admin tabs for the same too-strict-search pattern
+
+- Follow-up to the phone-search fix above. Swept every admin tab for backend-hitting search/filter fields. Only two others exist: Performance tab's "Filter by path" (exact match against a fixed, small set of static routes -- appropriate, not a bug) and System tab's "Filter by email" (already client-side `.includes()`, substring already works). No other tab has a text search box at all. Nothing else to fix.
+
+## [2026-07-13] feature | Add PayPal(PYUSD) as a vendor payment method
+
+- New `pc_vendor_payment_methods` enum value `pyusd`, added the same way Remitly was (migration 012) -- new migration 013_payment_method_pyusd.sql, schema.sql, VENDOR_PAYMENT_METHODS const, the intake parser's keyword/label maps, the Claude extraction prompt's enum, and the admin checkbox list + intake template text (label: "PayPal(PYUSD)").
+- Deploy gotcha hit and corrected: ran `deploy.sh --sync-files` first, which only rsyncs the existing dist/ build and does NOT run the Vue build -- the new checkbox didn't show up live until re-running plain `deploy.sh` (default build+sync mode).
+- Noticed in passing, not fixed (pre-existing, unrelated to this change): `bash deploy.sh --all`'s schema-sync step aborted on `028_product_cas_mw.sql` ("Duplicate column name 'cas_number'") -- that migration's columns were added out-of-band in an earlier session (raw SQL/live API calls) rather than via migrate.sh, so pc_migrations never recorded it as applied. Migrations 029-031 are live in the DB (confirmed elsewhere this session, e.g. last_skipped_at from #66) but also aren't recorded, so a future `--sync-schema`/`--all` run will hit the same abort at 028 every time until pc_migrations is manually backfilled for 028-031.
+
 ## [2026-07-13] fix | LC1201 Lipo-C misfiling (flagged in the pending-imports review above)
 
 - Acted on the "real risk of repeating the Lipo-C misfiling bug" finding from the same-day queue review: pending row 2835 (Jenny Peptide, LC1201, $80) suggested product 33 "Lipo-c" (no-B12), but LC1201's own ingredient list includes B12 -- belongs on product 55 "Lipo-C with B12" instead.
