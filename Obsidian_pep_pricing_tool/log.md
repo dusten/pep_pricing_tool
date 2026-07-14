@@ -718,7 +718,13 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 
 - New `pc_vendor_payment_methods` enum value `pyusd`, added the same way Remitly was (migration 012) -- new migration 013_payment_method_pyusd.sql, schema.sql, VENDOR_PAYMENT_METHODS const, the intake parser's keyword/label maps, the Claude extraction prompt's enum, and the admin checkbox list + intake template text (label: "PayPal(PYUSD)").
 - Deploy gotcha hit and corrected: ran `deploy.sh --sync-files` first, which only rsyncs the existing dist/ build and does NOT run the Vue build -- the new checkbox didn't show up live until re-running plain `deploy.sh` (default build+sync mode).
-- Noticed in passing, not fixed (pre-existing, unrelated to this change): `bash deploy.sh --all`'s schema-sync step aborted on `028_product_cas_mw.sql` ("Duplicate column name 'cas_number'") -- that migration's columns were added out-of-band in an earlier session (raw SQL/live API calls) rather than via migrate.sh, so pc_migrations never recorded it as applied. Migrations 029-031 are live in the DB (confirmed elsewhere this session, e.g. last_skipped_at from #66) but also aren't recorded, so a future `--sync-schema`/`--all` run will hit the same abort at 028 every time until pc_migrations is manually backfilled for 028-031.
+- Noticed in passing (pre-existing, unrelated to this change): `bash deploy.sh --all`'s schema-sync step aborted on `028_product_cas_mw.sql` ("Duplicate column name 'cas_number'") -- that migration's columns were added out-of-band in an earlier session (raw SQL/live API calls) rather than via migrate.sh, so pc_migrations never recorded it as applied. Migrations 029-031 were live in the DB (last_skipped_at from #66, the tier_kit_size/vendor_sku work) but also unrecorded.
+
+## [2026-07-13] fix | Backfill pc_migrations for 028-031 (deploy cleanup)
+
+- Fixed the gap noted above. Verified each of 028/029/030/031's actual schema effects were genuinely live before touching pc_migrations (checked pc_products.cas_number/molecular_weight, pc_price_history.tier_kit_size, pc_prices.vendor_sku NOT NULL + the rebuilt uq_price index covering vendor_sku, pc_pending_imports.last_skipped_at -- all present and correct) -- did NOT just re-run the migration SQL, which would have failed the same way again.
+- INSERT IGNORE'd the 4 filenames directly into pc_migrations to match what migrate.sh would have recorded had it succeeded originally.
+- Verified: `bash deploy.sh --sync-schema` now reports "31 skipped, 0 applied" with no abort; ran `bash deploy.sh --all` end to end afterward (schema + build + sync + smoke check), all green.
 
 ## [2026-07-13] fix | LC1201 Lipo-C misfiling (flagged in the pending-imports review above)
 
