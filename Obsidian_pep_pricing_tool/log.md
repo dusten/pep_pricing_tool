@@ -792,3 +792,4 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Added a small decorative colored dot before each product name (table + list view), color picked via `product_id % 8` against a fixed 8-color palette -- purely a visual scan aid, explicitly not a second meaning system alongside the classification tags.
 - Added a checkmark to the vendor-checks "Verified" text badge for consistency with the new emoji accents elsewhere.
 - Verified live in both table and list view: chips show emoji, dots render per product, filter bar stays pinned on scroll in both views.
+- Reverted same day: user reported the sticky filter bar doesn't work on mobile. Removed the `position: sticky` from `.filter-bar`, kept the category-chip emoji and per-product dots (those weren't affected).
