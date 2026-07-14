@@ -124,7 +124,21 @@ function commitExtractionResult(array $file, array $result): array {
             $label = trim((string)($p['spec_label'] ?? ''));
             $value = (float)($p['numeric_value'] ?? 0);
             $price = (float)($p['price_usd'] ?? 0);
-            if (!$name || !$label || $value <= 0 || $price <= 0) continue;
+            if (!$name || $price <= 0) continue; // nothing usable to even review
+
+            if (!$label || $value <= 0) {
+                // Claude found a real price but couldn't confidently produce a spec
+                // (e.g. source only gave a vial count, no per-vial mg breakdown) —
+                // needs a human to supply the correct spec_label/numeric_value.
+                // Was previously silently dropped here instead of surfaced for review.
+                $insertPending->execute([
+                    $file['id'], $file['vendor_id'],
+                    json_encode($p + ['tier_kit_size' => min(65535, max(1, (int)($p['tier_kit_size'] ?? 1)))]),
+                    'incomplete_spec', findExactProductMatch($pdo, $name),
+                ]);
+                $pending++;
+                continue;
+            }
 
             $unit        = (string)($p['unit'] ?? 'mg');
             $kitCount    = (int)($p['kit_vial_count'] ?? 10);

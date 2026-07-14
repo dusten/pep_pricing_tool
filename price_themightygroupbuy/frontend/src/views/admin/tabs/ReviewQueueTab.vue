@@ -156,7 +156,10 @@ async function setCoaStatus(s, action) {
 }
 
 function matchTypeLabel(t) {
-  return { new_product: 'New product', new_spec: 'New spec on existing product', name_mismatch: 'Name close to an existing product' }[t] || t
+  return {
+    new_product: 'New product', new_spec: 'New spec on existing product', name_mismatch: 'Name close to an existing product',
+    incomplete_spec: 'Price found, but spec (mg/label) unclear — needs manual entry',
+  }[t] || t
 }
 
 async function approveImport() {

@@ -403,7 +403,7 @@ CREATE TABLE IF NOT EXISTS pc_pending_imports (
   vendor_file_id       INT UNSIGNED NOT NULL,
   vendor_id            INT UNSIGNED NOT NULL,
   raw_json             JSON NOT NULL,        -- the single extracted price row as Claude returned it
-  match_type           ENUM('new_product','new_spec','name_mismatch') NOT NULL,
+  match_type           ENUM('new_product','new_spec','name_mismatch','incomplete_spec') NOT NULL,
   candidate_product_id INT UNSIGNED NULL,    -- best-guess existing product, if any (fuzzy match)
   status               ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
   reviewed_by          INT UNSIGNED NULL,
