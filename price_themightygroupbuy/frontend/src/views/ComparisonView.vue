@@ -366,10 +366,7 @@ const vendorColumns = computed(() => {
 </script>
 
 <style scoped>
-/* Pinned below the sticky TopBar so the search/category/view controls stay
-   reachable while a long result list scrolls underneath — no more scrolling
-   back up to change a filter. */
-.filter-bar { margin-bottom: 20px; position: sticky; top: var(--topbar-height); z-index: 40; }
+.filter-bar { margin-bottom: 20px; }
 .tier-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .tier-label { font-size: 12.5px; color: var(--text-secondary); font-weight: 600; margin-right: 4px; }
 .category-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
