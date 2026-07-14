@@ -13,7 +13,7 @@
                 @click="selectedClassifications = []">All</button>
         <button v-for="c in comparison.classifications" :key="c.id"
                 :class="['cat-tab', { active: selectedClassifications.includes(c.id) }]"
-                @click="toggleClassification(c.id)">{{ c.name }}</button>
+                @click="toggleClassification(c.id)">{{ classificationEmoji(c.name) }} {{ c.name }}</button>
       </div>
       <div class="filter-row">
         <input v-model="search" type="text" placeholder="Search product or Cat No.…" class="search-input" />
@@ -48,7 +48,7 @@
         <label v-for="v in comparison.vendors" :key="v.id" class="vendor-check">
           <input type="checkbox" :value="v.id" v-model="selectedVendors" />
           {{ v.display_name }}
-          <span v-if="v.is_verified" class="badge badge-pro">Verified</span>
+          <span v-if="v.is_verified" class="badge badge-pro">✅ Verified</span>
         </label>
       </div>
     </div>
@@ -100,7 +100,7 @@
                 </button>
               </td>
               <td class="sticky-col col-product">
-                {{ row.product }}
+                <span class="product-dot" :style="{ backgroundColor: productDotColor(row.product_id) }"></span>{{ row.product }}
                 <div v-if="row.cas_number || row.molecular_weight" class="product-meta">
                   <a v-if="row.cas_number" :href="pubchemUrl(row.cas_number)" target="_blank" rel="noopener" title="View on PubChem">CAS {{ row.cas_number }}</a>
                   <span v-if="row.molecular_weight">{{ row.molecular_weight }} g/mol</span>
@@ -141,7 +141,7 @@
       <div v-for="row in filteredRows" :key="row.product_id + ':' + row.spec" class="card list-row">
         <div class="list-head">
           <div class="list-title">
-            {{ row.product }} <span class="list-spec">{{ row.spec }}</span>
+            <span class="product-dot" :style="{ backgroundColor: productDotColor(row.product_id) }"></span>{{ row.product }} <span class="list-spec">{{ row.spec }}</span>
             <span v-if="row.is_raw_material" class="badge badge-free" title="Raw/bulk powder, not a finished vial">Raw</span>
             <button v-if="qualifiesForDistribution(row)" class="dist-trigger" title="Price distribution across vendors" @click="openDistribution(row)">📊</button>
             <div v-if="row.cas_number || row.molecular_weight" class="product-meta">
@@ -287,6 +287,26 @@ function toggleClassification(id) {
   else selectedClassifications.value.splice(i, 1)
 }
 
+// Purely decorative — a quick visual scan aid, not a second meaning system
+// alongside the classification tags. One emoji per tag name; falls back to
+// no icon for anything not in the map (harmless if a new tag is added).
+const CLASSIFICATION_EMOJI = {
+  'Anti-Aging': '⏳', 'Antimicrobial': '🦠', 'Bioregulator': '🧬', 'Clinical': '🏥',
+  'Cognitive': '🧠', 'Cosmetic': '💄', 'Fat Loss': '🔥', 'GH Secretagogue (Non-HGH)': '💉',
+  'GLP / Metabolic': '⚖️', 'Growth Factors': '🌱', 'Growth Hormone': '📈',
+  'Healing & Recovery': '🩹', 'Hormone Support': '⚕️', 'Immune': '🛡️', 'Lab Supplies': '🧪',
+  'Longevity': '🌿', 'Metabolic & Performance Support': '🏃', 'Mitochondrial': '🔋',
+  'Neuro / Mood': '💭', 'Neuroprotective': '🧿', 'Repair / Healing': '🩹',
+  'Sexual Health': '💗', 'Skin & Hair': '💇', 'Sleep & Recovery': '😴',
+  'Social / Sexual': '💗', 'Stack': '📦', 'Weight Management': '⚖️',
+}
+function classificationEmoji(name) { return CLASSIFICATION_EMOJI[name] || '' }
+
+// Decorative per-product accent dot — same purpose as the colored bullets on
+// aotide.com's catalog list, purely a scan aid, no relation to classification.
+const DOT_COLORS = ['#0D9488', '#F97316', '#6366F1', '#EC4899', '#0EA5E9', '#A855F7', '#65A30D', '#DB2777']
+function productDotColor(productId) { return DOT_COLORS[productId % DOT_COLORS.length] }
+
 const queryProducts = ref([])
 
 function runSearch() {
@@ -346,7 +366,10 @@ const vendorColumns = computed(() => {
 </script>
 
 <style scoped>
-.filter-bar { margin-bottom: 20px; }
+/* Pinned below the sticky TopBar so the search/category/view controls stay
+   reachable while a long result list scrolls underneath — no more scrolling
+   back up to change a filter. */
+.filter-bar { margin-bottom: 20px; position: sticky; top: var(--topbar-height); z-index: 40; }
 .tier-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .tier-label { font-size: 12.5px; color: var(--text-secondary); font-weight: 600; margin-right: 4px; }
 .category-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
@@ -356,6 +379,9 @@ const vendorColumns = computed(() => {
 }
 .cat-tab:hover  { border-color: var(--accent); color: var(--accent); }
 .cat-tab.active { background: var(--primary); border-color: var(--primary); color: var(--text-on-primary); }
+
+/* Decorative per-product accent dot — a scan aid, not a second tagging system. */
+.product-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
 
 .filter-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
 .search-input { max-width: 260px; }
