@@ -284,9 +284,9 @@ const selectedVendors    = ref([])
 const showUnitPricing    = ref(localStorage.getItem('cmp_show_unit') !== '0')
 watch(showUnitPricing, v => localStorage.setItem('cmp_show_unit', v ? '1' : '0'))
 
-// Table (wide matrix) vs. List (compact per-row) view. Default to List on a
-// phone-width screen, Table on desktop; persisted once the user picks.
-const viewMode = ref(localStorage.getItem('cmp_view') || (window.innerWidth < 768 ? 'list' : 'table'))
+// Table (wide matrix) vs. List (compact per-row) view. Defaults to List;
+// persisted once the user picks.
+const viewMode = ref(localStorage.getItem('cmp_view') || 'list')
 watch(viewMode, v => localStorage.setItem('cmp_view', v))
 
 // List view shows a row's vendors cheapest-first (by $/unit, matching the
