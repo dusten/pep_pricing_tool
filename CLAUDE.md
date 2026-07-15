@@ -66,6 +66,7 @@ Obsidian_pep_pricing_tool/
     concepts/       ← domain ideas, pricing models, workflows
     analyses/       ← dated query answers (YYYY-MM-DD-topic.md)
     _templates/     ← page templates (not linked in index)
+  plans/            ← implementation plans from plan-mode sessions (symlinked from ~/.claude/plans/)
   index.md          ← catalog of all wiki pages; update every run
   log.md            ← append-only activity log; append every run
   CLAUDE.md         ← full wiki schema and workflow reference

@@ -13,6 +13,7 @@ wiki/
   concepts/   ← pricing models, research topics, domain ideas
   analyses/   ← filed query answers, comparisons, investigations
   _templates/ ← page templates (not linked in index)
+plans/        ← implementation plans from plan-mode sessions (symlinked from ~/.claude/plans/)
 index.md      ← catalog of all wiki pages with one-line summaries
 log.md        ← append-only record of ingests, queries, lint passes
 CLAUDE.md     ← this file
