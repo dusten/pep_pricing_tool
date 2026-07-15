@@ -871,3 +871,10 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Root cause: the 75% gate measured vendor_count against *all* active vendors (25), but most vendors only carry a subset of the catalog (436 of 738 product+spec combos have exactly 1 vendor) -- so "75% of the whole store" was an unrealistic bar regardless of how well an item was actually sampled.
 - Presented 3 options (absolute floor, lower percentage, hybrid); user picked the absolute floor. Changed both the backend gate (`backend/api/comparison/distribution.php`, `MIN_VENDORS_FOR_DISTRIBUTION = 8`) and the frontend's mirrored client-side check that decides whether to even show the 📊 icon (`ComparisonView.vue`'s `qualifiesForDistribution()`) -- the frontend check is a separate copy that would've kept hiding the icon even after the backend was fixed. Removed the now-dead `totalActiveVendors` Pinia store state along with the coverage-percent UI copy.
 - Verified live: Adamax 5mg now shows the 📊 icon and renders a full bell curve across all 12 vendors ("12 of 25 active vendors carry this item").
+
+## [2026-07-15] feature | Verified-vendor badge redesign (backlog #68, resolved)
+
+- User asked to pick this backlog item up. Confirmed the desired layout via a quick option check: one green pill containing both the checkmark and the vendor name (e.g. "✓ Golden Age"), replacing plain-text name + separate badge.
+- Found the pattern rendered inconsistently in 4 places (different markup/wording each time: "✅ Verified" in the vendor-filter checklist, a bare "✓" in the table header, "Verified" text in VendorCard.vue and the admin Vendors tab) and missing entirely from the list-view's expanded vendor rows.
+- Added one shared `.badge-verified` class to `main.css` (reuses the existing `--success`/`--success-bg` CSS vars already used elsewhere in the app, e.g. COA-approved badges) and swapped all 5 render sites to `✓ {{ vendor name }}` inside that single pill.
+- Deployed and verified live at every location: Comparison page filter checklist, table view column header, list view vendor rows, VendorCard contact modal, and the admin Vendors tab table.
