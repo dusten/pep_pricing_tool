@@ -459,14 +459,25 @@ CREATE TABLE IF NOT EXISTS pc_comparison_log (
   INDEX (user_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS pc_whatsapp_clicks (
+-- Every outbound-link click the admin activity dashboard tracks: vendor
+-- WhatsApp, vendor Website, and per-product CAS/PubChem links so far.
+-- link_type is a plain VARCHAR (not ENUM) so a future link type doesn't need
+-- a migration just to widen it. vendor_id/product_id are both nullable —
+-- a vendor-link click sets vendor_id, a product-link click (CAS) sets
+-- product_id; exactly one is expected to be set per row, not enforced at
+-- the DB level since that's an app-level invariant, not a storage one.
+CREATE TABLE IF NOT EXISTS pc_outbound_link_clicks (
   id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  vendor_id  INT UNSIGNED NOT NULL,
+  link_type  VARCHAR(20) NOT NULL,
+  vendor_id  INT UNSIGNED NULL,
+  product_id INT UNSIGNED NULL,
   user_id    INT UNSIGNED NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (vendor_id) REFERENCES pc_vendors(id) ON DELETE CASCADE,
+  FOREIGN KEY (product_id) REFERENCES pc_products(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES pc_users(id) ON DELETE SET NULL,
-  INDEX (created_at)
+  INDEX (created_at),
+  INDEX (link_type, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pc_maintenance_runs (

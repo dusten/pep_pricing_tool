@@ -17,17 +17,6 @@
     </div>
 
     <h4 class="section-title">Activity</h4>
-    <div class="range-pills">
-      <button v-for="r in ['day', 'week', 'month']" :key="r" type="button"
-              :class="['pill', { active: activityRange === r }]" @click="activityRange = r; loadActivity()">{{ r }}</button>
-    </div>
-    <div v-if="activity" class="stat-grid">
-      <div class="stat-tile"><div class="stat-value">{{ activity.signups }}</div><div class="stat-label">Signups</div></div>
-      <div class="stat-tile"><div class="stat-value">{{ activity.logins }}</div><div class="stat-label">Logins</div></div>
-      <div class="stat-tile"><div class="stat-value">{{ activity.searches }}</div><div class="stat-label">Searches</div></div>
-      <div class="stat-tile"><div class="stat-value">{{ activity.whatsapp_clicks }}</div><div class="stat-label">WhatsApp clicks</div></div>
-    </div>
-
     <template v-if="trend">
       <div class="metric-grid">
         <div v-for="m in METRICS" :key="m.key" class="card metric-chart-card">
@@ -35,11 +24,11 @@
             <h5 class="metric-chart-title">{{ m.label }}</h5>
             <div class="range-pills">
               <button v-for="r in ['day', 'week', 'month']" :key="r" type="button"
-                      :class="['pill', { active: trendGranularity === r }]" @click="trendGranularity = r">{{ r }}</button>
+                      :class="['pill', { active: trendGranularity[m.key] === r }]" @click="trendGranularity[m.key] = r">{{ r }}</button>
             </div>
           </div>
           <div class="bar-rows">
-            <div v-for="row in trend[trendGranularity]" :key="row.label" class="bar-row">
+            <div v-for="row in trend[trendGranularity[m.key]]" :key="row.label" class="bar-row">
               <span class="bar-label">{{ row.label }}</span>
               <div class="bar-track"><div class="bar-fill" :style="{ width: barPct(row[m.key], m.key) + '%' }"></div></div>
               <span class="bar-value">{{ row[m.key] }}</span>
@@ -73,19 +62,13 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { get } from '@/utils/api.js'
 
 const data = ref(null)
 onMounted(async () => { data.value = await get('/api/admin/overview') })
 
-const activity      = ref(null)
-const activityRange = ref('day')
-async function loadActivity() { activity.value = await get(`/api/admin/activity-stats?range=${activityRange.value}`) }
-loadActivity()
-
-const trend           = ref(null)
-const trendGranularity = ref('day')
+const trend = ref(null)
 onMounted(async () => { trend.value = await get('/api/admin/activity-trend') })
 
 const METRICS = [
@@ -93,12 +76,18 @@ const METRICS = [
   { key: 'logins', label: 'Logins' },
   { key: 'searches', label: 'Searches' },
   { key: 'whatsapp_clicks', label: 'WhatsApp Clicks' },
+  { key: 'website_clicks', label: 'Website Clicks' },
+  { key: 'cas_clicks', label: 'CAS Link Clicks' },
+  { key: 'downloads', label: 'Downloads / Exports' },
 ]
+// Each card picks its own Day/Week/Month independently.
+const trendGranularity = reactive(Object.fromEntries(METRICS.map(m => [m.key, 'day'])))
+
 // Bar width relative to that metric's own max across the currently-shown
 // 13 periods (not a shared 0-100 scale across metrics) — matches how each
 // chart in the reference design normalizes independently.
 function barPct(value, metricKey) {
-  const rows = trend.value?.[trendGranularity.value] || []
+  const rows = trend.value?.[trendGranularity[metricKey]] || []
   const max = Math.max(1, ...rows.map(r => r[metricKey]))
   return (value / max) * 100
 }

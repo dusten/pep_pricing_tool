@@ -102,7 +102,7 @@
               <td class="sticky-col col-product">
                 <span class="product-dot" :style="{ backgroundColor: productDotColor(row.product_id) }"></span>{{ row.product }}
                 <div v-if="row.cas_number || row.molecular_weight" class="product-meta">
-                  <a v-if="row.cas_number" :href="pubchemUrl(row.cas_number)" target="_blank" rel="noopener" title="View on PubChem">CAS {{ row.cas_number }}</a>
+                  <a v-if="row.cas_number" :href="pubchemUrl(row.cas_number)" target="_blank" rel="noopener" title="View on PubChem" @click="trackCasClick(row.product_id)">CAS {{ row.cas_number }}</a>
                   <span v-if="row.molecular_weight">{{ row.molecular_weight }} g/mol</span>
                 </div>
               </td>
@@ -145,7 +145,7 @@
             <span class="product-dot" :style="{ backgroundColor: productDotColor(p.product_id) }"></span>{{ p.product }}
             <span class="list-spec">{{ p.specs.length }} spec{{ p.specs.length !== 1 ? 's' : '' }}</span>
             <div v-if="p.cas_number || p.molecular_weight" class="product-meta">
-              <a v-if="p.cas_number" :href="pubchemUrl(p.cas_number)" target="_blank" rel="noopener" title="View on PubChem" @click.stop>CAS {{ p.cas_number }}</a>
+              <a v-if="p.cas_number" :href="pubchemUrl(p.cas_number)" target="_blank" rel="noopener" title="View on PubChem" @click.stop="trackCasClick(p.product_id)">CAS {{ p.cas_number }}</a>
               <span v-if="p.molecular_weight">{{ p.molecular_weight }} g/mol</span>
             </div>
           </div>
@@ -209,6 +209,7 @@ import { useComparisonStore } from '@/stores/comparison.js'
 import { useCartStore } from '@/stores/cart.js'
 import { useAuthStore } from '@/stores/auth.js'
 import { useToastStore } from '@/stores/toast.js'
+import { post } from '@/utils/api.js'
 
 const comparison = useComparisonStore()
 const cart       = useCartStore()
@@ -244,6 +245,12 @@ function addToCart(row) {
 
 function pubchemUrl(cas) {
   return `https://pubchem.ncbi.nlm.nih.gov/#query=${encodeURIComponent(cas)}`
+}
+
+// Best-effort click tracking for the admin activity dashboard — never
+// blocks or delays the actual outbound navigation.
+function trackCasClick(productId) {
+  post('/api/track/link-click', { link_type: 'cas', product_id: productId }).catch(() => {})
 }
 
 const canExport = computed(() => auth.isAdmin || (auth.tierActive && ['pro', 'expert'].includes(auth.tier)))

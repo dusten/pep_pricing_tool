@@ -28,7 +28,7 @@
         </div>
 
         <div class="vc-rows">
-          <a v-if="vendor.whatsapp" class="vc-row vc-link" :href="whatsappUrl" target="_blank" rel="noopener" @click="trackWhatsappClick">
+          <a v-if="vendor.whatsapp" class="vc-row vc-link" :href="whatsappUrl" target="_blank" rel="noopener" @click="trackLinkClick('whatsapp')">
             <span class="vc-label">WhatsApp</span>
             <span>{{ vendor.whatsapp }}</span>
           </a>
@@ -44,7 +44,7 @@
           <div v-if="vendor.telegram" class="vc-row">
             <span class="vc-label">Telegram</span><span>{{ vendor.telegram }}</span>
           </div>
-          <a v-if="vendor.website" class="vc-row vc-link" :href="vendor.website" target="_blank" rel="noopener">
+          <a v-if="vendor.website" class="vc-row vc-link" :href="vendor.website" target="_blank" rel="noopener" @click="trackLinkClick('website')">
             <span class="vc-label">Website</span><span>{{ vendor.website }}</span>
           </a>
         </div>
@@ -92,9 +92,9 @@ const hasScorecard = computed(() => vendor.value?.scorecard && (
 function formatDate(d) { return new Date(d).toLocaleDateString() }
 
 // Best-effort click tracking for the admin activity dashboard — never
-// blocks or delays the actual WhatsApp navigation.
-function trackWhatsappClick() {
-  post('/api/track/whatsapp-click', { vendor_id: props.vendorId }).catch(() => {})
+// blocks or delays the actual outbound navigation.
+function trackLinkClick(linkType) {
+  post('/api/track/link-click', { link_type: linkType, vendor_id: props.vendorId }).catch(() => {})
 }
 
 const whatsappUrl = computed(() => {
