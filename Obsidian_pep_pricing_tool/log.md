@@ -891,3 +891,20 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - Deployed via `deploy.sh --all`; smoke check passed. `php -l` clean on all 6 touched/new backend files. `DESCRIBE pc_vendor_suggestions` confirmed the full column set landed. Left `diagnostic_scripts/2026-07-15-verify-vendor-suggestion-score.php` — feeds `scoreSuggestionPrices()` hand-built rows against live BPC-157/10mg market data (real ppus ~0.44-0.83) plus an unmatched product name; confirmed percentiles land in [0,100], below/above-market prices score near 0/100 respectively, the unmatched name surfaces correctly, `vendor_score = round(100 - avg_percentile)` holds, and the zero-match case returns null cleanly instead of dividing by zero. All checks passed against production data.
 - Did not mint a live session token to exercise the HTTP endpoints directly — the only available account to test the `test_account`/admin gate with was a real admin whose password isn't known, and materializing a usable bearer token for that account without consent was correctly blocked by the harness's safety classifier. DB/schema/lint verification plus the score-check script covers what's safe to verify server-side; in-browser verification (non-test redirect, template-CSV happy path, EICAR quarantine, rate limit, admin accept flow) is left to the parent session, which was the stated plan.
 - Phase 2 (Claude-pipeline fallback for non-template files, `processSuggestion()`, cron loop) and Phase 3 (delete the test-account gate at launch) remain unbuilt, as scoped.
+
+## [2026-07-15] fix | Vendor-suggestions storage dirs missing on server (found in browser verification)
+
+First live submit of a vendor suggestion 500'd: Apache couldn't `mkdir backend/storage/vendor_suggestions/`
+— `storage/` itself is `755 ec2-user:ec2-user`, so runtime dir creation by the web user was never
+going to work; `vendor_files/` only works because the setup scripts pre-create it with
+`ec2-user:apache 770` + `httpd_sys_rw_content_t`. Same latent bug existed for `storage/quarantine/`
+(`quarantineFile()` also mkdirs at runtime — an actual malware detection would have 500'd too), and
+`deploy.sh`'s `rsync --delete` would have wiped both dirs on the next deploy since they don't exist
+locally and weren't excluded. Fixed all three: dirs created on the server with matching
+ownership/mode/SELinux context, `setup.sh` + `add-price-site.sh` now pre-create both alongside
+`vendor_files`, and `deploy.sh` excludes both from rsync. Re-verified live end to end: template CSV
+submit → 201 → instant score 98/100 (2/3 rows matched, NotARealPeptide correctly unmatched) →
+admin Vendor Suggestions tab (relationship pill, score breakdown, extracted-price table) →
+rejected with admin note, status pill updated. Accept flow deliberately not exercised against
+production (would create a fake catalog vendor); EICAR/quarantine untested while ClamAV remains
+disabled (known standing issue).

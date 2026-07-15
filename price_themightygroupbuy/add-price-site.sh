@@ -115,6 +115,8 @@ echo "  ✓ ClamAV installed — signatures/clamd@scan pending clamav-db/ push v
 # ── [3/5] Storage directory ───────────────────────────────────
 echo "=== [3/5] Storage directory ==="
 mkdir -p "${APP_DIR}/backend/storage/vendor_files"
+mkdir -p "${APP_DIR}/backend/storage/vendor_suggestions"
+mkdir -p "${APP_DIR}/backend/storage/quarantine"
 mkdir -p "${APP_DIR}/public/dist"
 chown -R ec2-user:apache "${APP_DIR}/backend/storage"
 chmod -R 770              "${APP_DIR}/backend/storage"

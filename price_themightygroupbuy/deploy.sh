@@ -76,6 +76,8 @@ sync_files() {
     --exclude='frontend/node_modules/' \
     --exclude='frontend/.vite/' \
     --exclude='backend/storage/vendor_files/' \
+    --exclude='backend/storage/vendor_suggestions/' \
+    --exclude='backend/storage/quarantine/' \
     --exclude='log/' \
     "$SCRIPT_DIR/" \
     "$REMOTE_USER@$REMOTE_HOST:$REMOTE_DIR/"

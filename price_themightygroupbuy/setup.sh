@@ -169,6 +169,8 @@ echo "Written: /home/ec2-user/.pc_my.cnf"
 # ── [8/10] Storage + log directories ─────────────────────────
 echo "=== [8/10] Storage + log directories ==="
 mkdir -p "${APP_DIR}/backend/storage/vendor_files"
+mkdir -p "${APP_DIR}/backend/storage/vendor_suggestions"
+mkdir -p "${APP_DIR}/backend/storage/quarantine"
 mkdir -p "${APP_DIR}/public/dist"
 mkdir -p "${APP_DIR}/log"
 sudo chown -R ec2-user:apache "${APP_DIR}/backend/storage"
