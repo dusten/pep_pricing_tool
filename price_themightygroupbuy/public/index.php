@@ -148,6 +148,7 @@ $ROUTES = [
     'calendar/public'      => 'calendar_public.php',
     'admin/overview'       => 'admin/overview.php',
     'admin/activity-stats' => 'admin/activity_stats.php',
+    'admin/activity-trend' => 'admin/activity_trend.php',
     'admin/users'          => 'admin/users.php',
     'admin/waitlist'       => 'admin/waitlist.php',
     'admin/waitlist/export' => 'admin/waitlist_export.php',

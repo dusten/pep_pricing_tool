@@ -28,6 +28,41 @@
       <div class="stat-tile"><div class="stat-value">{{ activity.whatsapp_clicks }}</div><div class="stat-label">WhatsApp clicks</div></div>
     </div>
 
+    <template v-if="trend">
+      <h5 class="trend-title">Last 13 days</h5>
+      <div class="trend-rows">
+        <div v-for="row in trend.day" :key="row.label" class="trend-row">
+          <span class="trend-label">{{ row.label }}</span>
+          <span class="trend-metric"><strong>{{ row.signups }}</strong> signups</span>
+          <span class="trend-metric"><strong>{{ row.logins }}</strong> logins</span>
+          <span class="trend-metric"><strong>{{ row.searches }}</strong> searches</span>
+          <span class="trend-metric"><strong>{{ row.whatsapp_clicks }}</strong> clicks</span>
+        </div>
+      </div>
+
+      <h5 class="trend-title">Last 13 weeks</h5>
+      <div class="trend-rows">
+        <div v-for="row in trend.week" :key="row.label" class="trend-row">
+          <span class="trend-label">{{ row.label }}</span>
+          <span class="trend-metric"><strong>{{ row.signups }}</strong> signups</span>
+          <span class="trend-metric"><strong>{{ row.logins }}</strong> logins</span>
+          <span class="trend-metric"><strong>{{ row.searches }}</strong> searches</span>
+          <span class="trend-metric"><strong>{{ row.whatsapp_clicks }}</strong> clicks</span>
+        </div>
+      </div>
+
+      <h5 class="trend-title">Last 13 months</h5>
+      <div class="trend-rows">
+        <div v-for="row in trend.month" :key="row.label" class="trend-row">
+          <span class="trend-label">{{ row.label }}</span>
+          <span class="trend-metric"><strong>{{ row.signups }}</strong> signups</span>
+          <span class="trend-metric"><strong>{{ row.logins }}</strong> logins</span>
+          <span class="trend-metric"><strong>{{ row.searches }}</strong> searches</span>
+          <span class="trend-metric"><strong>{{ row.whatsapp_clicks }}</strong> clicks</span>
+        </div>
+      </div>
+    </template>
+
     <h4 class="section-title">Referrals</h4>
     <div class="stat-grid">
       <div class="stat-tile"><div class="stat-value">{{ data.referrals.total_referrals }}</div><div class="stat-label">Total referrals</div></div>
@@ -62,6 +97,9 @@ const activity      = ref(null)
 const activityRange = ref('day')
 async function loadActivity() { activity.value = await get(`/api/admin/activity-stats?range=${activityRange.value}`) }
 loadActivity()
+
+const trend = ref(null)
+onMounted(async () => { trend.value = await get('/api/admin/activity-trend') })
 </script>
 
 <style scoped>
@@ -76,4 +114,15 @@ loadActivity()
 }
 .pill:hover  { border-color: var(--accent); color: var(--accent); }
 .pill.active { background: var(--primary); border-color: var(--primary); color: var(--text-on-primary); }
+
+.trend-title { margin: 18px 0 8px; font-size: 12.5px; color: var(--text-secondary); }
+.trend-rows { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
+.trend-row {
+  display: flex; align-items: center; gap: 16px; padding: 6px 10px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface);
+  font-size: 12.5px;
+}
+.trend-label { min-width: 110px; color: var(--text-secondary); font-weight: 600; }
+.trend-metric { color: var(--text-secondary); }
+.trend-metric strong { color: var(--text); font-size: 13.5px; margin-right: 3px; }
 </style>
