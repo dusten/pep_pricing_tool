@@ -135,7 +135,11 @@
       <thead><tr><th>Name</th><th>Contact</th><th>Prices</th><th>Last upload</th><th>Active</th><th>Merge into</th><th></th></tr></thead>
       <tbody>
         <tr v-for="v in vendors" :key="v.id">
-          <td>{{ v.display_name }} <span v-if="v.is_verified" class="badge badge-pro">Verified</span> <span v-if="v.is_hidden" class="badge">Hidden</span></td>
+          <td>
+            <span v-if="v.is_verified" class="badge badge-verified">✓ {{ v.display_name }}</span>
+            <template v-else>{{ v.display_name }}</template>
+            <span v-if="v.is_hidden" class="badge">Hidden</span>
+          </td>
           <td class="text-muted text-sm">{{ v.contact_name || v.email || '—' }}</td>
           <td>{{ v.price_count }}</td>
           <td class="text-muted text-sm">{{ v.last_upload || 'never' }}</td>

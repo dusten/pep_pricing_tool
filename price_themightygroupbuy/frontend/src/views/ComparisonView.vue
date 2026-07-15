@@ -47,8 +47,8 @@
       <div v-if="comparison.vendors.length" class="vendor-checks">
         <label v-for="v in comparison.vendors" :key="v.id" class="vendor-check">
           <input type="checkbox" :value="v.id" v-model="selectedVendors" />
-          {{ v.display_name }}
-          <span v-if="v.is_verified" class="badge badge-pro">✅ Verified</span>
+          <span v-if="v.is_verified" class="badge badge-verified">✓ {{ v.display_name }}</span>
+          <template v-else>{{ v.display_name }}</template>
         </label>
       </div>
     </div>
@@ -78,8 +78,10 @@
               <th class="sticky-col col-product" rowspan="2">Product</th>
               <th class="sticky-col col-spec" rowspan="2">Spec</th>
               <th v-for="v in vendorColumns" :key="v.id" :colspan="showUnitPricing ? 2 : 1" class="vendor-header vendor-divider">
-                <button class="vendor-name-btn" :title="v.name" @click="openVendorCard(v.id)">{{ v.name }}</button>
-                <span v-if="v.is_verified" class="badge badge-pro">✓</span>
+                <button class="vendor-name-btn" :title="v.name" @click="openVendorCard(v.id)">
+                  <span v-if="v.is_verified" class="badge badge-verified">✓ {{ v.name }}</span>
+                  <template v-else>{{ v.name }}</template>
+                </button>
               </th>
               <th rowspan="2" class="stat-header col-avg">Avg</th>
               <th rowspan="2" class="stat-header col-median">Median</th>
@@ -172,7 +174,10 @@
             </div>
             <div v-if="expandedSpecs.has(row.specification_id)" class="list-vendors">
               <div v-for="v in sortedVendors(row)" :key="v.vendor_id" :class="['list-vendor', { lowest: v.is_lowest }]">
-                <button class="vendor-name-btn list-vendor-name" :title="v.name" @click="openVendorCard(v.vendor_id)">{{ v.name }}</button>
+                <button class="vendor-name-btn list-vendor-name" :title="v.name" @click="openVendorCard(v.vendor_id)">
+                  <span v-if="v.is_verified" class="badge badge-verified">✓ {{ v.name }}</span>
+                  <template v-else>{{ v.name }}</template>
+                </button>
                 <span class="list-vendor-price">
                   ${{ v.price.toFixed(2) }}
                   <span v-if="v.non_standard_kit" class="warn-icon" :title="`Listed as ${v.kit_vial_count}-vial kit — $/unit may not be comparable.`">⚠</span>

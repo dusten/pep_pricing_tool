@@ -7,8 +7,8 @@
 
       <template v-else-if="vendor">
         <h3 class="vc-name">
-          {{ vendor.display_name }}
-          <span v-if="vendor.is_verified" class="badge badge-pro">Verified</span>
+          <span v-if="vendor.is_verified" class="badge badge-verified">✓ {{ vendor.display_name }}</span>
+          <template v-else>{{ vendor.display_name }}</template>
         </h3>
         <p v-if="vendor.contact_name" class="text-muted text-sm" style="margin-bottom:14px">{{ vendor.contact_name }}</p>
 

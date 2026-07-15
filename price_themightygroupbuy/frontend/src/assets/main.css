@@ -300,6 +300,7 @@ input.error, select.error { border-color: var(--danger); }
 .badge-advanced { background: var(--info-bg);     color: var(--info); }
 .badge-pro      { background: var(--accent-subtle); color: var(--accent); border: 1px solid var(--accent); }
 .badge-expert   { background: var(--primary);     color: #fff; }
+.badge-verified { background: var(--success-bg);  color: var(--success); border: 1px solid var(--success); }
 
 /* ── Admin data table ─────────────────────────────────────────────
    The one shared definition for every admin-tab list table (users,
