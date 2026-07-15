@@ -1,3 +1,9 @@
+# Status 2026-07-15 (late): workstreams A/B/C shipped (commit 13a9b07); feature Phase 1 built +
+# verified live (5b663f4, c2ca5c4). NEXT ACTION: launch the Phase 2 build (Sonnet 5 subagent):
+# buildExtractionUserContent() refactor, processSuggestion(), cron loop — per the spec's Phase 2
+# section below. Then deploy, server-side end-to-end test (one real Claude call), wiki updates,
+# push. Phase 3 (un-gate/launch) stays untouched.
+
 # Wiki backlog entry: User-Suggested Vendors spec + ~/.claude→wiki migration + session notes
 
 ## Deliverable — WIKI ONLY, NO CODE CHANGES TO THE APP

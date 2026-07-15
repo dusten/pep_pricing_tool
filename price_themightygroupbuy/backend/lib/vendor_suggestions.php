@@ -169,6 +169,43 @@ function scoreSuggestionPrices(PDO $pdo, array $prices): array {
 }
 
 /**
+ * Phase 2: runs a non-template suggestion (pdf/xlsx/image/zip) through the
+ * same Claude extraction pipeline as vendor files
+ * (buildExtractionUserContent(), backend/lib/vendor_file_processor.php),
+ * then scores the result — never writes to pc_prices, that only happens at
+ * admin accept. $s must already be claimed (status='processing') by the
+ * caller; this function only moves it from there to a terminal status.
+ */
+function processSuggestion(array $s, string $model): void {
+    $pdo = db();
+    $fullPath = dirname(__DIR__) . '/storage/' . $s['stored_path'];
+
+    try {
+        if (!is_file($fullPath)) throw new RuntimeException('Stored file is missing from disk.');
+
+        $sheetNote = null;
+        $userContent = buildExtractionUserContent($fullPath, $s['file_type'], $sheetNote);
+        $result = callClaudeExtraction(buildExtractionSystemPrompt(), $userContent, $model, null);
+        if ($sheetNote) {
+            $result['warnings'] = $result['warnings'] ?? [];
+            array_unshift($result['warnings'], $sheetNote);
+        }
+
+        $score = scoreSuggestionPrices($pdo, $result['prices'] ?? []);
+        $pdo->prepare('UPDATE pc_vendor_suggestions SET status = ?, extracted_json = ?, score_json = ? WHERE id = ?')
+            ->execute(['scored', json_encode($result), json_encode($score), $s['id']]);
+
+        sendSuggestionScoredEmail($s['email'] ?? null, $s['contact_name'] ?? '', $s['display_name'], $score);
+    } catch (Throwable $e) {
+        // Matches the inline template-CSV path (backend/api/vendor_suggestions/index.php):
+        // parse_failed sends no email — it's not terminal (admin can still accept as
+        // contact-only or reject), submitter sees it on the My Suggestions list.
+        $pdo->prepare('UPDATE pc_vendor_suggestions SET status = ?, admin_note = ? WHERE id = ?')
+            ->execute(['parse_failed', $e->getMessage(), $s['id']]);
+    }
+}
+
+/**
  * Build-phase gate (backlog #69) — the feature is visible only to
  * test_account users and admins while Phase 2/3 aren't built yet. 404 (not
  * 403) so the endpoint's existence isn't disclosed to accounts outside the

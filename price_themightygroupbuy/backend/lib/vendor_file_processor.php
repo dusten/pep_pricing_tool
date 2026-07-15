@@ -28,18 +28,36 @@ function processVendorFile(array $file, string $model): array {
     if (!is_file($fullPath)) throw new RuntimeException('Stored file is missing from disk.');
 
     $sheetNote = null;
-    if ($file['file_type'] === 'pdf') {
+    $userContent = buildExtractionUserContent($fullPath, $file['file_type'], $sheetNote);
+
+    $result = callClaudeExtraction(buildExtractionSystemPrompt(), $userContent, $model, (int)$file['id']);
+    if ($sheetNote) {
+        $result['warnings'] = $result['warnings'] ?? [];
+        array_unshift($result['warnings'], $sheetNote);
+    }
+    return commitExtractionResult($file, $result);
+}
+
+/**
+ * Builds the Claude userContent block for a stored file, keyed off file_type.
+ * Shared by processVendorFile() above and processSuggestion()
+ * (backend/lib/vendor_suggestions.php) so both pipelines read files
+ * identically. $sheetNote is set (xlsx only) when the source had multiple
+ * sheets, for the caller to prepend as a warning.
+ */
+function buildExtractionUserContent(string $fullPath, string $fileType, ?string &$sheetNote): array {
+    if ($fileType === 'pdf') {
         $pdfBase64   = base64_encode((string)file_get_contents($fullPath));
         $userContent = [
             ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => $pdfBase64]],
             ['type' => 'text', 'text' => 'Please extract all pricing data from this vendor price list.'],
         ];
-    } elseif ($file['file_type'] === 'xlsx') {
+    } elseif ($fileType === 'xlsx') {
         $plainText   = xlsxToText($fullPath, $sheetNote);
         $userContent = [
             ['type' => 'text', 'text' => "Vendor price list (extracted text):\n\n{$plainText}\n\nPlease extract all pricing data from this vendor price list."],
         ];
-    } elseif ($file['file_type'] === 'image') {
+    } elseif ($fileType === 'image') {
         // Vendors often send a phone screenshot of a spreadsheet instead of a
         // real file — Claude reads the table straight out of the image, no
         // OCR step needed. media_type keyed off the stored extension, since
@@ -50,7 +68,7 @@ function processVendorFile(array $file, string $model): array {
             ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $mediaType, 'data' => base64_encode((string)file_get_contents($fullPath))]],
             ['type' => 'text', 'text' => 'Please extract all pricing data from this vendor price list image.'],
         ];
-    } elseif ($file['file_type'] === 'zip') {
+    } elseif ($fileType === 'zip') {
         // WhatsApp auto-zips a handful of shared images into one download —
         // that's the case this handles, not a general multi-page uploader
         // (see zip_reader.php's caps). All pages go in one call, in filename
@@ -63,13 +81,7 @@ function processVendorFile(array $file, string $model): array {
             ['type' => 'text', 'text' => "Vendor price list (extracted text):\n\n{$plainText}\n\nPlease extract all pricing data from this vendor price list."],
         ];
     }
-
-    $result = callClaudeExtraction(buildExtractionSystemPrompt(), $userContent, $model, (int)$file['id']);
-    if ($sheetNote) {
-        $result['warnings'] = $result['warnings'] ?? [];
-        array_unshift($result['warnings'], $sheetNote);
-    }
-    return commitExtractionResult($file, $result);
+    return $userContent;
 }
 
 /**
