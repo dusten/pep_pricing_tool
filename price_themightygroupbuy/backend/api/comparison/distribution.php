@@ -14,6 +14,12 @@ require_once dirname(__DIR__, 2) . '/lib/comparison_query.php';
 method('GET');
 requireTier('pro');
 
+// ponytail: absolute floor, not % of total active vendors — most vendors
+// only carry a subset of the catalog, so "75% of every vendor in the store"
+// was a bar few items could ever clear regardless of how well-sampled they
+// were. Raw sample size is what makes a mean/stdev meaningful.
+const MIN_VENDORS_FOR_DISTRIBUTION = 8;
+
 $productId = (int)($_GET['product_id'] ?? 0);
 $specId    = (int)($_GET['specification_id'] ?? 0);
 if (!$productId || !$specId) jsonResponse(['error' => 'product_id and specification_id are required.'], 422);
@@ -27,10 +33,9 @@ if (!$rows) jsonResponse(['error' => 'No active pricing data for this item.'], 4
 $row          = $rows[0];
 $totalVendors = getActiveVendorCount();
 $vendorCount  = count($row['vendors']);
-$coveragePct  = $totalVendors > 0 ? round($vendorCount / $totalVendors * 100, 1) : 0.0;
 
-if ($coveragePct < 75.0) {
-    jsonResponse(['qualifies' => false, 'coverage_pct' => $coveragePct, 'vendor_count' => $vendorCount, 'total_active_vendors' => $totalVendors]);
+if ($vendorCount < MIN_VENDORS_FOR_DISTRIBUTION) {
+    jsonResponse(['qualifies' => false, 'vendor_count' => $vendorCount, 'min_vendors' => MIN_VENDORS_FOR_DISTRIBUTION, 'total_active_vendors' => $totalVendors]);
 }
 
 jsonResponse([
@@ -38,7 +43,6 @@ jsonResponse([
     'product'              => $row['product'],
     'spec'                 => $row['spec'],
     'unit'                 => $row['unit'],
-    'coverage_pct'         => $coveragePct,
     'vendor_count'         => $vendorCount,
     'total_active_vendors' => $totalVendors,
     'stats'                => $row['stats'],

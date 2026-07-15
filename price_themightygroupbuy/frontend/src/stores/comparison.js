@@ -11,7 +11,6 @@ export const useComparisonStore = defineStore('comparison', () => {
   const loading     = ref(false)
   const error       = ref(null)
   const quotaBlocked = ref(null) // { message, resets_at } when free-tier limit hit
-  const totalActiveVendors = ref(0) // for the price-distribution feature's per-row coverage check
 
   async function loadFilters() {
     if (vendors.value.length || products.value.length) return
@@ -45,7 +44,6 @@ export const useComparisonStore = defineStore('comparison', () => {
     try {
       const res = await get(`/api/comparison?${params.toString()}`)
       rows.value = res.rows
-      totalActiveVendors.value = res.total_active_vendors || 0
     } catch (err) {
       if (err.status === 402) {
         quotaBlocked.value = { message: err.data.message, resets_at: err.data.resets_at }
@@ -58,5 +56,5 @@ export const useComparisonStore = defineStore('comparison', () => {
     }
   }
 
-  return { rows, vendors, products, classifications, tiers, loading, error, quotaBlocked, totalActiveVendors, loadFilters, search, buildParams }
+  return { rows, vendors, products, classifications, tiers, loading, error, quotaBlocked, loadFilters, search, buildParams }
 })

@@ -16,13 +16,13 @@
 
         <div v-else-if="data && !data.qualifies" class="card" style="text-align:center;padding:40px 24px;color:var(--text-secondary)">
           Not enough vendor coverage for this item yet — {{ data.vendor_count }} of {{ data.total_active_vendors }}
-          active vendors ({{ data.coverage_pct }}%). This view needs at least 75% coverage to be a meaningful signal.
+          active vendors carry it. This view needs at least {{ data.min_vendors }} vendors to be a meaningful signal.
         </div>
 
         <div v-else-if="data">
           <h3 style="margin-bottom:2px">{{ data.product }} <span class="text-muted">{{ data.spec }}</span></h3>
           <p class="text-muted text-sm" style="margin-bottom:14px">
-            {{ data.vendor_count }} of {{ data.total_active_vendors }} active vendors carry this item ({{ data.coverage_pct }}% coverage)
+            {{ data.vendor_count }} of {{ data.total_active_vendors }} active vendors carry this item
           </p>
 
           <label class="toggle-label" style="margin-bottom:10px">

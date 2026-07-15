@@ -228,13 +228,13 @@ function openHistory(row, vendorId, event) {
   }
 }
 
-// Price-distribution trigger — a row "qualifies" once its vendor coverage
-// clears the 75% floor (see wiki/analyses/2026-07-11-price-distribution-bell-curve-spec.md).
+// Price-distribution trigger — a row "qualifies" once it has enough vendors
+// for a meaningful mean/stdev (see wiki/analyses/2026-07-11-price-distribution-bell-curve-spec.md).
+// Mirrors backend/api/comparison/distribution.php's MIN_VENDORS_FOR_DISTRIBUTION.
 // Only needs the count already in the payload, not a request per row.
-const DISTRIBUTION_MIN_COVERAGE = 0.75
+const DISTRIBUTION_MIN_VENDORS = 8
 function qualifiesForDistribution(row) {
-  return comparison.totalActiveVendors > 0 &&
-    row.vendors.length / comparison.totalActiveVendors >= DISTRIBUTION_MIN_COVERAGE
+  return row.vendors.length >= DISTRIBUTION_MIN_VENDORS
 }
 const distributionRow = ref(null) // { product_id, specification_id } while the modal is open
 function openDistribution(row) { distributionRow.value = row }
