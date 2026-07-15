@@ -459,6 +459,16 @@ CREATE TABLE IF NOT EXISTS pc_comparison_log (
   INDEX (user_id, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS pc_whatsapp_clicks (
+  id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  vendor_id  INT UNSIGNED NOT NULL,
+  user_id    INT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (vendor_id) REFERENCES pc_vendors(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES pc_users(id) ON DELETE SET NULL,
+  INDEX (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS pc_maintenance_runs (
   id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   job        VARCHAR(100) NOT NULL,

@@ -16,6 +16,18 @@
       <div class="stat-tile"><div class="stat-value">{{ data.users.expert_tier }}</div><div class="stat-label">Expert</div></div>
     </div>
 
+    <h4 class="section-title">Activity</h4>
+    <div class="range-pills">
+      <button v-for="r in ['day', 'week', 'month']" :key="r" type="button"
+              :class="['pill', { active: activityRange === r }]" @click="activityRange = r; loadActivity()">{{ r }}</button>
+    </div>
+    <div v-if="activity" class="stat-grid">
+      <div class="stat-tile"><div class="stat-value">{{ activity.signups }}</div><div class="stat-label">Signups</div></div>
+      <div class="stat-tile"><div class="stat-value">{{ activity.logins }}</div><div class="stat-label">Logins</div></div>
+      <div class="stat-tile"><div class="stat-value">{{ activity.searches }}</div><div class="stat-label">Searches</div></div>
+      <div class="stat-tile"><div class="stat-value">{{ activity.whatsapp_clicks }}</div><div class="stat-label">WhatsApp clicks</div></div>
+    </div>
+
     <h4 class="section-title">Referrals</h4>
     <div class="stat-grid">
       <div class="stat-tile"><div class="stat-value">{{ data.referrals.total_referrals }}</div><div class="stat-label">Total referrals</div></div>
@@ -45,9 +57,23 @@ import { get } from '@/utils/api.js'
 
 const data = ref(null)
 onMounted(async () => { data.value = await get('/api/admin/overview') })
+
+const activity      = ref(null)
+const activityRange = ref('day')
+async function loadActivity() { activity.value = await get(`/api/admin/activity-stats?range=${activityRange.value}`) }
+loadActivity()
 </script>
 
 <style scoped>
 .section-title { margin: 24px 0 10px; font-size: 13.5px; }
 .mono { font-family: var(--font-mono); max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.range-pills { display: flex; gap: 6px; margin-bottom: 10px; }
+.pill {
+  padding: 4px 12px; border-radius: 99px; border: 1.5px solid var(--border); background: var(--surface);
+  cursor: pointer; font-size: 12px; font-weight: 500; color: var(--text-secondary); transition: all var(--transition);
+  text-transform: capitalize;
+}
+.pill:hover  { border-color: var(--accent); color: var(--accent); }
+.pill.active { background: var(--primary); border-color: var(--primary); color: var(--text-on-primary); }
 </style>

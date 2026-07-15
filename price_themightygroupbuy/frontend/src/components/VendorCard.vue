@@ -28,7 +28,7 @@
         </div>
 
         <div class="vc-rows">
-          <a v-if="vendor.whatsapp" class="vc-row vc-link" :href="whatsappUrl" target="_blank" rel="noopener">
+          <a v-if="vendor.whatsapp" class="vc-row vc-link" :href="whatsappUrl" target="_blank" rel="noopener" @click="trackWhatsappClick">
             <span class="vc-label">WhatsApp</span>
             <span>{{ vendor.whatsapp }}</span>
           </a>
@@ -60,7 +60,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { get } from '@/utils/api.js'
+import { get, post } from '@/utils/api.js'
 import { useCartStore } from '@/stores/cart.js'
 
 const props = defineProps({ vendorId: { type: Number, required: true } })
@@ -90,6 +90,12 @@ const hasScorecard = computed(() => vendor.value?.scorecard && (
   vendor.value.scorecard.price_change_count > 0
 ))
 function formatDate(d) { return new Date(d).toLocaleDateString() }
+
+// Best-effort click tracking for the admin activity dashboard — never
+// blocks or delays the actual WhatsApp navigation.
+function trackWhatsappClick() {
+  post('/api/track/whatsapp-click', { vendor_id: props.vendorId }).catch(() => {})
+}
 
 const whatsappUrl = computed(() => {
   if (!vendor.value?.whatsapp) return ''
