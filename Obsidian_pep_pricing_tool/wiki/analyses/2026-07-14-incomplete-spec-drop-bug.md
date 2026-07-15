@@ -158,3 +158,19 @@ unrelated issue and left alone. This wave is the clearest evidence yet that a fu
 "reprocess every file" sweep has more failure surface than just the pending-queue
 duplication already documented above — a future need to bulk-reprocess should check
 straight-through commits too, not just the pending queue.
+
+## Fourth wave — resurrected pre-fix data (NOVI OREA MOQ-in-vials)
+
+The most damaging wave found: reprocessing a file whose *original* extraction predates a
+later prompt-rule fix resurrects the **original, wrong** data, not the now-correct
+interpretation — because the reprocess replays the file's already-stored
+`raw_response_text` (frozen at extraction time), not a fresh Claude call. Vendor file 28
+(NOVI OREA INTERNATIONAL LIMITED, a "MOQ/vial" + "Price/vial" layout) was correctly fixed
+back on 2026-07-06 (rule 12 in `claude.php` + a dedicated migration script), but the
+2026-07-14 reprocess recreated 8 of its original wrong rows as fresh active prices,
+sitting alongside the correct tiers with bogus, absurdly-cheap "100-kit"/"500-kit" prices
+that would have won the Comparison page's "lowest price" highlight. Deactivated (see
+`log.md`'s "fourth wave" entry and
+`migration_scripts/2026-07-14-deactivate_resurrected_novi_orea_moq_rows.php`). Confirmed
+via a scan of every other file's extraction warnings that this exact pattern doesn't
+appear anywhere else — a single-file, now-resolved issue, not systemic.
