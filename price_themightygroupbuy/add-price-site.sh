@@ -121,6 +121,9 @@ mkdir -p "${APP_DIR}/public/dist"
 chown -R ec2-user:apache "${APP_DIR}/backend/storage"
 chmod -R 770              "${APP_DIR}/backend/storage"
 chcon -Rt httpd_sys_rw_content_t "${APP_DIR}/backend/storage" 2>/dev/null || true
+# Cron jobs run as ec2-user but PHP-FPM creates upload dirs/files as apache:apache
+# (750/644) — without apache group membership the async workers can't read them.
+usermod -aG apache ec2-user
 
 # ── [4/5] Apache vhost + SELinux ──────────────────────────────
 echo "=== [4/5] Apache vhost + SELinux ==="

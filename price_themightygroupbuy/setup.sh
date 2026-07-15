@@ -176,6 +176,9 @@ mkdir -p "${APP_DIR}/log"
 sudo chown -R ec2-user:apache "${APP_DIR}/backend/storage"
 sudo chmod -R 770              "${APP_DIR}/backend/storage"
 sudo chcon -Rt httpd_sys_rw_content_t "${APP_DIR}/backend/storage" 2>/dev/null || true
+# Cron jobs run as ec2-user but PHP-FPM creates upload dirs/files as apache:apache
+# (750/644) — without apache group membership the async workers can't read them.
+sudo usermod -aG apache ec2-user
 sudo chown apache:apache "${APP_DIR}/log"
 sudo chmod 775           "${APP_DIR}/log"
 sudo chcon -t httpd_sys_rw_content_t "${APP_DIR}/log" 2>/dev/null || true
