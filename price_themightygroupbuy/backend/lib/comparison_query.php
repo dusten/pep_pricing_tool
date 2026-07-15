@@ -160,6 +160,18 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
             $unitStdev = sqrt($variance);
         }
 
+        // kit_mean/kit_stdev are the same distribution, just on the raw kit
+        // price ($prices) instead of $/unit — feeds the bell-curve chart's
+        // "kit price" toggle (backlog: 2026-07-14 request to default the
+        // chart to kit price with a $/unit option, matching Avg/Median above
+        // which are also kit-price-based).
+        $kitMean  = array_sum($prices) / $n;
+        $kitStdev = null;
+        if ($n >= 3) {
+            $kitVariance = array_sum(array_map(fn($v) => ($v - $kitMean) ** 2, $prices)) / ($n - 1);
+            $kitStdev    = sqrt($kitVariance);
+        }
+
         $row['stats'] = [
             'avg'         => round(array_sum($prices) / $n, 6),
             'median'      => $priceMedian === null ? null : round($priceMedian, 6),
@@ -167,6 +179,8 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
             'max'         => max($ppus),
             'unit_mean'   => round($unitMean, 6),
             'unit_stdev'  => $unitStdev === null ? null : round($unitStdev, 6),
+            'kit_mean'    => round($kitMean, 6),
+            'kit_stdev'   => $kitStdev === null ? null : round($kitStdev, 6),
         ];
         $rows[] = $row;
     }

@@ -45,6 +45,7 @@ jsonResponse([
     'vendors'              => array_map(fn($v) => [
         'vendor_id'      => $v['vendor_id'],
         'name'           => $v['name'],
+        'price'          => $v['price'],
         'price_per_unit' => $v['price_per_unit'],
         'is_lowest'      => $v['is_lowest'],
     ], $row['vendors']),

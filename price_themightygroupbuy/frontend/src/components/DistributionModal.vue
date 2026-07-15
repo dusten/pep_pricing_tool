@@ -25,17 +25,22 @@
             {{ data.vendor_count }} of {{ data.total_active_vendors }} active vendors carry this item ({{ data.coverage_pct }}% coverage)
           </p>
 
+          <label class="toggle-label" style="margin-bottom:10px">
+            <input type="checkbox" v-model="showUnitPrice" />
+            Show $/{{ data.unit }} instead of kit price
+          </label>
+
           <BellCurveChart
-            :mean="data.stats.unit_mean" :stdev="data.stats.unit_stdev || 0"
-            :points="chartPoints" :unit="data.unit"
+            :mean="basis.mean" :stdev="basis.stdev || 0"
+            :points="chartPoints" :unit="basis.label"
           />
 
           <table class="admin-table dist-table">
-            <thead><tr><th>Vendor</th><th>$/{{ data.unit }}</th></tr></thead>
+            <thead><tr><th>Vendor</th><th>{{ showUnitPrice ? `$/${data.unit}` : 'Kit price' }}</th></tr></thead>
             <tbody>
               <tr v-for="v in sortedVendors" :key="v.vendor_id" :class="{ lowest: v.is_lowest }">
                 <td>{{ v.name }}</td>
-                <td>${{ v.price_per_unit.toFixed(2) }}</td>
+                <td>${{ (showUnitPrice ? v.price_per_unit : v.price).toFixed(2) }}</td>
               </tr>
             </tbody>
           </table>
@@ -75,12 +80,23 @@ onMounted(async () => {
   }
 })
 
+// Kit price is the default basis (matches the Avg/Median columns already
+// shown next to each vendor's kit Price on the Comparison table); $/unit is
+// the opt-in view for comparing across different kit sizes.
+const showUnitPrice = ref(false)
+
 const sortedVendors = computed(() => data.value?.qualifies
   ? [...data.value.vendors].sort((a, b) => a.price_per_unit - b.price_per_unit)
   : [])
 
+const basis = computed(() => showUnitPrice.value
+  ? { mean: data.value.stats.unit_mean, stdev: data.value.stats.unit_stdev, label: data.value.unit }
+  : { mean: data.value.stats.kit_mean, stdev: data.value.stats.kit_stdev, label: 'kit' })
+
 const chartPoints = computed(() => sortedVendors.value.map(v => ({
-  vendorId: v.vendor_id, name: v.name, value: v.price_per_unit, isLowest: v.is_lowest,
+  vendorId: v.vendor_id, name: v.name,
+  value: showUnitPrice.value ? v.price_per_unit : v.price,
+  isLowest: v.is_lowest,
 })))
 </script>
 
