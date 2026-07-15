@@ -60,6 +60,11 @@
                   </table>
                 </div>
 
+                <div v-if="s.status === 'awaiting_approval'" class="actions-row">
+                  <input v-model="adminNotes[s.id]" placeholder="Admin note (optional)" />
+                  <button class="btn btn-primary btn-sm" @click="queue(s)">Send to Claude</button>
+                  <button class="btn btn-danger btn-sm" @click="reject(s)">Reject</button>
+                </div>
                 <div v-if="['scored', 'parse_failed'].includes(s.status)" class="actions-row">
                   <input v-model="adminNotes[s.id]" placeholder="Admin note (optional)" />
                   <button class="btn btn-primary btn-sm" @click="accept(s)">Accept</button>
@@ -80,7 +85,7 @@ import { get, post } from '@/utils/api.js'
 import { useToastStore } from '@/stores/toast.js'
 
 const toast = useToastStore()
-const statuses = ['pending_parse', 'processing', 'scored', 'parse_failed', 'virus_detected', 'accepted', 'rejected']
+const statuses = ['pending_parse', 'awaiting_approval', 'processing', 'scored', 'parse_failed', 'virus_detected', 'accepted', 'rejected']
 
 const items = ref([])
 const statusFilter = ref('')
@@ -118,6 +123,16 @@ async function reject(s) {
     toast.error(err.message || 'Reject failed.')
   }
 }
+
+async function queue(s) {
+  try {
+    await post(`/api/admin/vendor-suggestions/${s.id}/queue`, {})
+    toast.success('Sent to Claude — the cron will process it shortly.')
+    await load()
+  } catch (err) {
+    toast.error(err.message || 'Queue failed.')
+  }
+}
 </script>
 
 <style scoped>
@@ -132,6 +147,6 @@ tr.dup { background: var(--warning-bg); }
 .actions-row input { flex: 1; max-width: 300px; }
 
 .badge-vs-scored, .badge-vs-accepted { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
-.badge-vs-pending_parse, .badge-vs-processing { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning); }
+.badge-vs-pending_parse, .badge-vs-awaiting_approval, .badge-vs-processing { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning); }
 .badge-vs-parse_failed, .badge-vs-virus_detected, .badge-vs-rejected { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
 </style>

@@ -77,6 +77,19 @@ if ((int)$_FILES['file']['size'] > 5 * 1024 * 1024) {
 $dir = dirname(__DIR__, 2) . "/storage/vendor_suggestions/{$user['id']}";
 if (!is_dir($dir)) mkdir($dir, 0770, true);
 
+$contentHash = hash_file('sha256', $_FILES['file']['tmp_name']);
+
+// Same user, same bytes, not already rejected → block a resubmit before it
+// can burn another Claude call (rejected is the one status where retrying
+// after fixing the file is expected).
+$dupStmt = db()->prepare(
+    "SELECT id FROM pc_vendor_suggestions WHERE user_id = ? AND content_hash = ? AND status != 'rejected' LIMIT 1"
+);
+$dupStmt->execute([$user['id'], $contentHash]);
+if ($dupStmt->fetch()) {
+    jsonResponse(['error' => "You've already submitted this exact file."], 422);
+}
+
 $storedName = generateToken(16) . ".$ext";
 $storedPath = "$dir/$storedName";
 if (!move_uploaded_file($_FILES['file']['tmp_name'], $storedPath)) {
@@ -115,12 +128,12 @@ if (!$clean) {
     db()->prepare(
         'INSERT INTO pc_vendor_suggestions
            (user_id, relationship, display_name, contact_name, email, whatsapp, discord, telegram, website, notes,
-            original_filename, stored_path, file_type, file_size_bytes, status)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+            original_filename, stored_path, file_type, file_size_bytes, content_hash, status)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
     )->execute([
         $user['id'], $relationship, $displayName, $contactName ?: null, $email ?: null, $whatsapp ?: null,
         $discord ?: null, $telegram ?: null, $website, $notes ?: null,
-        $original, $quarantinedPath, $typeMap[$ext], (int)$_FILES['file']['size'], 'virus_detected',
+        $original, $quarantinedPath, $typeMap[$ext], (int)$_FILES['file']['size'], $contentHash, 'virus_detected',
     ]);
     jsonResponse(['error' => 'This file was flagged by malware scanning and was not accepted.'], 422);
 }
@@ -136,7 +149,7 @@ $adminNote = findDuplicateSuggestionNote($displayName, $website, (int)$user['id'
 // vendor's own export with a different column layout still needs the
 // Claude pipeline (Phase 2), it just isn't built yet, so it lands pending_parse.
 $isTemplate = false;
-$status = 'pending_parse';
+$status = 'awaiting_approval'; // non-template files need an admin to queue them for Claude (backlog #69)
 $extractedJson = null;
 $scoreJson = null;
 
@@ -163,14 +176,14 @@ if ($isTemplate) {
 $stmt = db()->prepare(
     'INSERT INTO pc_vendor_suggestions
        (user_id, relationship, display_name, contact_name, email, whatsapp, discord, telegram, website, notes,
-        original_filename, stored_path, file_type, file_size_bytes, is_template_csv, status,
+        original_filename, stored_path, file_type, file_size_bytes, content_hash, is_template_csv, status,
         extracted_json, score_json, duplicate_of_vendor_id, admin_note)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
 );
 $stmt->execute([
     $user['id'], $relationship, $displayName, $contactName ?: null, $email ?: null, $whatsapp ?: null,
     $discord ?: null, $telegram ?: null, $website, $notes ?: null,
-    $original, $relativePath, $typeMap[$ext], (int)$_FILES['file']['size'], $isTemplate ? 1 : 0, $status,
+    $original, $relativePath, $typeMap[$ext], (int)$_FILES['file']['size'], $contentHash, $isTemplate ? 1 : 0, $status,
     $extractedJson, $scoreJson, $duplicateVendorId, $adminNote,
 ]);
 $suggestionId = (int)db()->lastInsertId();
@@ -184,7 +197,7 @@ jsonResponse([
     'status' => $status,
     'message' => $status === 'scored'
         ? 'Scored instantly from the template file.'
-        : 'File received — queued for processing.',
+        : 'File received — an admin will review it before processing.',
 ], 201);
 
 /**

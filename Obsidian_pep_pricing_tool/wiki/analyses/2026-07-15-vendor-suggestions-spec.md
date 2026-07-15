@@ -10,6 +10,8 @@ sources: []
 
 Drafted 2026-07-15 for backlog #69, per the user's request to review the spec before any implementation begins. **Phases 1–2 built 2026-07-15** (same day, with Sonnet 5) — see [[wiki/entities/phase-roadmap]] for the backlog entry and the 2026-07-15 log entries for what shipped. Phase 3 (launch/un-gate) remains unbuilt. Gated to `pc_users.test_account = 1` users (+ admins) throughout the build, per the plan below.
 
+**Same-day follow-up (migration 037):** product owner added two hard requirements after Phase 2 shipped — non-template files must never reach Claude without an explicit admin approval, and a user must not be able to burn repeat Claude calls by resubmitting the same file. See the "Status lifecycle" and "Abuse / Claude cost" updates below.
+
 ## Context
 
 Users (both vendor reps and regular buyers) will be able to suggest a new vendor: contact
@@ -39,7 +41,7 @@ Almost everything needed already exists and gets reused: upload gate + ClamAV sc
 |---|---|
 | Vendor already in catalog (dedup) | Soft-flag via `duplicate_of_vendor_id` (match by phone / lowercased display_name / website host, against catalog AND pending suggestions) — never auto-reject; their file may be fresher. Admin decides. |
 | Two users suggest the same vendor | Note in `admin_note` ("also suggested by user #N"); no merge tooling v1. |
-| Abuse / Claude cost | 3/hr memcached rate limit + durable 3-per-7-days DB count (memcached restarts wipe counters), 5MB file cap, Claude only ever invoked from the cron worker. |
+| Abuse / Claude cost | 3/hr memcached rate limit + durable 3-per-7-days DB count (memcached restarts wipe counters), 5MB file cap, Claude only ever invoked from the cron worker. **037 addendum**: admin approval now gates every Claude call too — non-template files land `awaiting_approval` and only reach `pending_parse` (cron-eligible) via an explicit admin "Send to Claude" action; a `content_hash` (sha256) + `(user_id, content_hash)` index blocks a user from resubmitting the exact same file while any non-rejected suggestion of theirs already has that hash (422). |
 | Tier gating | None while test-gated. At launch, one-line `requireTier('advanced')` for non-template files only if abused — skip for now. |
 | Score anti-gaming (vendor self-submits fake low prices) | Score is private (submitter + admin only), acceptance is always manual, admin card shows `relationship` (vendor_rep = self-submitted) next to the score. No detection heuristics v1. |
 | Submitter UX | Single `/suggest-vendor` page: form + CSV-template download + "My Suggestions" list with expandable score report and rejection note. No separate view. |
@@ -97,8 +99,12 @@ is NOT NULL and stays that way; suggestions store at `backend/storage/vendor_sug
 ## Status lifecycle
 
 - submit → scan fail → `virus_detected` (quarantined via existing `quarantineFile()`, terminal)
+- submit + same-user duplicate `content_hash` (any non-rejected status) → 422, no row inserted
 - submit + template CSV → parse + score inline → `scored`
-- submit + other file → `pending_parse` → cron claims → `processing` → `scored` | `parse_failed`
+- submit + other file → `awaiting_approval` (**037**: no longer `pending_parse` — needs admin sign-off
+  before Claude ever sees it) → admin `queue` action → `pending_parse` → cron claims → `processing` →
+  `scored` | `parse_failed`
+- `awaiting_approval` → admin → `rejected` (reject also works pre-approval, skipping the pipeline entirely)
 - `scored` / `parse_failed` → admin → `accepted` (vendor_id set) | `rejected`
 
 ## Backend changes

@@ -10,6 +10,7 @@ require_once dirname(__DIR__, 2) . '/email.php';
 // GET  /admin/vendor-suggestions[?status=]      — list
 // POST /admin/vendor-suggestions/{id}/accept    — create/commit real vendor
 // POST /admin/vendor-suggestions/{id}/reject
+// POST /admin/vendor-suggestions/{id}/queue     — awaiting_approval -> pending_parse (admin approves Claude extraction)
 method('GET', 'POST');
 $admin  = requireAdmin();
 $id     = isset($PARAMS['id']) ? (int)$PARAMS['id'] : null;
@@ -18,7 +19,7 @@ $action = $PARAMS['action'] ?? null;
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $where = [];
     $params = [];
-    if (in_array($_GET['status'] ?? '', ['pending_parse', 'processing', 'scored', 'parse_failed', 'virus_detected', 'accepted', 'rejected'], true)) {
+    if (in_array($_GET['status'] ?? '', ['pending_parse', 'awaiting_approval', 'processing', 'scored', 'parse_failed', 'virus_detected', 'accepted', 'rejected'], true)) {
         $where[] = 'vs.status = ?';
         $params[] = $_GET['status'];
     }
@@ -47,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     jsonResponse(['suggestions' => $rows]);
 }
 
-if (!$id || !in_array($action, ['accept', 'reject'], true)) {
+if (!$id || !in_array($action, ['accept', 'reject', 'queue'], true)) {
     jsonResponse(['error' => 'Not found.'], 404);
 }
 
@@ -57,6 +58,15 @@ $suggestion = $stmt->fetch();
 if (!$suggestion) jsonResponse(['error' => 'Suggestion not found.'], 404);
 
 $d = input();
+
+if ($action === 'queue') {
+    if ($suggestion['status'] !== 'awaiting_approval') {
+        jsonResponse(['error' => 'Only suggestions awaiting approval can be queued.'], 422);
+    }
+    db()->prepare("UPDATE pc_vendor_suggestions SET status = 'pending_parse' WHERE id = ?")->execute([$id]);
+    logAdminAction((int)$admin['id'], 'queue_vendor_suggestion', ['suggestion_id' => $id]);
+    jsonResponse(['message' => 'Suggestion queued for processing.']);
+}
 
 if ($action === 'reject') {
     db()->prepare('UPDATE pc_vendor_suggestions SET status = ?, reviewed_by = ?, reviewed_at = NOW(), admin_note = ? WHERE id = ?')

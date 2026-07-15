@@ -34,8 +34,8 @@
         <input type="file" ref="fileInput" accept=".pdf,.xlsx,.csv,.jpg,.jpeg,.png,.zip" @change="onFileChange" />
         <button class="btn btn-ghost btn-sm" style="margin-top:6px" @click="downloadTemplate">Download CSV template</button>
         <p class="text-muted text-sm" style="margin-top:4px">
-          Using the CSV template gets you an instant score. Other formats (PDF/XLSX/screenshot/ZIP) are
-          queued for processing.
+          Using the CSV template gets you an instant score. Other formats (PDF/XLSX/screenshot/ZIP)
+          are reviewed by an admin before processing.
         </p>
       </div>
 
@@ -64,6 +64,7 @@
               Unmatched: {{ s.score_json.unmatched_names.join(', ') }}
             </p>
           </template>
+          <p v-else-if="s.status === 'awaiting_approval'" class="text-muted text-sm">Awaiting admin review.</p>
           <p v-else-if="s.status === 'pending_parse'" class="text-muted text-sm">Queued for processing.</p>
           <p v-if="s.admin_note" class="text-muted text-sm">Admin note: {{ s.admin_note }}</p>
         </div>
@@ -106,7 +107,7 @@ function onFileChange(e) {
 }
 
 function statusLabel(status) {
-  return { pending_parse: 'Queued', processing: 'Processing', scored: 'Scored', parse_failed: 'Parse failed',
+  return { pending_parse: 'Queued', awaiting_approval: 'Awaiting review', processing: 'Processing', scored: 'Scored', parse_failed: 'Parse failed',
            virus_detected: 'Rejected (file flagged)', accepted: 'Accepted', rejected: 'Rejected' }[status] || status
 }
 
@@ -182,7 +183,7 @@ async function submit() {
 .suggestion-body { margin-top: 8px; padding-left: 4px; }
 
 .badge-vs-scored, .badge-vs-accepted { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); }
-.badge-vs-pending_parse, .badge-vs-processing { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning); }
+.badge-vs-pending_parse, .badge-vs-awaiting_approval, .badge-vs-processing { background: var(--warning-bg); color: var(--warning); border: 1px solid var(--warning); }
 .badge-vs-parse_failed, .badge-vs-virus_detected, .badge-vs-rejected { background: var(--danger-bg); color: var(--danger); border: 1px solid var(--danger); }
 .badge-vs-dup { background: var(--surface-alt); color: var(--text-secondary); border: 1px solid var(--border); }
 </style>
