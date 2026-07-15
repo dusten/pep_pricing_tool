@@ -174,3 +174,27 @@ that would have won the Comparison page's "lowest price" highlight. Deactivated 
 `migration_scripts/2026-07-14-deactivate_resurrected_novi_orea_moq_rows.php`). Confirmed
 via a scan of every other file's extraction warnings that this exact pattern doesn't
 appear anywhere else — a single-file, now-resolved issue, not systemic.
+
+## Fifth wave — the full catalog audit (TB-500/Nina)
+
+The earlier third-wave cleanup only checked for duplicates where both rows had an
+**identical price** (`GROUP BY ... HAVING COUNT(DISTINCT vendor_sku) > 1`), which missed
+any pair where the reprocess's re-extraction also read the price slightly differently —
+exactly what happened with Nina's TB-500 10mg ($116 vs $115). A full re-audit (any vendor
+with more than one active row for the same product/spec/tier, regardless of price)
+found 75 groups instead of 24. 62 fit the established mishap pattern exactly (confirmed via
+`source_file_id`: every pair traces to the identical source file) and were deactivated.
+
+The other 13 turned out to be a genuinely different phenomenon: tracing each to its actual
+extraction call showed nearly all of them came from a **single extraction pass** reading
+two distinct rows out of the vendor's own source document — not a reprocess duplicate at
+all. Two were confirmed as extraction glitches (a source file with only one real SKU
+per item, but a spurious blank-SKU row alongside it) and fixed. One was confirmed as a
+genuine product mismatch (Lipo-C-coded SKUs sitting on the L-Carnitine product) and
+corrected via direct SQL, since no existing endpoint supports moving a single price row
+between products/specs without also relocating every other vendor's data on the same
+spec. The rest were left alone — either other likely product mismatches or genuine
+vendor-source duplicates where only a human (or the vendor) can say which listing is
+authoritative. See `log.md`'s "fifth wave" entry for the full breakdown and
+`migration_scripts/2026-07-14-deactivate_reprocess_duplicates_full_audit.php` for the
+complete list.
