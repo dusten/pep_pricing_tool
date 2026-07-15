@@ -29,36 +29,22 @@
     </div>
 
     <template v-if="trend">
-      <h5 class="trend-title">Last 13 days</h5>
-      <div class="trend-rows">
-        <div v-for="row in trend.day" :key="row.label" class="trend-row">
-          <span class="trend-label">{{ row.label }}</span>
-          <span class="trend-metric"><strong>{{ row.signups }}</strong> signups</span>
-          <span class="trend-metric"><strong>{{ row.logins }}</strong> logins</span>
-          <span class="trend-metric"><strong>{{ row.searches }}</strong> searches</span>
-          <span class="trend-metric"><strong>{{ row.whatsapp_clicks }}</strong> clicks</span>
-        </div>
-      </div>
-
-      <h5 class="trend-title">Last 13 weeks</h5>
-      <div class="trend-rows">
-        <div v-for="row in trend.week" :key="row.label" class="trend-row">
-          <span class="trend-label">{{ row.label }}</span>
-          <span class="trend-metric"><strong>{{ row.signups }}</strong> signups</span>
-          <span class="trend-metric"><strong>{{ row.logins }}</strong> logins</span>
-          <span class="trend-metric"><strong>{{ row.searches }}</strong> searches</span>
-          <span class="trend-metric"><strong>{{ row.whatsapp_clicks }}</strong> clicks</span>
-        </div>
-      </div>
-
-      <h5 class="trend-title">Last 13 months</h5>
-      <div class="trend-rows">
-        <div v-for="row in trend.month" :key="row.label" class="trend-row">
-          <span class="trend-label">{{ row.label }}</span>
-          <span class="trend-metric"><strong>{{ row.signups }}</strong> signups</span>
-          <span class="trend-metric"><strong>{{ row.logins }}</strong> logins</span>
-          <span class="trend-metric"><strong>{{ row.searches }}</strong> searches</span>
-          <span class="trend-metric"><strong>{{ row.whatsapp_clicks }}</strong> clicks</span>
+      <div class="metric-grid">
+        <div v-for="m in METRICS" :key="m.key" class="card metric-chart-card">
+          <div class="metric-chart-header">
+            <h5 class="metric-chart-title">{{ m.label }}</h5>
+            <div class="range-pills">
+              <button v-for="r in ['day', 'week', 'month']" :key="r" type="button"
+                      :class="['pill', { active: trendGranularity === r }]" @click="trendGranularity = r">{{ r }}</button>
+            </div>
+          </div>
+          <div class="bar-rows">
+            <div v-for="row in trend[trendGranularity]" :key="row.label" class="bar-row">
+              <span class="bar-label">{{ row.label }}</span>
+              <div class="bar-track"><div class="bar-fill" :style="{ width: barPct(row[m.key], m.key) + '%' }"></div></div>
+              <span class="bar-value">{{ row[m.key] }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </template>
@@ -98,8 +84,24 @@ const activityRange = ref('day')
 async function loadActivity() { activity.value = await get(`/api/admin/activity-stats?range=${activityRange.value}`) }
 loadActivity()
 
-const trend = ref(null)
+const trend           = ref(null)
+const trendGranularity = ref('day')
 onMounted(async () => { trend.value = await get('/api/admin/activity-trend') })
+
+const METRICS = [
+  { key: 'signups', label: 'Signups' },
+  { key: 'logins', label: 'Logins' },
+  { key: 'searches', label: 'Searches' },
+  { key: 'whatsapp_clicks', label: 'WhatsApp Clicks' },
+]
+// Bar width relative to that metric's own max across the currently-shown
+// 13 periods (not a shared 0-100 scale across metrics) — matches how each
+// chart in the reference design normalizes independently.
+function barPct(value, metricKey) {
+  const rows = trend.value?.[trendGranularity.value] || []
+  const max = Math.max(1, ...rows.map(r => r[metricKey]))
+  return (value / max) * 100
+}
 </script>
 
 <style scoped>
@@ -115,14 +117,15 @@ onMounted(async () => { trend.value = await get('/api/admin/activity-trend') })
 .pill:hover  { border-color: var(--accent); color: var(--accent); }
 .pill.active { background: var(--primary); border-color: var(--primary); color: var(--text-on-primary); }
 
-.trend-title { margin: 18px 0 8px; font-size: 12.5px; color: var(--text-secondary); }
-.trend-rows { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
-.trend-row {
-  display: flex; align-items: center; gap: 16px; padding: 6px 10px;
-  border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface);
-  font-size: 12.5px;
-}
-.trend-label { min-width: 110px; color: var(--text-secondary); font-weight: 600; }
-.trend-metric { color: var(--text-secondary); }
-.trend-metric strong { color: var(--text); font-size: 13.5px; margin-right: 3px; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 16px; margin-bottom: 8px; }
+.metric-chart-card { padding: 18px; }
+.metric-chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.metric-chart-title { margin: 0; font-size: 14.5px; }
+
+.bar-rows { display: flex; flex-direction: column; gap: 9px; }
+.bar-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
+.bar-label { min-width: 76px; color: var(--text-secondary); flex-shrink: 0; }
+.bar-track { flex: 1; height: 10px; border-radius: 99px; background: var(--surface-alt); overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width var(--transition); }
+.bar-value { min-width: 22px; text-align: right; color: var(--text-secondary); font-weight: 600; flex-shrink: 0; }
 </style>
