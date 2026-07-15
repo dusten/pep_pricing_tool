@@ -129,3 +129,43 @@ function sendWaitlistInviteEmail(string $email, string $name, string $inviteUrl)
     return sendEmail($email, $name, "You're invited — TheMightyGroupBuy Price Comparison",
                      emailTemplate("You're In!", $body));
 }
+
+// ── Vendor suggestions (backlog #69) ─────────────────────────────
+// Bodies built inline rather than as email_templates/*.html files — content
+// is short and mostly dynamic (score numbers, admin notes), not worth a
+// static template file for three one-paragraph emails.
+
+function sendSuggestionScoredEmail(?string $email, string $name, string $vendorName, array $score): bool {
+    if (!$email) return false;
+    $greeting = $name ? "Hi {$name}," : 'Hi there,';
+    $scoreLine = $score['vendor_score'] !== null
+        ? "<p style=\"font-size:15px;color:#111827\">Vendor score: <strong>{$score['vendor_score']}/100</strong> ({$score['matched_rows']} of {$score['total_rows']} rows matched to catalog products).</p>"
+        : '<p style="font-size:15px;color:#111827">Not enough catalog overlap to score this vendor yet.</p>';
+    $body = "<p style=\"font-size:15px;color:#111827\">{$greeting}</p>
+<p style=\"font-size:15px;color:#111827\">Your suggested vendor <strong>" . htmlspecialchars($vendorName, ENT_QUOTES, 'UTF-8') . "</strong> has been scored against current market prices.</p>
+{$scoreLine}
+<p style=\"font-size:14px;color:#6b7280\">See the full breakdown any time on the Suggest a Vendor page. An admin still needs to review before it appears in the catalog.</p>";
+    return sendEmail($email, $name, 'Your vendor suggestion has been scored — TheMightyGroupBuy Prices',
+                     emailTemplate('Suggestion Scored', $body));
+}
+
+function sendSuggestionAcceptedEmail(?string $email, string $name, string $vendorName): bool {
+    if (!$email) return false;
+    $greeting = $name ? "Hi {$name}," : 'Hi there,';
+    $body = "<p style=\"font-size:15px;color:#111827\">{$greeting}</p>
+<p style=\"font-size:15px;color:#111827\">Your suggested vendor <strong>" . htmlspecialchars($vendorName, ENT_QUOTES, 'UTF-8') . "</strong> has been accepted and is now live on TheMightyGroupBuy Prices. Thanks for the contribution!</p>"
+        . _btn(APP_URL . '/comparison', 'View on Comparison');
+    return sendEmail($email, $name, 'Your suggested vendor is now live — TheMightyGroupBuy Prices',
+                     emailTemplate('Suggestion Accepted', $body));
+}
+
+function sendSuggestionRejectedEmail(?string $email, string $name, string $vendorName, string $adminNote = ''): bool {
+    if (!$email) return false;
+    $greeting = $name ? "Hi {$name}," : 'Hi there,';
+    $noteLine = $adminNote ? "<p style=\"font-size:14px;color:#6b7280\">Note: " . htmlspecialchars($adminNote, ENT_QUOTES, 'UTF-8') . '</p>' : '';
+    $body = "<p style=\"font-size:15px;color:#111827\">{$greeting}</p>
+<p style=\"font-size:15px;color:#111827\">Your suggested vendor <strong>" . htmlspecialchars($vendorName, ENT_QUOTES, 'UTF-8') . "</strong> was not accepted into the catalog.</p>
+{$noteLine}";
+    return sendEmail($email, $name, 'Update on your vendor suggestion — TheMightyGroupBuy Prices',
+                     emailTemplate('Suggestion Not Accepted', $body));
+}

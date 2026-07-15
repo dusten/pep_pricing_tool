@@ -18,6 +18,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isAuthenticated = computed(() => !!token.value && !!user.value)
   const isAdmin         = computed(() => !!user.value?.is_admin)
+  const isTestAccount   = computed(() => !!user.value?.test_account)
   const tier            = computed(() => user.value?.tier ?? 'free')
   const tierActive      = computed(() =>
     ['active','trialing'].includes(user.value?.tier_status))
@@ -66,7 +67,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     token, user,
-    isAuthenticated, isAdmin, tier, tierActive,
+    isAuthenticated, isAdmin, isTestAccount, tier, tierActive,
     login, logout, fetchMe, updateTheme,
   }
 })

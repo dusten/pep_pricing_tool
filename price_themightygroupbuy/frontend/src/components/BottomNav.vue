@@ -24,11 +24,19 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 15l2 2 4-4"/></svg>
       <span>Submit COA</span>
     </RouterLink>
+    <!-- ponytail: build-phase gate (backlog #69), delete v-if at launch (Phase 3) -->
+    <RouterLink v-if="auth.isTestAccount || auth.isAdmin" to="/suggest-vendor" class="bn-item" active-class="active">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M12 2l3 6.5 7 1-5 5 1.5 7L12 18l-6.5 3.5 1.5-7-5-5 7-1z"/></svg>
+      <span>Suggest Vendor</span>
+    </RouterLink>
   </nav>
 </template>
 
 <script setup>
 import { RouterLink } from 'vue-router'
+import { useAuthStore } from '@/stores/auth.js'
+
+const auth = useAuthStore()
 </script>
 
 <style scoped>

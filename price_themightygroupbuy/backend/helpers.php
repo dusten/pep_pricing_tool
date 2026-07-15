@@ -317,6 +317,7 @@ function userShape(array $u): array {
         'timezone'     => $u['timezone'],
         'push_enabled' => (bool)$u['push_enabled'],
         'is_admin'     => (bool)$u['is_admin'],
+        'test_account' => (bool)($u['test_account'] ?? false),
         'email_verified' => !empty($u['email_verified_at']),
         'pending_email'  => $u['pending_email'] ?? null,
         'created_at'   => $u['created_at'],

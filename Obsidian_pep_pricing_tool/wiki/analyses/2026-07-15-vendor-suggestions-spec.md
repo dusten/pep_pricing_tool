@@ -8,7 +8,7 @@ sources: []
 
 # User-Suggested Vendors — Full Spec (backlog #69)
 
-Drafted 2026-07-15 for backlog #69, per the user's request to review the spec before any implementation begins — **not built yet**. Build is deferred to a future session (with Sonnet 5) and will be gated to `pc_users.test_account = 1` users throughout development, per the plan below. See [[wiki/entities/phase-roadmap]] for the backlog entry.
+Drafted 2026-07-15 for backlog #69, per the user's request to review the spec before any implementation begins. **Phase 1 built 2026-07-15** (same day, with Sonnet 5) — see [[wiki/entities/phase-roadmap]] for the backlog entry and the 2026-07-15 log entry for what shipped. Phases 2/3 remain unbuilt. Gated to `pc_users.test_account = 1` users (+ admins) throughout the build, per the plan below.
 
 ## Context
 

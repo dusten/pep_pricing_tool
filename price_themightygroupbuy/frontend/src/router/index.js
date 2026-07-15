@@ -80,6 +80,11 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/suggest-vendor',
+      component: () => import('@/views/SuggestVendorView.vue'),
+      meta: { requiresAuth: true, requiresTestAccount: true },
+    },
+    {
       path: '/account',
       redirect: '/settings',
     },
@@ -118,6 +123,11 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.requiresAdmin && !auth.isAdmin) {
+    return { path: '/dashboard' }
+  }
+
+  // ponytail: build-phase gate (backlog #69), delete at launch (Phase 3)
+  if (to.meta.requiresTestAccount && !auth.isTestAccount && !auth.isAdmin) {
     return { path: '/dashboard' }
   }
 

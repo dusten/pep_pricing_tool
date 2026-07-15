@@ -25,6 +25,7 @@
       <SubscriptionsTab v-if="activeTab === 'subscriptions'" />
       <VendorsTab       v-if="activeTab === 'vendors'" />
       <ReviewQueueTab   v-if="activeTab === 'review-queue'" />
+      <VendorSuggestionsTab v-if="activeTab === 'vendor-suggestions'" />
       <ProductsTab      v-if="activeTab === 'products'" />
       <StacksTab        v-if="activeTab === 'stacks'" />
       <InventoryTab     v-if="activeTab === 'inventory'" />
@@ -50,6 +51,7 @@ import WaitlistTab      from './tabs/WaitlistTab.vue'
 import SubscriptionsTab from './tabs/SubscriptionsTab.vue'
 import VendorsTab       from './tabs/VendorsTab.vue'
 import ReviewQueueTab   from './tabs/ReviewQueueTab.vue'
+import VendorSuggestionsTab from './tabs/VendorSuggestionsTab.vue'
 import ProductsTab      from './tabs/ProductsTab.vue'
 import StacksTab        from './tabs/StacksTab.vue'
 import InventoryTab     from './tabs/InventoryTab.vue'
@@ -68,6 +70,7 @@ const groups = [
   { id: 'catalog', label: 'Vendor / Product Management', tabs: [
     { id: 'vendors',      label: 'Vendors' },
     { id: 'review-queue', label: 'Review Queue' },
+    { id: 'vendor-suggestions', label: 'Vendor Suggestions' },
     { id: 'products',     label: 'Products' },
     { id: 'inventory',    label: 'Inventory' },
     { id: 'stacks',       label: 'Stacks' },

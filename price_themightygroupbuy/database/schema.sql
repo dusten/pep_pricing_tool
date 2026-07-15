@@ -415,6 +415,43 @@ CREATE TABLE IF NOT EXISTS pc_pending_imports (
   INDEX (status, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- User-suggested vendors (backlog #69), Phase 1 — see migrations/036_vendor_suggestions.sql
+CREATE TABLE IF NOT EXISTS pc_vendor_suggestions (
+  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id           INT UNSIGNED NOT NULL,
+  relationship      ENUM('vendor_rep','customer','other') NOT NULL,
+  display_name      VARCHAR(100) NOT NULL,
+  contact_name      VARCHAR(100) NULL,
+  email             VARCHAR(200) NULL,
+  whatsapp          VARCHAR(50)  NULL,
+  discord           VARCHAR(100) NULL,
+  telegram          VARCHAR(100) NULL,
+  website           VARCHAR(300) NULL,
+  phones            VARCHAR(300) NULL,
+  payment_methods   VARCHAR(500) NULL,
+  notes             TEXT NULL,
+  original_filename VARCHAR(300) NOT NULL,
+  stored_path       VARCHAR(500) NOT NULL,
+  file_type         ENUM('pdf','xlsx','csv','image','zip') NOT NULL,
+  file_size_bytes   INT UNSIGNED NULL,
+  is_template_csv   BOOLEAN NOT NULL DEFAULT FALSE,
+  status ENUM('pending_parse','processing','scored','parse_failed','virus_detected','accepted','rejected')
+         NOT NULL DEFAULT 'pending_parse',
+  extracted_json    JSON NULL,
+  score_json        JSON NULL,
+  duplicate_of_vendor_id INT UNSIGNED NULL,
+  admin_note        TEXT NULL,
+  vendor_id         INT UNSIGNED NULL,
+  reviewed_by       INT UNSIGNED NULL,
+  reviewed_at       DATETIME NULL,
+  created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id)   REFERENCES pc_users(id)   ON DELETE CASCADE,
+  FOREIGN KEY (vendor_id) REFERENCES pc_vendors(id) ON DELETE SET NULL,
+  INDEX (status, created_at),
+  INDEX (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS pc_coa_submissions (
   id                   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id              INT UNSIGNED NOT NULL,
