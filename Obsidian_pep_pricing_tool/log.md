@@ -842,3 +842,9 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 
 - User asked to save the 11 unresolved conflicting-listing pairs to the wiki with an index link, and asked whether they were currently hidden -- confirmed no, all 20 rows across the 11 pairs are still `is_active=1`, fully live on the Comparison page (they're not in the Review Queue either -- these are already-committed active prices, a different thing from pc_pending_imports).
 - Filed as wiki/analyses/2026-07-14-flagged-duplicate-listings-needing-research.md with the full vendor/product/SKU/price table and research instructions (check the vendor's Files-tab source, decide keep-one/keep-both/recategorize). Added to index.md.
+
+## [2026-07-14] fix | Pending-import review buttons no longer shift position
+
+- User asked for the Approve/Reject/Skip buttons on the pending-imports review card to sit on their own centered line, since they previously shared a flex row with the "Map onto X" checkbox label -- the buttons' position shifted left/right depending on how long that label's candidate-product-name text was.
+- Wrapped the buttons in a new .action-buttons div (flex, centered) inside a .pending-actions modifier on the outer .review-actions container (column layout) -- scoped to just the pending-imports card so the COA review card's simpler 2-button row (which doesn't have this problem) is untouched.
+- Verified live: buttons now sit centered on their own row below the checkbox.
