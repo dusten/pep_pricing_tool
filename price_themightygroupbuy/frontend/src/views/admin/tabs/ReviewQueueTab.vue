@@ -41,13 +41,15 @@
           <label class="toggle-label"><input type="checkbox" v-model="importRow.raw_json.is_raw_material" /> Raw/bulk powder (priced by weight, not a finished vial)</label>
         </div>
 
-        <div class="review-actions">
+        <div class="review-actions pending-actions">
           <label v-if="importRow.candidate_product_id" class="toggle-label">
             <input type="checkbox" v-model="mapToCandidate" /> Map onto "{{ importRow.candidate_name }}" instead of creating a new product
           </label>
-          <button class="btn btn-primary btn-sm" @click="approveImport">Approve</button>
-          <button class="btn btn-ghost btn-sm" @click="rejectImport">Reject</button>
-          <button class="btn btn-ghost btn-sm" title="Come back to this one later — moves it to the back of the queue instead of approving or rejecting" @click="skipImport">Skip</button>
+          <div class="action-buttons">
+            <button class="btn btn-primary btn-sm" @click="approveImport">Approve</button>
+            <button class="btn btn-ghost btn-sm" @click="rejectImport">Reject</button>
+            <button class="btn btn-ghost btn-sm" title="Come back to this one later — moves it to the back of the queue instead of approving or rejecting" @click="skipImport">Skip</button>
+          </div>
         </div>
       </div>
       <p v-if="approveMsg" class="text-sm text-success approve-msg">{{ approveMsg }}</p>
@@ -237,6 +239,10 @@ onMounted(loadImport)
 .review-row { display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
 .label-sm { min-width: 160px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
 .review-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+/* Pending-import review card: buttons get their own centered line, so they
+   don't shift left/right based on the "Map onto X" label's varying length. */
+.pending-actions { flex-direction: column; align-items: stretch; }
+.action-buttons { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
 .toggle-label { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-secondary); }
 .toggle-label input { width: auto; }
 .hint { margin: 10px 0; }
