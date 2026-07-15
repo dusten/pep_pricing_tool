@@ -823,3 +823,10 @@ Created directory structure, CLAUDE.md schema, index, log, and four page templat
 - But the 2026-07-14 broad reprocess mishap resurrected the file's ORIGINAL wrong extraction as 8 new active price rows (Tirzepatide 10/30/60mg, Retatrutide 10/30/60mg, GHK-Cu 50/100mg) sitting alongside the correct tiers with bogus "100-kit"/"500-kit" prices far below the real tiers -- live and would have wrongly won the "lowest price" highlight on the Comparison page. Botox was unaffected (its resurrected pending rows were separately rejected already).
 - Scanned every other vendor file's extraction for the same "MOQ/vial" warning text -- only file 28 was ever flagged with it, so this isn't a wider unfixed-extraction problem, just a resurrected-data problem specific to this file.
 - Deactivated all 8 resurrected rows via PUT /api/prices/{id} -- every one already had a correct tier from the 2026-07-06 fix or this vendor's other files, nothing needed recalculating. Archived as migration_scripts/2026-07-14-deactivate_resurrected_novi_orea_moq_rows.php. Verified live: NOVI OREA's Tirzepatide/Retatrutide/GHK-Cu now show only the correct, consistent tiers.
+
+## [2026-07-14] feature | Bell curve defaults to kit price, $/unit toggle added
+
+- User wanted the price-distribution bell curve to default to kit price (matching the Comparison table's Avg/Median columns) instead of being hardcoded to $/unit, with an option to switch back to $/unit.
+- Added kit_mean/kit_stdev to comparison_query.php's stats block (same computation as the existing unit_mean/unit_stdev, just over each vendor's raw kit price instead of price_per_unit; same n>=3 threshold for stdev). distribution.php now also returns each vendor's raw kit price, not just price_per_unit.
+- DistributionModal.vue: added a checkbox ("Show $/{unit} instead of kit price"), unchecked by default. Chart mean/stdev/points and the vendor table column switch based on the toggle.
+- Verified live on BPC-157 5mg (23 vendors): defaults to kit price ($31-$48 range), toggling switches the chart, table header, and every value to $/mg correctly.
