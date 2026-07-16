@@ -930,3 +930,11 @@ storage-dir provisioning. Phase 2 is now actually operable for real traffic.
 ## [2026-07-15] feature | Admin approval gate for Claude extraction + duplicate-file block (backlog #69)
 
 Migration 037: `pc_vendor_suggestions.status` gains `awaiting_approval` (MODIFY COLUMN, existing rows untouched); new `content_hash CHAR(64)` + `(user_id, content_hash)` index. Non-template submissions now land `awaiting_approval` instead of `pending_parse` — new admin action `queue` (`admin/vendor-suggestions/{id}/(accept|reject|queue)`) flips `awaiting_approval` → `pending_parse`; the existing cron loop is otherwise untouched, it only ever claims `pending_parse`. Submit endpoint computes sha256 of the upload and 422s ("You've already submitted this exact file.") on a same-user, non-rejected duplicate hash. Frontend: "Awaiting review" status copy (no mention of Claude to the user), updated helper text, admin tab gets a "Send to Claude" button for `awaiting_approval` rows. Verified on server: `php -l` clean on all 5 touched backend files + `public/index.php`; `DESCRIBE pc_vendor_suggestions` shows the new enum value + `content_hash` column; manual cron run left an `awaiting_approval` test row untouched (only `pending_parse` claimed); queue-transition UPDATE verified directly; dedup-hash logic + cron-claim-exclusion verified via `diagnostic_scripts/check_suggestion_approval_gate.php` (insert/assert/cleanup, no Claude call). Deploy via `deploy.sh --all`, smoke check passed.
+
+## [2026-07-15] decision | Vendor-suggestions Phase 3 backlogged pending user testing (backlog #69)
+
+Owner's call: Phases 1–2 plus the admin approval gate are feature-complete, but the launch step
+(removing the `test_account` gate, final tier-gating decision) waits until test users have
+exercised the full loop — template-CSV instant score, non-template admin-approval path, and an
+admin accept into the live catalog. #69 stays open on the backlog with Phase 3 as the remaining
+work; no code change involved.
