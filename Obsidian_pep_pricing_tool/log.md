@@ -938,3 +938,40 @@ Owner's call: Phases 1–2 plus the admin approval gate are feature-complete, bu
 exercised the full loop — template-CSV instant score, non-template admin-approval path, and an
 admin accept into the live catalog. #69 stays open on the backlog with Phase 3 as the remaining
 work; no code change involved.
+
+## [2026-07-17] fix | pc_price_history orphaned on product/spec/vendor merges
+
+Root cause: `pc_price_history` deliberately has no FKs (survives cascade-deletes by design — see
+[[wiki/analyses/2026-07-03-price-history-spec]]), but `backend/api/products/merge.php`,
+`backend/api/products/spec_merge.php`, and `backend/api/vendors/merge.php` re-homed `pc_prices`
+(and carts/aliases) onto the merge winner and then deleted the loser row — without ever
+repointing `pc_price_history`. History rows were silently left pointing at dead product/spec/
+vendor ids: not deleted, just unreachable, since `comparison/price_history.php` only queries by
+the live (vendor_id, product_id, specification_id, tier_kit_size) tuple. Confirmed concretely:
+vendor 11 / product 372 / spec 1282 had a live price row but zero price-history rows — history
+sat orphaned under dead product_id 449 (today's `merge_product` audit event, winner 372 loser 449).
+
+**Fix (3 files, same transaction, before the loser DELETE):** each merge script now runs the
+matching `UPDATE pc_price_history SET <col> = ? WHERE <col> = ?` (winner, loser) right alongside
+its existing `pc_prices` repoint — `product_id` (+ `specification_id` in the matched-spec branch)
+in `products/merge.php`, `specification_id` in `spec_merge.php`, `vendor_id` in `vendors/merge.php`.
+No FK added — that property is preserved on purpose.
+
+**Backfill** (`diagnostic_scripts/backfill_price_history_merge_orphans.php`): replays every
+`merge_product` / `merge_specification` / `merge_vendor` event ever logged in
+`pc_admin_audit_log` (306 events found, going back to the 2026-07-03 spec-merge feature launch),
+finds any `pc_price_history` rows still pointing at that event's loser id, and repoints them to
+the winner — chasing transitively if the winner was itself later merged into something else.
+Idempotent (verified via re-run: 0 rows on second pass, same 4 unresolved). Dry-run and real run
+matched exactly: **672 rows repointed across 172 merge events**. 4 events unresolved (winner chain
+terminates at an id that no longer exists in the table at all — a pre-existing gap unrelated to
+this bug, not something this script can safely guess at; audit_ids 14, 1572, 2896, 2897).
+
+Verified vendor 11 / product 372 / spec 1282 now returns its real history row (id 5981, $197.00,
+2026-07-17 14:35:13) via the exact popover query. Verified the code fix going forward with a
+synthetic in-transaction test (throwaway product + winner/loser spec + price + history row, ran
+spec_merge.php's exact SQL, confirmed repoint, then rolled back — no test data persisted, confirmed
+via direct SELECT afterward).
+
+Deployed via `deploy.sh` (default build+sync mode), smoke check passed. `php -l` clean on all 4
+touched/new files.

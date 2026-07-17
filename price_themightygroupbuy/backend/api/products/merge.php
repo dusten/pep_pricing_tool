@@ -37,6 +37,10 @@ try {
                 'UPDATE IGNORE pc_prices SET product_id = ?, specification_id = ? WHERE product_id = ? AND specification_id = ?'
             );
             $movePrices->execute([$winnerId, $winnerSpecId, $loserId, $spec['id']]);
+            // Repoint history so the popover can still find it — pc_price_history has
+            // no FKs (survives cascade deletes on purpose) so it's never auto-cleaned.
+            $pdo->prepare('UPDATE pc_price_history SET product_id = ?, specification_id = ? WHERE product_id = ? AND specification_id = ?')
+                ->execute([$winnerId, $winnerSpecId, $loserId, $spec['id']]);
             // Repoint user carts/stacks BEFORE the delete — their FKs cascade,
             // so without this the merge silently empties them.
             repointCartAndStackItems($pdo, $winnerId, (int)$winnerSpecId, (int)$spec['id']);
@@ -45,6 +49,8 @@ try {
             // No equivalent spec on winner — re-home this spec (and its prices) directly.
             $pdo->prepare('UPDATE pc_specifications SET product_id = ? WHERE id = ?')->execute([$winnerId, $spec['id']]);
             $pdo->prepare('UPDATE pc_prices SET product_id = ? WHERE product_id = ? AND specification_id = ?')
+                ->execute([$winnerId, $loserId, $spec['id']]);
+            $pdo->prepare('UPDATE pc_price_history SET product_id = ? WHERE product_id = ? AND specification_id = ?')
                 ->execute([$winnerId, $loserId, $spec['id']]);
             // Cart/stack rows carry their own product_id — left pointing at the
             // loser they'd cascade-delete when it's removed below.

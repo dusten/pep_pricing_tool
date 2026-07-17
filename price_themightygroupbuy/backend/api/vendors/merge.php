@@ -45,6 +45,10 @@ try {
     // for that combo wins, same philosophy as the product merge tool).
     $pdo->prepare('UPDATE IGNORE pc_prices SET vendor_id = ? WHERE vendor_id = ?')->execute([$winnerId, $loserId]);
 
+    // History has no FKs (survives cascade deletes on purpose) so it's never
+    // auto-cleaned — repoint it too or it orphans under the deleted loser vendor id.
+    $pdo->prepare('UPDATE pc_price_history SET vendor_id = ? WHERE vendor_id = ?')->execute([$winnerId, $loserId]);
+
     // Pending imports / COA submissions: no uniqueness constraint, re-home directly.
     $pdo->prepare('UPDATE pc_pending_imports SET vendor_id = ? WHERE vendor_id = ?')->execute([$winnerId, $loserId]);
     $pdo->prepare('UPDATE pc_coa_submissions SET vendor_id = ? WHERE vendor_id = ?')->execute([$winnerId, $loserId]);

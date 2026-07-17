@@ -33,6 +33,11 @@ try {
     // left behind and cascade-deleted with the loser spec row below.
     $pdo->prepare('UPDATE IGNORE pc_prices SET specification_id = ? WHERE specification_id = ?')
         ->execute([$winnerId, $loserId]);
+    // Repoint history too — pc_price_history has no FKs (survives cascade deletes
+    // on purpose) so it's never auto-cleaned; without this it orphans under the
+    // deleted loser spec id and the price-history popover can never find it again.
+    $pdo->prepare('UPDATE pc_price_history SET specification_id = ? WHERE specification_id = ?')
+        ->execute([$winnerId, $loserId]);
     // Repoint user carts/stacks BEFORE the delete — their FKs cascade.
     repointCartAndStackItems($pdo, (int)$specs[$winnerId]['product_id'], $winnerId, $loserId);
     $pdo->prepare('DELETE FROM pc_specifications WHERE id = ?')->execute([$loserId]);
