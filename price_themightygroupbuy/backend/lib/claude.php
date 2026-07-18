@@ -125,18 +125,18 @@ PROMPT;
  * the actual extraction flow, so this swallows its own exceptions.
  */
 function logClaudeCall(
-    ?int $vendorFileId, string $callType, string $model, ?int $httpStatus,
+    ?int $vendorFileId, ?int $vendorSuggestionId, string $callType, string $model, ?int $httpStatus,
     ?array $decoded, ?string $rawText, bool $parsedOk, ?string $errorMessage
 ): void {
     try {
         $usage = $decoded['usage'] ?? [];
         db()->prepare(
             'INSERT INTO pc_claude_call_log
-               (vendor_file_id, call_type, model, http_status, stop_reason, input_tokens, output_tokens,
+               (vendor_file_id, vendor_suggestion_id, call_type, model, http_status, stop_reason, input_tokens, output_tokens,
                 cache_creation_input_tokens, cache_read_input_tokens, raw_response_text, parsed_ok, error_message)
-             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)'
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)'
         )->execute([
-            $vendorFileId, $callType, $model, $httpStatus, $decoded['stop_reason'] ?? null,
+            $vendorFileId, $vendorSuggestionId, $callType, $model, $httpStatus, $decoded['stop_reason'] ?? null,
             $usage['input_tokens'] ?? null, $usage['output_tokens'] ?? null,
             $usage['cache_creation_input_tokens'] ?? null, $usage['cache_read_input_tokens'] ?? null,
             $rawText, $parsedOk ? 1 : 0, $errorMessage,
@@ -148,7 +148,7 @@ function logClaudeCall(
 
 function callClaudeMessages(
     string $systemPrompt, array $userContent, string $model = CLAUDE_MODEL_DEFAULT,
-    string $callType = 'extraction', ?int $vendorFileId = null
+    string $callType = 'extraction', ?int $vendorFileId = null, ?int $vendorSuggestionId = null
 ): array {
     if (!ANTHROPIC_API_KEY) throw new RuntimeException('ANTHROPIC_API_KEY is not configured.');
 
@@ -193,7 +193,7 @@ function callClaudeMessages(
     curl_close($ch);
 
     if ($code < 200 || $code >= 300 || !$result) {
-        logClaudeCall($vendorFileId, $callType, $model, $code, null, (string)$result, false, "HTTP error $code");
+        logClaudeCall($vendorFileId, $vendorSuggestionId, $callType, $model, $code, null, (string)$result, false, "HTTP error $code");
         throw new RuntimeException("Claude API error (HTTP $code): " . substr((string)$result, 0, 500));
     }
 
@@ -221,7 +221,7 @@ function callClaudeMessages(
 
     $parsed = json_decode($text, true);
     $ok = is_array($parsed);
-    logClaudeCall($vendorFileId, $callType, $model, $code, $decoded, $rawText, $ok, $ok ? null : 'Claude response was not valid JSON');
+    logClaudeCall($vendorFileId, $vendorSuggestionId, $callType, $model, $code, $decoded, $rawText, $ok, $ok ? null : 'Claude response was not valid JSON');
     if (!$ok) {
         throw new RuntimeException('Claude response was not valid JSON: ' . substr($text, 0, 300));
     }
@@ -239,8 +239,8 @@ function callClaudeMessages(
  * source type would've meant a fifth bolted-on param. Returns the decoded
  * JSON payload.
  */
-function callClaudeExtraction(string $systemPrompt, array $userContent, string $model = CLAUDE_MODEL_DEFAULT, ?int $vendorFileId = null): array {
-    $parsed = callClaudeMessages($systemPrompt, $userContent, $model, 'extraction', $vendorFileId);
+function callClaudeExtraction(string $systemPrompt, array $userContent, string $model = CLAUDE_MODEL_DEFAULT, ?int $vendorFileId = null, ?int $vendorSuggestionId = null): array {
+    $parsed = callClaudeMessages($systemPrompt, $userContent, $model, 'extraction', $vendorFileId, $vendorSuggestionId);
     if (!isset($parsed['prices'])) {
         throw new RuntimeException('Claude response was not valid extraction JSON.');
     }

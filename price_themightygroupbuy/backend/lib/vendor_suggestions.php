@@ -185,7 +185,7 @@ function processSuggestion(array $s, string $model): void {
 
         $sheetNote = null;
         $userContent = buildExtractionUserContent($fullPath, $s['file_type'], $sheetNote);
-        $result = callClaudeExtraction(buildExtractionSystemPrompt(), $userContent, $model, null);
+        $result = callClaudeExtraction(buildExtractionSystemPrompt(), $userContent, $model, null, (int)$s['id']);
         if ($sheetNote) {
             $result['warnings'] = $result['warnings'] ?? [];
             array_unshift($result['warnings'], $sheetNote);

@@ -325,6 +325,7 @@ CREATE TABLE IF NOT EXISTS pc_vendor_files (
 CREATE TABLE IF NOT EXISTS pc_claude_call_log (
   id                          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   vendor_file_id              INT UNSIGNED NULL,
+  vendor_suggestion_id        INT UNSIGNED NULL, -- FK added below, after pc_vendor_suggestions exists (038_vendor_suggestion_claude_cost.sql)
   call_type                   ENUM('extraction','vendor_contact_parse') NOT NULL,
   model                       VARCHAR(50) NOT NULL,
   http_status                 SMALLINT UNSIGNED NULL,
@@ -339,6 +340,7 @@ CREATE TABLE IF NOT EXISTS pc_claude_call_log (
   created_at                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (vendor_file_id) REFERENCES pc_vendor_files(id) ON DELETE SET NULL,
   INDEX (vendor_file_id),
+  INDEX (vendor_suggestion_id),
   INDEX (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -454,6 +456,14 @@ CREATE TABLE IF NOT EXISTS pc_vendor_suggestions (
   INDEX (user_id, created_at),
   INDEX (user_id, content_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ponytail: pc_claude_call_log.vendor_suggestion_id has no FK in this fresh-install
+-- script (unlike the real migration, 038_vendor_suggestion_claude_cost.sql) — this
+-- table is created earlier in this file, before pc_vendor_suggestions exists, and an
+-- ALTER here would break "schema.sql is safe to re-run" (all CREATE TABLE IF NOT
+-- EXISTS elsewhere). Column + index alone are enough for a fresh install; add the FK
+-- by hand after a from-scratch setup if desired, or reorder both tables if this
+-- annoys someone enough to fix properly.
 
 CREATE TABLE IF NOT EXISTS pc_coa_submissions (
   id                   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

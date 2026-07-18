@@ -5,6 +5,7 @@ require_once dirname(__DIR__, 2) . '/helpers.php';
 require_once dirname(__DIR__, 2) . '/lib/vendor_helpers.php';
 require_once dirname(__DIR__, 2) . '/lib/vendor_file_processor.php';
 require_once dirname(__DIR__, 2) . '/lib/price_import.php';
+require_once dirname(__DIR__, 2) . '/lib/claude_pricing.php';
 require_once dirname(__DIR__, 2) . '/email.php';
 
 // GET  /admin/vendor-suggestions[?status=]      — list
@@ -35,6 +36,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     );
     $stmt->execute($params);
     $rows = $stmt->fetchAll();
+
+    // Claude cost (backlog #69) — only the Phase 2 async path ever logs a call
+    // against a suggestion, so most rows have zero matching pc_claude_call_log
+    // rows (template-CSV suggestions never call Claude at all). Reprocessing
+    // is possible, so a suggestion can have more than one log row; sum per-row
+    // cost rather than summing tokens first, since a reprocess could use a
+    // different model with a different rate.
+    $costByRow = [];
+    if ($rows) {
+        $ids = array_column($rows, 'id');
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $callStmt = db()->prepare(
+            "SELECT vendor_suggestion_id, model, input_tokens, output_tokens,
+                    cache_creation_input_tokens, cache_read_input_tokens
+             FROM pc_claude_call_log
+             WHERE vendor_suggestion_id IN ($placeholders)"
+        );
+        $callStmt->execute($ids);
+        foreach ($callStmt->fetchAll() as $call) {
+            $cost = estimateClaudeCallCostUsd(
+                $call['model'], $call['input_tokens'], $call['output_tokens'],
+                $call['cache_creation_input_tokens'], $call['cache_read_input_tokens']
+            );
+            if ($cost === null) continue;
+            $sid = (int)$call['vendor_suggestion_id'];
+            $costByRow[$sid] = ($costByRow[$sid] ?? 0) + $cost;
+        }
+    }
+
     foreach ($rows as &$row) {
         $row['id'] = (int)$row['id'];
         $row['user_id'] = (int)$row['user_id'];
@@ -44,6 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $row['vendor_id'] = $row['vendor_id'] !== null ? (int)$row['vendor_id'] : null;
         $row['extracted_json'] = $row['extracted_json'] ? json_decode($row['extracted_json'], true) : null;
         $row['score_json'] = $row['score_json'] ? json_decode($row['score_json'], true) : null;
+        $row['estimated_cost_usd'] = isset($costByRow[$row['id']]) ? round($costByRow[$row['id']], 4) : null;
     }
     jsonResponse(['suggestions' => $rows]);
 }

@@ -987,3 +987,27 @@ endpoint calls the real Admin API `cost_report` for month-to-date and today spen
 a stat-tile spend summary + per-row cost column to `ClaudeApiTab.vue`. Vendor-suggestions extraction
 path has no per-suggestion token linkage in the schema, so left uncovered rather than bolting on a
 lossy join. Deployed + smoke-tested; see `sessions/2026-07-17.md` for full detail.
+
+## [2026-07-18] feature | Per-suggestion Claude cost tracking (backlog #69)
+
+Closes the gap flagged 2026-07-17: `pc_claude_call_log.vendor_suggestion_id` (migration 038, FK
+`ON DELETE SET NULL` mirroring `vendor_file_id`'s shape exactly) threaded through
+`callClaudeExtraction()` → `callClaudeMessages()` → `logClaudeCall()`. `processSuggestion()`
+(`backend/lib/vendor_suggestions.php`) now passes the suggestion's own id; `vendor_file_processor.php`
+passes an explicit trailing `null`. Admin `GET /admin/vendor-suggestions` sums
+`estimateClaudeCallCostUsd()` across all matching call-log rows per suggestion (handles reprocessing);
+`VendorSuggestionsTab.vue` shows the cost line only when non-null (template-CSV suggestions show
+nothing, not a dash). End-to-end verified on the live server: reused the leftover
+`phase2_test_1784149013.xlsx` test file from the earlier Phase 2 verification, inserted suggestion id
+7 at `pending_parse`, ran `process_async_queue.php` manually → `scored` (244 rows,
+`vendor_score: 71`) → `pc_claude_call_log` id 73 got `vendor_suggestion_id = 7`
+(input=2665, output=27225, cache_creation=2469, cache_read=0) → hand-computed cost $0.4256, matched
+the endpoint's computed `estimated_cost_usd` exactly. Suggestion 7 marked `rejected` afterward
+(admin_note noting the test), call-log row 73 left in place as a permanent record, matching the
+2026-07-15 Phase 2 test's own cleanup convention. Deviation: `database/schema.sql`'s
+`pc_claude_call_log` is created before `pc_vendor_suggestions` exists later in the same file, so the
+FK for the new column had to become a standalone `ALTER TABLE` after `pc_vendor_suggestions`'s
+`CREATE TABLE` — that ALTER isn't safe to re-run against an already-migrated DB (confirmed: broke
+`deploy.sh --all` on the first attempt), so it was pulled back out; schema.sql now has the column +
+index only for fresh installs, with a comment pointing at the real migration for the FK. `php -l`
+clean on all 4 touched backend files; deploy + smoke check passed.

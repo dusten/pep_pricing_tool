@@ -30,7 +30,7 @@ function processVendorFile(array $file, string $model): array {
     $sheetNote = null;
     $userContent = buildExtractionUserContent($fullPath, $file['file_type'], $sheetNote);
 
-    $result = callClaudeExtraction(buildExtractionSystemPrompt(), $userContent, $model, (int)$file['id']);
+    $result = callClaudeExtraction(buildExtractionSystemPrompt(), $userContent, $model, (int)$file['id'], null);
     if ($sheetNote) {
         $result['warnings'] = $result['warnings'] ?? [];
         array_unshift($result['warnings'], $sheetNote);

@@ -45,6 +45,8 @@
                   </div>
                 </template>
 
+                <div v-if="s.estimated_cost_usd != null" class="text-sm mono">Claude cost: ${{ s.estimated_cost_usd.toFixed(4) }}</div>
+
                 <div v-if="s.extracted_json?.prices?.length" class="price-preview">
                   <strong>Extracted prices ({{ s.extracted_json.prices.length }}):</strong>
                   <table class="admin-table">
