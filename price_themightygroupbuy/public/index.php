@@ -162,6 +162,7 @@ $ROUTES = [
     'admin/slow-queries/export' => 'admin/slow_queries_export.php',
     'admin/claude-prompt'  => 'admin/claude_prompt.php',
     'admin/claude-log'     => 'admin/claude_log.php',
+    'admin/claude-spend'   => 'admin/claude_spend.php',
     'admin/calendar-features' => 'admin/calendar_features.php',
     'admin/backup'         => 'admin/backup.php',
     // ── Backlog — Stripe billing, do not build yet ───────────────

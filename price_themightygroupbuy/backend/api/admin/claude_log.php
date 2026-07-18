@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require_once dirname(__DIR__, 2) . '/config.php';
 require_once dirname(__DIR__, 2) . '/helpers.php';
+require_once dirname(__DIR__, 2) . '/lib/claude_pricing.php';
 
 // GET /admin/claude-log — recent raw Claude API call history (backlog #24).
 // Response previews are truncated; fetch /admin/claude-log/{id} for the full text.
@@ -29,6 +30,12 @@ foreach ($rows as &$r) {
     $r['cache_creation_input_tokens'] = $r['cache_creation_input_tokens'] !== null ? (int)$r['cache_creation_input_tokens'] : null;
     $r['cache_read_input_tokens']     = $r['cache_read_input_tokens'] !== null ? (int)$r['cache_read_input_tokens'] : null;
     $r['parsed_ok']                   = (bool)$r['parsed_ok'];
+    // ponytail: computed from known per-model rates, not billed truth — Admin API
+    // cost_report is the real number if it's ever needed per-call.
+    $r['estimated_cost_usd'] = estimateClaudeCallCostUsd(
+        $r['model'], $r['input_tokens'], $r['output_tokens'],
+        $r['cache_creation_input_tokens'], $r['cache_read_input_tokens']
+    );
 }
 
 jsonResponse(['calls' => $rows]);

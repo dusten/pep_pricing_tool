@@ -975,3 +975,15 @@ via direct SELECT afterward).
 
 Deployed via `deploy.sh` (default build+sync mode), smoke check passed. `php -l` clean on all 4
 touched/new files.
+
+## [2026-07-17] feature | Per-call Claude cost estimate + org spend tracking (Admin API cost_report)
+Added `estimated_cost_usd` to `/api/admin/claude-log` rows, computed from `pc_claude_call_log` token
+counts via a new shared `backend/lib/claude_pricing.php` (Sonnet 5 $3/$15/MTok, Opus 4.8 $5/$25/MTok;
+cache_creation at 1.25x input, cache_read at 0.1x input). Only `claude-sonnet-5` is in production use
+so far (72 rows checked live). Hand-verified one row's math ($0.3053). New `/api/admin/claude-spend`
+endpoint calls the real Admin API `cost_report` for month-to-date and today spend, reading an optional
+`ANTHROPIC_ADMIN_API_KEY` from `.env_pricetool`; gracefully returns `{configured: false}` when absent
+(verified live — key not yet added). Cached 10 min via existing Memcached `cacheGet()`. Frontend adds
+a stat-tile spend summary + per-row cost column to `ClaudeApiTab.vue`. Vendor-suggestions extraction
+path has no per-suggestion token linkage in the schema, so left uncovered rather than bolting on a
+lossy join. Deployed + smoke-tested; see `sessions/2026-07-17.md` for full detail.

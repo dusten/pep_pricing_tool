@@ -46,6 +46,7 @@ define('MAIL_FROM_NAME', _env('MAIL_FROM_NAME',  'TheMightyGroupBuy Prices'));
 
 // ── External services (populated in later phases) ─────────────────
 define('ANTHROPIC_API_KEY',     _env('ANTHROPIC_API_KEY'));
+define('ANTHROPIC_ADMIN_API_KEY', _env('ANTHROPIC_ADMIN_API_KEY')); // org spend tracking (Admin API cost_report) — optional
 define('STRIPE_SECRET_KEY',     _env('STRIPE_SECRET_KEY'));
 define('STRIPE_WEBHOOK_SECRET', _env('STRIPE_WEBHOOK_SECRET'));
 
