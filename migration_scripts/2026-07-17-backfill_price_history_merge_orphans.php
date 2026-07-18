@@ -13,8 +13,8 @@ declare(strict_types=1);
 // until a row is found that was never itself later merged as a loser.
 //
 // Usage: php backfill_price_history_merge_orphans.php [--dry-run]
-require_once dirname(__DIR__) . '/backend/config.php';
-require_once dirname(__DIR__) . '/backend/helpers.php';
+require_once __DIR__ . '/../price_themightygroupbuy/backend/config.php';
+require_once __DIR__ . '/../price_themightygroupbuy/backend/helpers.php';
 
 $dryRun = in_array('--dry-run', $argv, true);
 $pdo = db();

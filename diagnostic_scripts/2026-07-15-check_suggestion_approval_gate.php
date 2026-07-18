@@ -6,8 +6,8 @@ declare(strict_types=1);
 // cron's pending_parse claim query never selects an awaiting_approval row.
 // No HTTP call, no Claude call — direct DB, self-cleaning. Delete once the
 // approval gate has been live a while.
-require_once dirname(__DIR__) . '/backend/config.php';
-require_once dirname(__DIR__) . '/backend/helpers.php';
+require_once __DIR__ . '/../price_themightygroupbuy/backend/config.php';
+require_once __DIR__ . '/../price_themightygroupbuy/backend/helpers.php';
 
 function assertTrue(bool $cond, string $msg): void {
     if (!$cond) { fwrite(STDERR, "FAIL: $msg\n"); exit(1); }

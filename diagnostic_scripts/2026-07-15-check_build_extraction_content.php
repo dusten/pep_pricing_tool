@@ -5,13 +5,13 @@ declare(strict_types=1);
 // already-processed vendor files and asserts the userContent shape is
 // exactly what the old inline code would have produced per file_type — no
 // Claude call, no DB writes. Delete once Phase 2 has been live a while.
-require_once dirname(__DIR__) . '/backend/config.php';
-require_once dirname(__DIR__) . '/backend/helpers.php';
-require_once dirname(__DIR__) . '/backend/lib/claude.php';
-require_once dirname(__DIR__) . '/backend/lib/xlsx_reader.php';
-require_once dirname(__DIR__) . '/backend/lib/zip_reader.php';
-require_once dirname(__DIR__) . '/backend/lib/price_import.php';
-require_once dirname(__DIR__) . '/backend/lib/vendor_file_processor.php';
+require_once __DIR__ . '/../price_themightygroupbuy/backend/config.php';
+require_once __DIR__ . '/../price_themightygroupbuy/backend/helpers.php';
+require_once __DIR__ . '/../price_themightygroupbuy/backend/lib/claude.php';
+require_once __DIR__ . '/../price_themightygroupbuy/backend/lib/xlsx_reader.php';
+require_once __DIR__ . '/../price_themightygroupbuy/backend/lib/zip_reader.php';
+require_once __DIR__ . '/../price_themightygroupbuy/backend/lib/price_import.php';
+require_once __DIR__ . '/../price_themightygroupbuy/backend/lib/vendor_file_processor.php';
 
 function assertTrue(bool $cond, string $msg): void {
     if (!$cond) { fwrite(STDERR, "FAIL: $msg\n"); exit(1); }

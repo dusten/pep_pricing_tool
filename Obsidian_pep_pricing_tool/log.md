@@ -1011,3 +1011,28 @@ FK for the new column had to become a standalone `ALTER TABLE` after `pc_vendor_
 `deploy.sh --all` on the first attempt), so it was pulled back out; schema.sql now has the column +
 index only for fresh installs, with a comment pointing at the real migration for the FK. `php -l`
 clean on all 4 touched backend files; deploy + smoke check passed.
+
+## [2026-07-18] fix | Misplaced diagnostic/migration scripts corrected to repo-root archive dirs
+
+User asked to confirm the standing convention (every one-off server script gets archived, never
+deleted — see memory `feedback_archive_diagnostic_scripts`/`feedback_archive_migration_scripts`)
+was actually being followed. It mostly was — but 3 recent scripts from the last few days had
+landed in a stray `price_themightygroupbuy/diagnostic_scripts/` directory instead of the real
+archive location at the git repo root: `backfill_price_history_merge_orphans.php` (data-mutating,
+672 rows — miscategorized as a diagnostic when it belongs in `migration_scripts/`),
+`check_build_extraction_content.php`, and `check_suggestion_approval_gate.php` (both read-only,
+correctly diagnostic but wrong location, and none had the required `YYYY-MM-DD-` name prefix).
+
+`git mv`'d all three to their correct directories/names (history preserved). Their internal
+`require_once dirname(__DIR__) . '/backend/...'` paths broke on the move (that pattern only
+resolved correctly one directory level deeper than repo root) — rewrote each to
+`__DIR__ . '/../price_themightygroupbuy/backend/...'`, matching the pattern already used by every
+correctly-archived script. Verified over SSH by mirroring the real repo layout (symlinked sibling
+dir) rather than testing in place: `check_suggestion_approval_gate.php` — all 4 assertions pass,
+self-cleaning, confirmed the approval gate still works; `backfill_price_history_merge_orphans.php
+--dry-run` — found the same 306 historical merge events and same 4 permanently-unresolved rows as
+the original run (0 to repoint, correctly idempotent); `check_build_extraction_content.php` — all
+requires resolved and it executed real DB/file-existence logic, failing only on a stale sample file
+reference (vendor_files id=53's PDF has since rotated off disk) — a pre-existing data-staleness gap
+in the script itself, unrelated to this fix, left as-is since these are point-in-time audit records
+not living tests.
