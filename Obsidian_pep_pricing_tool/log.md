@@ -1036,3 +1036,7 @@ requires resolved and it executed real DB/file-existence logic, failing only on 
 reference (vendor_files id=53's PDF has since rotated off disk) — a pre-existing data-staleness gap
 in the script itself, unrelated to this fix, left as-is since these are point-in-time audit records
 not living tests.
+
+## [2026-07-19] query | Slow-query log processing methodology, portable prompt for grp
+
+Distilled the full slow-query-capture lineage (build 2026-07-01, triage 2026-07-04, noise-filter 2026-07-10, regression fix 2026-07-14) into a reusable build/triage/re-audit prompt for setting up or auditing the same pattern on grp, which shares the physical mysql.slow_log with this app. Filed as wiki/concepts/slow-query-log-capture-pattern.md.

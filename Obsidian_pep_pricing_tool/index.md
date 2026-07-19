@@ -29,6 +29,7 @@ Catalog of all [[llm-wiki-pattern]] pages. Updated on every ingest. LLM reads th
 | [[wiki/concepts/query-quota\|Query Quota System]] | Free-tier 3-query/72h rolling window — filter_hash dedup, pc_query_log, /api/me/quota |
 | [[wiki/concepts/deployment\|Deployment Pattern]] | deploy.sh flow, add-price-site.sh rules, server gotchas, credential convention |
 | [[wiki/concepts/variant-compounds\|Variant Compounds Watchlist]] | Compounds with same-name variants (Epithalon, TB-500 family) — weekly scan reference |
+| [[wiki/concepts/slow-query-log-capture-pattern\|Slow-Query Log Capture Pattern]] | Portable build/triage/re-audit prompt for per-app slow-query capture on a shared MySQL server — reusable for grp |
 
 ## Entities
 
