@@ -15,3 +15,4 @@
 - [Shared admin-table CSS](feedback_shared_admin_table_css.md) — Use global .admin-table/.actions classes for new tables; never put display:flex/grid directly on a td/th
 - [Delegate builds to Sonnet](feedback_delegate_builds_to_sonnet.md) — Investigate/plan directly, delegate implementation to background Sonnet 5 subagents, verify their reports independently
 - [Vendor suggestions gated](project_vendor_suggestions_gated.md) — Backlog #69 Phases 1-2 shipped but deliberately test_account-gated pending user testing; don't suggest launching without asking
+- [No real billing](project_no_real_billing.md) — No Stripe/payment integration exists; tier/tier_status/tier_renews_at are 100% manually admin-set; confirm before assuming any billing automation
