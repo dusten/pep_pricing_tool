@@ -13,3 +13,5 @@
 - [SSH key path](reference_ssh_key_path.md) — Prod server key is always at ~/projects/peptides_projects/pepcal_key.pem
 - [Archive diagnostic scripts](feedback_archive_diagnostic_scripts.md) — Read-only verification scripts go in diagnostic_scripts/ too, not just data-mutating ones, and get logged in the wiki
 - [Shared admin-table CSS](feedback_shared_admin_table_css.md) — Use global .admin-table/.actions classes for new tables; never put display:flex/grid directly on a td/th
+- [Delegate builds to Sonnet](feedback_delegate_builds_to_sonnet.md) — Investigate/plan directly, delegate implementation to background Sonnet 5 subagents, verify their reports independently
+- [Vendor suggestions gated](project_vendor_suggestions_gated.md) — Backlog #69 Phases 1-2 shipped but deliberately test_account-gated pending user testing; don't suggest launching without asking

@@ -1045,3 +1045,15 @@ Distilled the full slow-query-capture lineage (build 2026-07-01, triage 2026-07-
 
 - Scanned `raw/clippings/`: 5 files found, all previously ingested on 2026-06-30
 - No new source pages, entity pages, or variant sightings this week
+
+## [2026-07-20] lint | Week-in-review catch-up: session notes, index, memory
+
+User asked for a full catch-up pass — anything from the last week not yet captured in session notes, the wiki index, or memory. Found and fixed three real gaps:
+
+1. `sessions/2026-07-18.md` only covered the per-suggestion Claude cost work; the same night's misplaced-diagnostic-scripts fix (git mv + require-path repair, commits a22e1e7/1602ab5) was logged in log.md but missing from the session note itself. Appended.
+2. `sessions/2026-07-19.md` didn't exist at all — only a log.md entry for the slow-query-capture-pattern concept page. Created.
+3. `index.md`'s Sessions table stopped at 2026-07-17 — added the missing 07-18 and 07-19 rows.
+
+Also added two new memory files: a project memory recording backlog #69's current deliberately-gated status (Phases 1-2 shipped, test_account-gated pending user testing — a decaying fact worth surfacing quickly rather than re-deriving from the wiki each time), and a feedback memory capturing the now well-established pattern of delegating implementation to background Sonnet 5 subagents while the primary session handles investigation/planning/verification. Reinforced the existing diagnostic-scripts memory with a pointer to the concrete 2026-07-18 incident (scripts landing in the wrong nested directory) as a "watch for this" note for future subagent-report review.
+
+No app code changed — wiki/memory only.

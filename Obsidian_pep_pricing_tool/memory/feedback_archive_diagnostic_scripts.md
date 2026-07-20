@@ -16,3 +16,12 @@ Whenever a one-off PHP script is written and run directly on the server (`sudo -
 - Each file keeps a header comment: what it checks, and which feature/fix it was verifying.
 - Log what each script does in the wiki (a line in `log.md` for the session, or reference it from the relevant `wiki/analyses/` page) — not just the file's own header comment, so it's discoverable without opening the file.
 - Commit normally, per [[feedback_commit_style]].
+
+**Confirmed still needs occasional resurfacing:** on 2026-07-18 the user asked to confirm this
+convention was actually being followed, and 3 scripts from the prior few days had in fact landed in
+a stray nested `price_themightygroupbuy/diagnostic_scripts/` instead of the real repo-root location
+— one of them (a data-mutating backfill) also miscategorized as diagnostic when it belonged in
+`migration_scripts/`. Background subagents building a feature default to writing scripts relative to
+their own working directory rather than checking the true repo root first. When a subagent's build
+report mentions a diagnostic/migration script, verify its actual location and category before
+trusting the report — see [[sessions/2026-07-18]] for the fix.
