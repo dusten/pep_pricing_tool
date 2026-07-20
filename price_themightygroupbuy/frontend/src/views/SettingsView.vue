@@ -79,7 +79,7 @@
           <h3 class="card-title" style="margin:0">Refer a Friend</h3>
         </div>
         <p class="text-muted text-sm" style="margin:10px 0 14px">
-          Share your link. When someone signs up and subscribes, you earn account credit.
+          Share your link. When someone signs up and subscribes, you earn free months added to your subscription.
         </p>
         <div class="ref-row">
           <input :value="referralUrl" readonly class="ref-input" @focus="$event.target.select()" />
@@ -89,7 +89,7 @@
         <div class="stat-tiles">
           <div class="stat-tile"><div class="stat-value">{{ referralStats.joined }}</div><div class="stat-label">Joined</div></div>
           <div class="stat-tile"><div class="stat-value accent">{{ referralStats.converted }}</div><div class="stat-label">Converted</div></div>
-          <div class="stat-tile"><div class="stat-value accent">${{ referralStats.credit_earned_usd.toFixed(0) }}</div><div class="stat-label">Credit Earned</div></div>
+          <div class="stat-tile"><div class="stat-value accent">{{ referralStats.months_earned }}</div><div class="stat-label">Months Earned</div></div>
         </div>
       </div>
 
@@ -278,7 +278,7 @@ async function copyRef() {
   copied.value = true
   setTimeout(() => { copied.value = false }, 2000)
 }
-const referralStats = ref({ joined: 0, converted: 0, credit_earned_usd: 0 })
+const referralStats = ref({ joined: 0, converted: 0, months_earned: 0 })
 onMounted(async () => { referralStats.value = await get('/api/me/referral-stats') })
 
 // ── Notifications ─────────────────────────────────────────────────

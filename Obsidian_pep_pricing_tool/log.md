@@ -1105,3 +1105,5 @@ search_log row it produced so verification traffic doesn't pollute real metrics.
 
 `php -l` clean on all 8 touched/new backend files (linted over SSH, no local PHP). Deployed via
 `bash deploy.sh --sync-schema` then `bash deploy.sh`; smoke check passed both times.
+
+## [2026-07-20] feature | Referral rewards converted from dollar credit to free months (backlog #4)

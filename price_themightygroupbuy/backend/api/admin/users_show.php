@@ -9,9 +9,10 @@ $admin = requireAdmin();
 $id    = (int)($PARAMS['id'] ?? 0);
 $d     = input();
 
-$target = db()->prepare('SELECT id FROM pc_users WHERE id = ? LIMIT 1');
+$target = db()->prepare('SELECT id, tier_status, referred_by_id FROM pc_users WHERE id = ? LIMIT 1');
 $target->execute([$id]);
-if (!$target->fetch()) jsonResponse(['error' => 'User not found.'], 404);
+$before = $target->fetch();
+if (!$before) jsonResponse(['error' => 'User not found.'], 404);
 
 $fields = [];
 $vals   = [];
@@ -46,5 +47,43 @@ $vals[] = $id;
 db()->prepare('UPDATE pc_users SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($vals);
 cacheBust('admin_users');
 logAdminAction((int)$admin['id'], 'update_user', ['user_id' => $id, 'fields' => $d]);
+
+// Referral reward (backlog #4 pre-Stripe correction): grant the referrer free
+// months on the referee's first genuine activation. Only fires on a real
+// none/past_due/canceled/trialing -> active transition, not a redundant PATCH.
+if (($d['tier_status'] ?? null) === 'active' && $before['tier_status'] !== 'active' && $before['referred_by_id']) {
+    $already = db()->prepare('SELECT 1 FROM pc_referral_credits WHERE referee_id = ? AND granted_at IS NOT NULL');
+    $already->execute([$id]);
+    if (!$already->fetch()) {
+        $referrerId = (int)$before['referred_by_id'];
+        $months     = (int)getAppSetting('referral_months_free', '2');
+
+        $pdo = db();
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare(
+                'INSERT INTO pc_referral_credits (referrer_id, referee_id, months_granted, granted_at)
+                 VALUES (?, ?, ?, NOW())
+                 ON DUPLICATE KEY UPDATE months_granted = VALUES(months_granted), granted_at = VALUES(granted_at)'
+            )->execute([$referrerId, $id, $months]);
+
+            $pdo->prepare(
+                'UPDATE pc_users SET
+                    tier_renews_at = DATE_ADD(GREATEST(COALESCE(tier_renews_at, NOW()), NOW()), INTERVAL ? MONTH),
+                    tier_status = IF(tier_status IN (\'active\',\'trialing\'), tier_status, \'active\')
+                 WHERE id = ?'
+            )->execute([$months, $referrerId]);
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+
+        cacheBust('admin_users');
+        logAdminAction((int)$admin['id'], 'referral_reward_granted', [
+            'referrer_id' => $referrerId, 'referee_id' => $id, 'months' => $months,
+        ]);
+    }
+}
 
 jsonResponse(['message' => 'User updated.']);

@@ -50,7 +50,7 @@ $admin = requireAdmin();
 $d     = input();
 
 $allowed = [
-    'waitlist_mode', 'maintenance_mode', 'referral_credit_usd',
+    'waitlist_mode', 'maintenance_mode', 'referral_months_free',
     'free_tier_query_limit', 'free_tier_window_hours',
     'annual_discount_months_free', 'session_lifetime_days',
 ];

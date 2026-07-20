@@ -16,7 +16,7 @@ $referredBy = db()->prepare(
 $referredBy->execute([$id]);
 
 $referred = db()->prepare(
-    'SELECT u.id, u.email, u.display_name, u.created_at, rc.amount_usd, rc.granted_at
+    'SELECT u.id, u.email, u.display_name, u.created_at, rc.months_granted, rc.granted_at
      FROM pc_referrals r
      JOIN pc_users u ON u.id = r.referee_id
      LEFT JOIN pc_referral_credits rc ON rc.referee_id = u.id AND rc.referrer_id = ?

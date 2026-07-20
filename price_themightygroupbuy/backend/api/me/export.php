@@ -15,7 +15,7 @@ $data = [
     'comparison_queries' => q('SELECT selection_params, duration_ms, result_count, created_at FROM pc_comparison_log WHERE user_id = ? ORDER BY created_at DESC', $id),
     'feedback' => q('SELECT type, message, url, created_at FROM pc_feedback WHERE user_id = ? ORDER BY created_at DESC', $id),
     'referrals_made' => q('SELECT referee_id, created_at FROM pc_referrals WHERE referrer_id = ?', $id),
-    'referral_credits_earned' => q('SELECT amount_usd, granted_at FROM pc_referral_credits WHERE referrer_id = ?', $id),
+    'referral_credits_earned' => q('SELECT months_granted, granted_at FROM pc_referral_credits WHERE referrer_id = ?', $id),
     'activity_log' => q('SELECT action, details, ip, created_at FROM pc_user_audit_log WHERE user_id = ? ORDER BY created_at DESC', $id),
 ];
 

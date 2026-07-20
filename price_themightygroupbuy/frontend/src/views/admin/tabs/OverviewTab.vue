@@ -48,7 +48,7 @@
     <div class="stat-grid">
       <div class="stat-tile"><div class="stat-value">{{ data.referrals.total_referrals }}</div><div class="stat-label">Total referrals</div></div>
       <div class="stat-tile"><div class="stat-value">{{ data.referrals.unique_referrers }}</div><div class="stat-label">Unique referrers</div></div>
-      <div class="stat-tile"><div class="stat-value">${{ data.referrals.total_credited_usd.toFixed(2) }}</div><div class="stat-label">Total credited</div></div>
+      <div class="stat-tile"><div class="stat-value">{{ data.referrals.total_months_credited }}</div><div class="stat-label">Total months credited</div></div>
     </div>
 
     <h4 class="section-title">Recent admin activity</h4>

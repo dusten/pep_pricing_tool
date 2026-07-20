@@ -32,11 +32,11 @@ $data = cacheGet('admin_overview', 'all', 600, function () {
     foreach ($referrals as $k => $v) $referrals[$k] = (int)$v;
 
     $credits = db()->query(
-        "SELECT COUNT(*) AS credited_count, COALESCE(SUM(amount_usd), 0) AS total_credited_usd
+        "SELECT COUNT(*) AS credited_count, COALESCE(SUM(months_granted), 0) AS total_months_credited
          FROM pc_referral_credits WHERE granted_at IS NOT NULL"
     )->fetch();
-    $referrals['credited_count']     = (int)$credits['credited_count'];
-    $referrals['total_credited_usd'] = (float)$credits['total_credited_usd'];
+    $referrals['credited_count']         = (int)$credits['credited_count'];
+    $referrals['total_months_credited']  = (int)$credits['total_months_credited'];
 
     $waitlistPending = (int)db()->query('SELECT COUNT(*) FROM pc_waitlist WHERE joined_at IS NULL')->fetchColumn();
 

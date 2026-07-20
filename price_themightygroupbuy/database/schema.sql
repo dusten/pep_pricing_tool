@@ -577,11 +577,11 @@ CREATE TABLE IF NOT EXISTS pc_slow_query_cache (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS pc_referral_credits (
-  id           BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  referrer_id  INT UNSIGNED NOT NULL,
-  referee_id   INT UNSIGNED NOT NULL UNIQUE,
-  amount_usd   DECIMAL(10,2) NOT NULL,
-  granted_at   DATETIME NULL,           -- set when referee's first paid invoice settles
+  id             BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  referrer_id    INT UNSIGNED NOT NULL,
+  referee_id     INT UNSIGNED NOT NULL UNIQUE,
+  months_granted SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  granted_at     DATETIME NULL,           -- set when referee's tier_status first goes active
   stripe_credit_id VARCHAR(64) NULL,
   FOREIGN KEY (referrer_id) REFERENCES pc_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -607,7 +607,7 @@ SET FOREIGN_KEY_CHECKS = 1;
 INSERT IGNORE INTO pc_app_settings (`key`, value) VALUES
   ('waitlist_mode',              '1'),
   ('maintenance_mode',           '0'),
-  ('referral_credit_usd',        '5.00'),
+  ('referral_months_free',       '2'),
   ('free_tier_query_limit',      '3'),
   ('free_tier_window_hours',     '72'),
   ('annual_discount_months_free','2'),

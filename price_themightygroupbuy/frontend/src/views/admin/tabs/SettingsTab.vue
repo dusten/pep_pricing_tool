@@ -12,8 +12,8 @@
       </label>
 
       <div class="field">
-        <label>Referral credit (USD)</label>
-        <input v-model="form.referral_credit_usd" type="number" step="0.01" min="0" />
+        <label>Referral reward (months)</label>
+        <input v-model="form.referral_months_free" type="number" min="0" />
       </div>
       <div class="field">
         <label>Free tier query limit</label>
@@ -41,7 +41,7 @@ import { reactive, ref, onMounted } from 'vue'
 import { get, post } from '@/utils/api.js'
 
 const form   = reactive({
-  waitlist_mode: '0', maintenance_mode: '0', referral_credit_usd: '5.00',
+  waitlist_mode: '0', maintenance_mode: '0', referral_months_free: '2',
   free_tier_query_limit: '3', free_tier_window_hours: '72',
   annual_discount_months_free: '2', session_lifetime_days: '30',
 })

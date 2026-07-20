@@ -87,7 +87,7 @@
                 <ul v-if="referralData[u.id].referred.length" class="referral-list">
                   <li v-for="r in referralData[u.id].referred" :key="r.id" class="text-sm">
                     {{ r.display_name }} ({{ r.email }}) — joined {{ r.created_at }}
-                    <span v-if="r.granted_at" class="text-success"> · credited ${{ r.amount_usd }}</span>
+                    <span v-if="r.granted_at" class="text-success"> · credited {{ r.months_granted }} mo</span>
                     <span v-else class="text-muted"> · not yet converted</span>
                   </li>
                 </ul>

@@ -11,14 +11,14 @@ $joined = db()->prepare('SELECT COUNT(*) FROM pc_referrals WHERE referrer_id = ?
 $joined->execute([$user['id']]);
 
 $credits = db()->prepare(
-    'SELECT COUNT(*) AS converted, COALESCE(SUM(amount_usd), 0) AS total
+    'SELECT COUNT(*) AS converted, COALESCE(SUM(months_granted), 0) AS total
      FROM pc_referral_credits WHERE referrer_id = ? AND granted_at IS NOT NULL'
 );
 $credits->execute([$user['id']]);
 $c = $credits->fetch();
 
 jsonResponse([
-    'joined'            => (int)$joined->fetchColumn(),
-    'converted'         => (int)$c['converted'],
-    'credit_earned_usd' => (float)$c['total'],
+    'joined'        => (int)$joined->fetchColumn(),
+    'converted'     => (int)$c['converted'],
+    'months_earned' => (int)$c['total'],
 ]);
