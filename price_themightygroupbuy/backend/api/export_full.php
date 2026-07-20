@@ -32,6 +32,7 @@ $data = [
 ];
 
 logUserAction((int)$user['id'], 'export_full', ['products' => count($data['products']), 'prices' => count($data['prices'])]);
+cacheBust('admin_activity_trend'); // so the admin Activity dashboard reflects this export immediately
 
 header('Content-Disposition: attachment; filename="full-export-' . date('Y-m-d') . '.json"');
 jsonResponse($data);

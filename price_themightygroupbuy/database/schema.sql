@@ -495,6 +495,19 @@ CREATE TABLE IF NOT EXISTS pc_query_log (
   FOREIGN KEY (user_id) REFERENCES pc_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Unconditional per-request search log for the admin Activity dashboard
+-- (pc_query_log above is free-tier quota bookkeeping only — deduped by
+-- filter_hash and never written by admins/paid users, so it can't serve
+-- as a usage-analytics source). See migration 039.
+CREATE TABLE IF NOT EXISTS pc_search_log (
+  id         BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id    INT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES pc_users(id) ON DELETE CASCADE,
+  INDEX (created_at),
+  INDEX (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS pc_comparison_log (
   id               BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id          INT UNSIGNED NOT NULL,

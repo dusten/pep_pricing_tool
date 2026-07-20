@@ -118,6 +118,7 @@ try {
     error_log('[register] ' . $e->getMessage());
     jsonResponse(['error' => 'Something went wrong. Please try again.'], 500);
 }
+cacheBust('admin_activity_trend'); // so the admin Activity dashboard reflects this signup immediately
 
 // ── Send verification email ───────────────────────────────────────
 $verifyUrl = APP_URL . '/verify-email?token=' . $emailToken;

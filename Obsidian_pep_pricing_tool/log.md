@@ -1057,3 +1057,51 @@ User asked for a full catch-up pass — anything from the last week not yet capt
 Also added two new memory files: a project memory recording backlog #69's current deliberately-gated status (Phases 1-2 shipped, test_account-gated pending user testing — a decaying fact worth surfacing quickly rather than re-deriving from the wiki each time), and a feedback memory capturing the now well-established pattern of delegating implementation to background Sonnet 5 subagents while the primary session handles investigation/planning/verification. Reinforced the existing diagnostic-scripts memory with a pointer to the concrete 2026-07-18 incident (scripts landing in the wrong nested directory) as a "watch for this" note for future subagent-report review.
 
 No app code changed — wiki/memory only.
+
+## [2026-07-20] fix | Activity dashboard: real search logging, DAU, admin/test toggle, cache TTL fix
+
+Fixed the two confirmed root causes in the admin Activity dashboard and added the product-decided
+admin/test-activity toggle:
+
+- New table `pc_search_log` (migration 039) — unconditional per-request log, written from
+  `comparison/index.php` on every `/api/comparison` hit regardless of tier/admin, completely
+  separate from `pc_query_log`'s deduped free-tier quota logic (untouched, verified via diff).
+- `activity_trend.php` generalized: `?include_internal=1` toggle (default excluded), per-metric
+  `date_col`/`distinct_col`/`user_col`, new `daily_active_users` metric off `pc_sessions.last_seen_at`,
+  `searches` repointed to `pc_search_log`. Cache TTL 600s → 60s, cache key now varies by toggle.
+- Added `cacheBust('admin_activity_trend')` at every write site (link_click.php, login.php,
+  register.php, comparison/index.php's new search-log insert, export_full.php,
+  comparison/export_csv.php, comparison/export_xlsx.php) per direct user follow-up — dashboard now
+  reflects new activity immediately rather than waiting out the TTL. DAU left on TTL-only (busting
+  on every authenticated request site-wide would be pointless — it already updates on virtually
+  every request).
+- Frontend: "Include admin/test activity" checkbox on the Activity section, `daily_active_users`
+  card added to `OverviewTab.vue`'s `METRICS` array.
+
+Hit a real bug during verification (not part of the original diagnosis): the exclusion JOIN against
+`pc_users` made `created_at` ambiguous for every metric table that also has its own `created_at`
+column (i.e. all of them), 500ing the default (excluded) view in production
+(`SQLSTATE[23000]: ... Column 'created_at' in field list is ambiguous`). Fixed by table-qualifying
+`date_col`/`distinct_col` and the `pc_users`-self-filter columns.
+
+Verified live with a throwaway `pc_sessions` row for admin user id 4 (1-hour expiry, deleted after,
+matching the established pattern from 2026-07-17's session): `/day` bucket for 2026-07-20, excluded
+vs included —
+
+| metric | excluded | included |
+|---|---|---|
+| logins | 1 | 1 |
+| searches | 0 → 2 (after 2 live `/api/comparison` hits) | 1 → 2 |
+| whatsapp_clicks | 0 | 1 |
+| website_clicks | 0 | 1 |
+| daily_active_users | 1 | 2 |
+
+The admin's pre-existing whatsapp/website clicks and the test searches disappeared from the
+excluded view and reappeared with `include_internal=1`, confirming the join/filter is correct.
+Confirmed immediate cache-bust (not just short TTL): a second `/api/comparison` hit bumped
+`searches` from 1→2 on the *very next* request, no delay. DAU excluded/included (1 vs 2) matches
+the known-good manual `pc_sessions` query exactly. Cleaned up the test session row and the
+search_log row it produced so verification traffic doesn't pollute real metrics.
+
+`php -l` clean on all 8 touched/new backend files (linted over SSH, no local PHP). Deployed via
+`bash deploy.sh --sync-schema` then `bash deploy.sh`; smoke check passed both times.

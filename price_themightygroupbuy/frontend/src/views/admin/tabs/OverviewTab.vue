@@ -16,7 +16,13 @@
       <div class="stat-tile"><div class="stat-value">{{ data.users.expert_tier }}</div><div class="stat-label">Expert</div></div>
     </div>
 
-    <h4 class="section-title">Activity</h4>
+    <h4 class="section-title">
+      Activity
+      <label class="include-internal">
+        <input type="checkbox" v-model="includeInternal" @change="loadTrend" />
+        Include admin/test activity
+      </label>
+    </h4>
     <template v-if="trend">
       <div class="metric-grid">
         <div v-for="m in METRICS" :key="m.key" class="card metric-chart-card">
@@ -69,12 +75,17 @@ const data = ref(null)
 onMounted(async () => { data.value = await get('/api/admin/overview') })
 
 const trend = ref(null)
-onMounted(async () => { trend.value = await get('/api/admin/activity-trend') })
+const includeInternal = ref(false)
+async function loadTrend() {
+  trend.value = await get('/api/admin/activity-trend' + (includeInternal.value ? '?include_internal=1' : ''))
+}
+onMounted(loadTrend)
 
 const METRICS = [
   { key: 'signups', label: 'Signups' },
   { key: 'logins', label: 'Logins' },
   { key: 'searches', label: 'Searches' },
+  { key: 'daily_active_users', label: 'Daily Active Users' },
   { key: 'whatsapp_clicks', label: 'WhatsApp Clicks' },
   { key: 'website_clicks', label: 'Website Clicks' },
   { key: 'cas_clicks', label: 'CAS Link Clicks' },
@@ -94,7 +105,8 @@ function barPct(value, metricKey) {
 </script>
 
 <style scoped>
-.section-title { margin: 24px 0 10px; font-size: 13.5px; }
+.section-title { margin: 24px 0 10px; font-size: 13.5px; display: flex; align-items: center; gap: 14px; }
+.include-internal { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 400; color: var(--text-secondary); cursor: pointer; }
 .mono { font-family: var(--font-mono); max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .range-pills { display: flex; gap: 6px; margin-bottom: 10px; }

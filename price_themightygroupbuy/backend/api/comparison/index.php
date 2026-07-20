@@ -12,6 +12,13 @@ $startedAt = microtime(true);
 // tier a vendor introduces later doesn't need a code change here.
 [$productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly] = parseComparisonFiltersFromGet();
 
+// Unconditional per-request search log for the admin Activity dashboard —
+// every viewing of the comparison page counts, regardless of tier/admin
+// status. Separate from and unrelated to the free-tier quota block below
+// (pc_query_log), which is deduped-by-filter and must not change.
+db()->prepare('INSERT INTO pc_search_log (user_id) VALUES (?)')->execute([$user['id']]);
+cacheBust('admin_activity_trend'); // so the admin Activity dashboard reflects this search immediately
+
 // ── Free-tier metering ──────────────────────────────────────────────
 $isAdmin = !empty($user['is_admin']);
 $isFree  = !$isAdmin && ($user['tier'] === 'free' || !in_array($user['tier_status'], ['active', 'trialing'], true));

@@ -41,6 +41,7 @@ db()->prepare(
 
 db()->prepare('INSERT INTO pc_login_history (user_id, ip, user_agent) VALUES (?,?,?)')
     ->execute([$user['id'], $ip, $userAgent]);
+cacheBust('admin_activity_trend'); // so the admin Activity dashboard reflects this login immediately
 
 db()->prepare('UPDATE pc_users SET last_login_at = NOW() WHERE id = ?')->execute([$user['id']]);
 

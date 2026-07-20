@@ -22,5 +22,6 @@ if (!$vendorId && !$productId) jsonResponse(['error' => 'vendor_id or product_id
 
 db()->prepare('INSERT INTO pc_outbound_link_clicks (link_type, vendor_id, product_id, user_id) VALUES (?, ?, ?, ?)')
     ->execute([$linkType, $vendorId, $productId, (int)$user['id']]);
+cacheBust('admin_activity_trend'); // so the admin Activity dashboard reflects this click immediately
 
 jsonResponse(['message' => 'ok']);
