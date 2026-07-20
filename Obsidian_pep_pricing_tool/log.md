@@ -1040,3 +1040,8 @@ not living tests.
 ## [2026-07-19] query | Slow-query log processing methodology, portable prompt for grp
 
 Distilled the full slow-query-capture lineage (build 2026-07-01, triage 2026-07-04, noise-filter 2026-07-10, regression fix 2026-07-14) into a reusable build/triage/re-audit prompt for setting up or auditing the same pattern on grp, which shares the physical mysql.slow_log with this app. Filed as wiki/concepts/slow-query-log-capture-pattern.md.
+
+## [2026-07-20] scan | Weekly clipping scan — no new files
+
+- Scanned `raw/clippings/`: 5 files found, all previously ingested on 2026-06-30
+- No new source pages, entity pages, or variant sightings this week
