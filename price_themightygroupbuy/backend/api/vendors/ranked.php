@@ -6,9 +6,23 @@ require_once dirname(__DIR__, 2) . '/helpers.php';
 // GET /vendors/ranked — Dashboard "Active vendors" tile pop-up. Cross-vendor
 // composite score, NOT getVendorScorecard() (that's one-vendor, used by the
 // contact card) — this is a single aggregate query over every active vendor.
-// score = round((cheapest_pct + coverage_pct) / 2, 1) + (10 if PayPal/PYUSD)
+// score = round((cheapest_pct + coverage_pct) / 2, 1) + payment_bonus, where
+// payment_bonus comes from the vendor's single BEST accepted payment method
+// (buyer-protection/refund-risk ranking, not additive across methods).
 method('GET');
 requireAuth();
+
+// Tier rank (lower = better), bonus points, and display label per method.
+// pyusd is intentionally NOT tier 1 — it requires more KYC than real PayPal.
+const PAYMENT_TIERS = [
+    'paypal'      => [1, 10, 'PayPal'],
+    'zelle'       => [2, 8, 'Zelle'],
+    'alibaba'     => [3, 6, 'Alibaba'],
+    'wise'        => [4, 5, 'Wise'],
+    'alipay'      => [5, 4, 'Alipay'],
+    'credit_card' => [6, 3, 'Credit Card'],
+];
+const PAYMENT_TIER_OTHER = [7, 1, 'Other/Crypto']; // everything else in the enum
 
 $vendors = cacheGet('comparison_data', 'vendor_ranking', 600, function () {
     $pdo = db();
@@ -54,10 +68,13 @@ $vendors = cacheGet('comparison_data', 'vendor_ranking', 600, function () {
     )->fetchAll(PDO::FETCH_ASSOC);
     $coverage = array_column($coverage, null, 'vendor_id');
 
-    $paypalVendorIds = $pdo->query(
-        "SELECT DISTINCT vendor_id FROM pc_vendor_payment_methods WHERE method IN ('paypal', 'pyusd')"
-    )->fetchAll(PDO::FETCH_COLUMN);
-    $paypalVendorIds = array_flip($paypalVendorIds);
+    $methodRows = $pdo->query(
+        "SELECT vendor_id, method FROM pc_vendor_payment_methods"
+    )->fetchAll(PDO::FETCH_ASSOC);
+    $vendorMethods = [];
+    foreach ($methodRows as $row) {
+        $vendorMethods[$row['vendor_id']][] = $row['method'];
+    }
 
     $vendorRows = $pdo->query(
         'SELECT id, display_name, is_verified FROM pc_vendors WHERE is_active = 1 AND is_hidden = 0'
@@ -73,16 +90,29 @@ $vendors = cacheGet('comparison_data', 'vendor_ranking', 600, function () {
             ? round((int)$c['cheapest_count'] / (int)$c['total_listings'] * 100, 1) : 0.0;
         $coveragePct = $catalogTotal > 0 && $ov
             ? round((int)$ov['covered'] / $catalogTotal * 100, 1) : 0.0;
-        $hasPaypal = isset($paypalVendorIds[$id]);
+
+        // Best (lowest tier rank) accepted method wins; no rows on file = 0 bonus.
+        $paymentBonus = 0;
+        $paymentTierLabel = null;
+        $bestRank = null;
+        foreach ($vendorMethods[$id] ?? [] as $method) {
+            [$rank, $bonus, $label] = PAYMENT_TIERS[$method] ?? PAYMENT_TIER_OTHER;
+            if ($bestRank === null || $rank < $bestRank) {
+                $bestRank = $rank;
+                $paymentBonus = $bonus;
+                $paymentTierLabel = $label;
+            }
+        }
 
         $result[] = [
-            'id'           => (int)$id,
-            'display_name' => $v['display_name'],
-            'is_verified'  => (bool)$v['is_verified'],
-            'score'        => round(($cheapestPct + $coveragePct) / 2, 1) + ($hasPaypal ? 10 : 0),
-            'cheapest_pct' => $cheapestPct,
-            'coverage_pct' => $coveragePct,
-            'has_paypal'   => $hasPaypal,
+            'id'                 => (int)$id,
+            'display_name'       => $v['display_name'],
+            'is_verified'        => (bool)$v['is_verified'],
+            'score'              => round(($cheapestPct + $coveragePct) / 2, 1) + $paymentBonus,
+            'cheapest_pct'       => $cheapestPct,
+            'coverage_pct'       => $coveragePct,
+            'payment_bonus'      => $paymentBonus,
+            'payment_tier_label' => $paymentTierLabel,
         ];
     }
 

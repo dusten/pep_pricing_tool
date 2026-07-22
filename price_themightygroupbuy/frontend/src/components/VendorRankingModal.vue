@@ -15,7 +15,7 @@
               <span class="vrm-score">{{ v.score }}</span>
             </div>
             <p class="text-muted text-sm vrm-breakdown">
-              Cheapest {{ v.cheapest_pct }}% · Carries {{ v.coverage_pct }}% of catalog · PayPal: {{ v.has_paypal ? 'Yes' : 'No' }}
+              Cheapest {{ v.cheapest_pct }}% · Carries {{ v.coverage_pct }}% of catalog · Payment: {{ v.payment_tier_label || 'None on file' }} (+{{ v.payment_bonus }})
             </p>
           </div>
         </li>
