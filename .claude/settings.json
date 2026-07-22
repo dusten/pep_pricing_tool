@@ -1,0 +1,31 @@
+{
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
+  },
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -n --arg ctx \"Context is about to be compacted for the pep_pricing_tool project. Before doing anything else this turn: 1) append a dated entry to Obsidian_pep_pricing_tool/log.md for any work this session not yet logged; 2) create or append Obsidian_pep_pricing_tool/sessions/$(date +%Y-%m-%d).md summarizing today's work; 3) add any missing rows to Obsidian_pep_pricing_tool/index.md Sessions/Analyses tables. Follow the conventions already documented in CLAUDE.md and Obsidian_pep_pricing_tool/CLAUDE.md. Do this proactively without asking the user first, then commit and push the wiki files before continuing.\" '{hookSpecificOutput:{hookEventName:\"PreCompact\",additionalContext:$ctx}}'",
+            "timeout": 15,
+            "statusMessage": "Checkpointing wiki/log/session notes before auto-compaction..."
+          }
+        ]
+      },
+      {
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -n --arg ctx \"Context is about to be compacted for the pep_pricing_tool project. Before doing anything else this turn: 1) append a dated entry to Obsidian_pep_pricing_tool/log.md for any work this session not yet logged; 2) create or append Obsidian_pep_pricing_tool/sessions/$(date +%Y-%m-%d).md summarizing today's work; 3) add any missing rows to Obsidian_pep_pricing_tool/index.md Sessions/Analyses tables. Follow the conventions already documented in CLAUDE.md and Obsidian_pep_pricing_tool/CLAUDE.md. Do this proactively without asking the user first, then commit and push the wiki files before continuing.\" '{hookSpecificOutput:{hookEventName:\"PreCompact\",additionalContext:$ctx}}'",
+            "timeout": 15,
+            "statusMessage": "Checkpointing wiki/log/session notes before /compact..."
+          }
+        ]
+      }
+    ]
+  }
+}

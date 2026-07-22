@@ -17,3 +17,4 @@
 - [Vendor suggestions gated](project_vendor_suggestions_gated.md) — Backlog #69 Phases 1-2 shipped but deliberately test_account-gated pending user testing; don't suggest launching without asking
 - [No real billing](project_no_real_billing.md) — No Stripe/payment integration exists; tier/tier_status/tier_renews_at are 100% manually admin-set; confirm before assuming any billing automation
 - [Restore browser session after test](feedback_restore_browser_session_after_test.md) — Subagents that log the shared browser into a throwaway test account must log it back out, not just delete it server-side, or the real user's tab silently breaks
+- [PreCompact wiki checkpoint hook](project_precompact_wiki_hook.md) — A real PreCompact hook (not just a CLAUDE.md instruction) injects a wiki/log/session-note reminder before every compaction; best-effort safety net, not a substitute for logging as you go

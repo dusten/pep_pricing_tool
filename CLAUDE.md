@@ -117,6 +117,18 @@ sources: []
 
 A cloud agent (routine `trig_012jsqYj1nEgZcVzphK6syjy`) runs every Monday 09:00 UTC to ingest new clippings automatically. Supports both web clippings and WhatsApp chat exports dropped into `raw/clippings/`.
 
+### Pre-compaction wiki checkpoint (automatic)
+
+A `PreCompact` hook is configured in `.claude/settings.json` (fires on both automatic
+context-limit compaction and manual `/compact`, no user action needed). It injects a reminder
+into context instructing the session to, before anything else: append any not-yet-logged work
+to `log.md`, create/append today's `sessions/YYYY-MM-DD.md`, and add any missing rows to
+`index.md`'s Sessions/Analyses tables — then commit and push — before continuing. **This is a
+best-effort mechanism, not a hard guarantee**: the hook deterministically fires and injects the
+instruction every time, but actually authoring the wiki content still requires a model turn, so
+if compaction happens to land mid-tool-call or the session ends abruptly, the checkpoint may be
+skipped. Treat it as a strong safety net, not a substitute for logging work normally as you go.
+
 ## Key Constraints
 
 - Pure PDO — no ORM, no query builder
