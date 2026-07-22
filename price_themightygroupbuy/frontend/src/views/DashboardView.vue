@@ -74,7 +74,7 @@
 
       <!-- Stat tiles -->
       <div class="stat-grid">
-        <div class="stat-tile card">
+        <div class="stat-tile card stat-tile-clickable" @click="showVendorRanking = true">
           <div class="stat-value">{{ stats.vendors ?? '—' }}</div>
           <div class="stat-label">Active vendors</div>
         </div>
@@ -101,6 +101,7 @@
         <RouterLink to="/pricing" class="btn btn-accent btn-sm">View plans</RouterLink>
       </div>
     </div>
+    <VendorRankingModal v-if="showVendorRanking" @close="showVendorRanking = false" />
   </AppLayout>
 </template>
 
@@ -108,6 +109,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import AppLayout from '@/components/AppLayout.vue'
+import VendorRankingModal from '@/components/VendorRankingModal.vue'
 import { useAuthStore }  from '@/stores/auth.js'
 import { useQuotaStore } from '@/stores/quota.js'
 import { useCartStore }  from '@/stores/cart.js'
@@ -119,6 +121,7 @@ const cart  = useCartStore()
 
 const stats  = ref({ vendors: null, products: null, prices: null })
 const stacks = ref([])
+const showVendorRanking = ref(false)
 
 onMounted(async () => {
   quota.fetch()
@@ -185,6 +188,7 @@ const resetsIn = computed(() => {
 
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; }
 .stat-tile { text-align: center; }
+.stat-tile-clickable { cursor: pointer; }
 .stat-value { font-size: 28px; font-weight: 700; color: var(--primary); }
 .stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
 

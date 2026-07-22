@@ -1107,3 +1107,38 @@ search_log row it produced so verification traffic doesn't pollute real metrics.
 `bash deploy.sh --sync-schema` then `bash deploy.sh`; smoke check passed both times.
 
 ## [2026-07-20] feature | Referral rewards converted from dollar credit to free months (backlog #4)
+
+## [2026-07-22] feature | Vendor ranking pop-up on Dashboard (cheapest % + coverage % + PayPal bonus)
+
+New `GET /api/vendors/ranked` (backlog #70): `score = round((cheapest_pct + coverage_pct) / 2, 1) + (10 if paypal/pyusd)`,
+one aggregate query across all active/non-hidden vendors, cached in the existing `comparison_data`
+group (600s TTL). Distinct from `getVendorScorecard()` (#51) — that stays untouched, one-vendor-at-a-time,
+still backs `VendorCard.vue`'s contact popup. Dashboard's "Active vendors" stat tile is now clickable,
+opening `VendorRankingModal.vue` (rank, verified badge, score, breakdown line).
+
+Hand-verified 3 real vendors via direct SQL against the live endpoint, exact match on all fields:
+
+| vendor | cheapest_pct | coverage_pct | has_paypal | score |
+|---|---|---|---|---|
+| 1 — Zhongke Meiye Pharmaceutical | 4.7% (6/128) | 19.8% (155/784) | yes | 22.3 |
+| 3 — Purelypep Factory | 17.2% (21/122) | 15.6% (122/784) | yes | 26.4 |
+| 7 — Laicuinuo LCN | 2.0% (3/153) | 19.5% (153/784) | no | 10.8 |
+
+Confirmed the one hidden+inactive vendor (id 30, `zzz-emoji-test-delete-me`) is absent from the 33
+returned rows (active count matches exactly). PayPal bonus confirmed real: vendors 1/3 get +10
+(has_paypal true), vendor 7 gets none (has_paypal false, score is bare `(cheapest+coverage)/2`).
+
+Judgment call: PayPal bonus scope includes both `paypal` and `pyusd` payment-method rows (PYUSD is
+PayPal's own stablecoin) — narrow to `paypal` only later if the user wants a stricter reading.
+
+Live in-browser check via a throwaway `test_account` session (deleted after, same pattern as
+2026-07-20's session): modal opens on tile click, ranked list matches the hand-verified numbers
+exactly, verified badges render on Jenny Peptide / Purelypep Factory, closes on both Escape and
+backdrop click. Caught a real bug during this check: the new component's template reused
+`VendorCard.vue`'s `.vc-backdrop`/`.vc-card`/`.vc-close`/`.vc-name` class names, but Vue scoped CSS
+doesn't leak across components — those rules were missing from the deployed bundle and the modal
+first rendered with `position: static`, no dimmed backdrop, no centering. Fixed by copying the
+`.vc-*` rules into the new component's own `<style scoped>` block; redeployed and reverified live.
+
+`php -l` clean on both touched/new backend files (linted over SSH, no local PHP). Deployed via
+`bash deploy.sh` (twice, after the CSS fix); smoke check passed both times.
