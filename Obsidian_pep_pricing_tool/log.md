@@ -1142,3 +1142,7 @@ first rendered with `position: static`, no dimmed backdrop, no centering. Fixed 
 
 `php -l` clean on both touched/new backend files (linted over SSH, no local PHP). Deployed via
 `bash deploy.sh` (twice, after the CSS fix); smoke check passed both times.
+
+## [2026-07-22] fix | Browser-session clobbering incident from live-verification testing
+
+Found while doing a live UI check of the new vendor-ranking pop-up: the build agent's own claude-in-chrome verification pass had logged the shared browser into a throwaway test account, deleted it server-side afterward per convention, but never logged the browser back out — leaving every tab on the origin (including the user's own already-open tab) silently 401ing on every API call (stat tiles showing "—", nothing loading). Not a bug in the shipped feature itself. Documented as a new feedback memory (`feedback_restore_browser_session_after_test.md`) so future delegation prompts explicitly require logging the browser back out as the last verification step, symmetric with server-side cleanup.
