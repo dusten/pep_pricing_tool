@@ -2,8 +2,8 @@
   <AppLayout title="Pricing">
   <div class="pricing-page">
     <div class="pricing-hero">
-      <div class="pricing-eyebrow">Pricing</div>
-      <h1 class="pricing-title">Simple, transparent pricing</h1>
+      <div class="eyebrow-woodblock">Pricing</div>
+      <h1 class="pricing-title">Every vendor.<br class="pricing-title-break">One true price.</h1>
       <p class="pricing-sub">Access detailed vendor price comparisons. Upgrade or cancel any time.</p>
 
       <!-- Billing interval toggle -->
@@ -174,9 +174,18 @@ function selectPlan(plan) {
 .pricing-page { max-width: 1100px; margin: 0 auto; padding: 48px 24px; }
 
 .pricing-hero { text-align: center; margin-bottom: 48px; }
-.pricing-eyebrow { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 10px; }
-.pricing-title { font-size: 32px; font-weight: 800; margin-bottom: 10px; }
+.eyebrow-woodblock { margin-bottom: 18px; }
+.pricing-title {
+  font-family: var(--font-display);
+  font-size: 44px; font-weight: 600; letter-spacing: -0.5px; line-height: 1.15;
+  margin-bottom: 14px; color: var(--text);
+}
 .pricing-sub   { color: var(--text-secondary); font-size: 15px; margin-bottom: 28px; }
+
+@media (max-width: 560px) {
+  .pricing-title { font-size: 32px; }
+  .pricing-title-break { display: none; }
+}
 
 .interval-toggle { display: inline-flex; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 99px; padding: 3px; gap: 2px; }
 .toggle-btn { padding: 7px 18px; border-radius: 99px; border: none; background: none; cursor: pointer; font-size: 13.5px; font-weight: 500; color: var(--text-secondary); transition: all var(--transition); display: flex; align-items: center; gap: 6px; }

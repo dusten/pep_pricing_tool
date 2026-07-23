@@ -26,11 +26,12 @@
           </div>
           <template v-else>
             <div v-for="v in cart.vendors" :key="v.vendor_id"
-                 :class="['vendor-row', { full: v.full_coverage }]">
+                 :class="['vendor-row', { cheapest: v.vendor_id === cart.cheapestFullCoverage?.vendor_id }]">
               <div>
                 <button class="vendor-name-btn" @click="openVendorId = v.vendor_id">{{ v.vendor_name }}</button>
                 <span v-if="v.full_coverage" class="badge badge-pro">Covers all {{ v.total_items }}</span>
                 <span v-else class="text-muted text-sm">{{ v.items_covered }} of {{ v.total_items }} items — missing {{ v.missing.join(', ') }}</span>
+                <span v-if="v.vendor_id === cart.cheapestFullCoverage?.vendor_id" class="best-price-badge">Best price</span>
               </div>
               <span class="vendor-total">${{ v.total_usd.toFixed(2) }}</span>
             </div>
@@ -88,8 +89,12 @@ onMounted(() => cart.load())
 
 .vendor-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .vendor-row:last-child { border-bottom: none; }
-.vendor-row.full { background: var(--success-bg); margin: 0 -20px; padding: 10px 20px; }
+.vendor-row.cheapest {
+  background: var(--accent-subtle); margin: 0 -20px; padding: 10px 20px;
+  border-left: 3px solid var(--accent); border-bottom-color: transparent;
+}
 .vendor-total { font-weight: 700; font-size: 15px; }
+.best-price-badge { background: var(--accent); color: var(--text-on-accent); font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px; padding: 2px 7px; border-radius: 99px; margin-left: 8px; }
 .vendor-name-btn {
   background: none; border: none; padding: 0; font: inherit; font-weight: 700; color: inherit;
   cursor: pointer; text-decoration: underline; text-decoration-color: transparent;

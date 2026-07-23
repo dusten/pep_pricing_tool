@@ -167,7 +167,7 @@ const resetsIn = computed(() => {
   border-color: transparent;
   color: var(--text-on-primary);
 }
-.welcome-card h2 { font-size: 18px; margin-bottom: 4px; }
+.welcome-card h2 { font-family: var(--font-display); font-weight: 600; font-size: 22px; letter-spacing: -0.3px; margin-bottom: 4px; }
 .welcome-card p  { margin: 0; opacity: .75; font-size: 13.5px; }
 
 .quota-card h3  { margin: 0; font-size: 14px; }
