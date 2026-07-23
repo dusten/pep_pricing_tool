@@ -8,7 +8,7 @@
       <ol v-else class="vrm-list">
         <li v-for="(v, i) in vendors" :key="v.id" class="vrm-row">
           <span class="vrm-rank">{{ i + 1 }}</span>
-          <div class="vrm-body">
+          <button class="vrm-body vrm-body-btn" @click="openVendorId = v.id">
             <div class="vrm-name-line">
               <span v-if="v.is_verified" class="badge badge-verified">✓ {{ v.display_name }}</span>
               <template v-else>{{ v.display_name }}</template>
@@ -17,21 +17,24 @@
             <p class="text-muted text-sm vrm-breakdown">
               Cheapest {{ v.cheapest_pct }}% · Carries {{ v.coverage_pct }}% of catalog · Payment: {{ v.payment_tier_label || 'None on file' }} (+{{ v.payment_bonus }})
             </p>
-          </div>
+          </button>
         </li>
       </ol>
     </div>
+    <VendorCard v-if="openVendorId" :vendor-id="openVendorId" @close="openVendorId = null" />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { get } from '@/utils/api.js'
+import VendorCard from '@/components/VendorCard.vue'
 
 const emit = defineEmits(['close'])
 
 const vendors = ref([])
 const loading = ref(true)
+const openVendorId = ref(null)
 
 function onEscape(e) { if (e.key === 'Escape') emit('close') }
 
@@ -66,6 +69,11 @@ onUnmounted(() => document.removeEventListener('keydown', onEscape))
 .vrm-row:last-child { border-bottom: none; }
 .vrm-rank { font-weight: 700; color: var(--text-secondary); min-width: 18px; }
 .vrm-body { flex: 1; }
+.vrm-body-btn {
+  background: none; border: none; padding: 0; font: inherit; color: inherit;
+  text-align: left; cursor: pointer; width: 100%;
+}
+.vrm-body-btn:hover .vrm-name-line { text-decoration: underline; text-decoration-color: currentColor; }
 .vrm-name-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13.5px; }
 .vrm-score { font-weight: 700; color: var(--primary); }
 .vrm-breakdown { margin: 3px 0 0; }
