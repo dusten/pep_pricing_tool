@@ -1,5 +1,10 @@
 <template>
   <AppLayout title="Price Comparison" wide>
+    <div class="comparison-header">
+      <span class="eyebrow-woodblock">Comparison</span>
+      <h1 class="comparison-title">Every vendor, side by side.</h1>
+    </div>
+
     <!-- Filter bar -->
     <div class="card filter-bar">
       <div v-if="comparison.tiers.length > 1" class="tier-tabs">
@@ -420,6 +425,11 @@ const vendorColumns = computed(() => {
 </script>
 
 <style scoped>
+.comparison-header { display: flex; align-items: baseline; gap: 16px; margin-bottom: 14px; flex-wrap: wrap; }
+.comparison-title {
+  font-family: var(--font-display); font-weight: 600; letter-spacing: -0.3px;
+  font-size: 21px; color: var(--text); margin: 0;
+}
 .filter-bar { margin-bottom: 20px; }
 .tier-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .tier-label { font-size: 12.5px; color: var(--text-secondary); font-weight: 600; margin-right: 4px; }
