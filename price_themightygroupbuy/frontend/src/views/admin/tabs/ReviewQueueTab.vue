@@ -43,9 +43,18 @@
         </div>
 
         <div class="review-actions pending-actions">
-          <label v-if="importRow.candidate_product_id" class="toggle-label">
-            <input type="checkbox" v-model="mapToCandidate" /> Map onto "{{ importRow.candidate_name }}" instead of creating a new product
-          </label>
+          <div class="review-row">
+            <span class="label-sm">Map to product</span>
+            <input type="text" v-model="productFilter" placeholder="Search existing products…" style="width:200px" />
+            <select v-model="selectedProductId" style="width:260px">
+              <option value="">— Create new product "{{ importRow.raw_json.canonical_name }}" —</option>
+              <option v-for="p in filteredProducts" :key="p.id" :value="p.id">{{ p.canonical_name }}</option>
+            </select>
+            <button v-if="importRow.candidate_product_id" type="button" class="btn btn-ghost btn-sm"
+                    @click="selectedProductId = importRow.candidate_product_id; productFilter = importRow.candidate_name">
+              Use suggested: "{{ importRow.candidate_name }}"
+            </button>
+          </div>
           <div class="action-buttons">
             <button class="btn btn-primary btn-sm" @click="approveImport">Approve</button>
             <button class="btn btn-ghost btn-sm" @click="rejectImport">Reject</button>
@@ -127,15 +136,32 @@ const importWarning = computed(() => {
   return ''
 })
 const coaRow          = ref(null)
-const mapToCandidate  = ref(true)
 const approveMsg      = ref('')
 const coaList         = ref([])
 const coaStatusFilter = ref('')
 
+// Product picker (Review Queue backlog fix — replaces the old "map onto the
+// one suggested candidate" checkbox with a real search over the full catalog,
+// since the suggested candidate can be flat-out wrong, e.g. CJC-1295 with vs.
+// without DAC).
+const allProducts      = ref([])
+const productFilter    = ref('')
+const selectedProductId = ref('')
+const filteredProducts = computed(() => {
+  const q = productFilter.value.trim().toLowerCase()
+  const matches = q ? allProducts.value.filter(p => p.canonical_name.toLowerCase().includes(q)) : allProducts.value
+  return matches.slice().sort((a, b) => a.canonical_name.localeCompare(b.canonical_name)).slice(0, 40)
+})
+async function loadProducts() {
+  const res = await get('/api/products')
+  allProducts.value = res.products
+}
+
 async function loadImport() {
   const res = await get('/api/vendors/pending-imports')
   importRow.value = res.done ? null : res
-  mapToCandidate.value = true
+  selectedProductId.value = ''
+  productFilter.value = ''
 }
 async function loadCoa() {
   const res = await get('/api/admin/coa-queue')
@@ -166,7 +192,6 @@ function matchTypeLabel(t) {
 }
 
 async function approveImport() {
-  const productId = mapToCandidate.value ? importRow.value.candidate_product_id : null
   const r = importRow.value.raw_json
   const body = {
     canonical_name: r.canonical_name, spec_label: r.spec_label, numeric_value: r.numeric_value,
@@ -174,7 +199,8 @@ async function approveImport() {
     vendor_sku: r.vendor_sku, non_standard_kit: r.non_standard_kit, is_raw_material: r.is_raw_material,
     is_tablet: r.is_tablet,
   }
-  if (productId) body.product_id = productId
+  if (selectedProductId.value) body.product_id = selectedProductId.value
+  else body.create_new = true
   try {
     const res = await post(`/api/vendors/pending-imports/${importRow.value.id}/approve`, body)
     if (res.auto_approved_matches) {
@@ -225,7 +251,7 @@ async function rejectCoa() {
 }
 
 watch(mode, (m) => { if (m === 'imports') loadImport(); else loadCoa() })
-onMounted(loadImport)
+onMounted(() => { loadImport(); loadProducts() })
 </script>
 
 <style scoped>

@@ -11,6 +11,8 @@ const VARIANT_COMPOUND_WATCH_NAMES = [
     'epitalon', 'epithalon', 'epithalone', 'aedg', 'n-acetyl epitalon', 'acetyl epitalon amidate', 'ac-aedg',
     'tb-500', 'tb500', 'tb 500', 'thymosin beta-4', 'thymosin b4', 'thymosin b5', 'tb-500 fragment',
     'tb500 fragment', 'tb frag', '17-23', 'lkktetq', 'fequesetide', 'tb5', 'tb-5',
+    'cjc-1295 with dac', 'cjc-1295 without dac', 'cjc-1295 dac', 'cjc-1295 no dac',
+    'cjc1295 with dac', 'cjc1295 without dac', 'cjc1295 dac',
 ];
 
 function buildExtractionSystemPrompt(): string {

@@ -179,22 +179,13 @@ function commitExtractionResult(array $file, array $result): array {
                 continue;
             }
 
-            $findSpec = $pdo->prepare('SELECT id FROM pc_specifications WHERE product_id = ? AND spec_label = ?');
-            $findSpec->execute([$productId, $label]);
-            $specId = $findSpec->fetchColumn();
+            // Product identity is already certain (exact match) — a brand-new dose/spec
+            // on it is low-stakes (easy to fix later via Products/Inventory if the value
+            // is off), unlike the identity risk new_product/name_mismatch route for.
+            // Auto-commit instead of parking in Review Queue.
+            $specId = findOrCreateSpec($pdo, $productId, $label, $value, $unit, !empty($p['is_raw_material']), !empty($p['is_tablet']));
 
-            if (!$specId) {
-                // Existing product, but this spec doesn't exist on it yet — review before adding.
-                $insertPending->execute([
-                    $file['id'], $file['vendor_id'],
-                    json_encode($p + ['tier_kit_size' => $tierSize]),
-                    'new_spec', $productId,
-                ]);
-                $pending++;
-                continue;
-            }
-
-            $changed = commitPriceRow($pdo, (int)$file['vendor_id'], $productId, (int)$specId, $price, $value, $kitCount, $tierSize, $nonStandard, (int)$file['id'], $vendorSku);
+            $changed = commitPriceRow($pdo, (int)$file['vendor_id'], $productId, $specId, $price, $value, $kitCount, $tierSize, $nonStandard, (int)$file['id'], $vendorSku);
             if ($changed) $imported++; else $unchanged++;
         }
 

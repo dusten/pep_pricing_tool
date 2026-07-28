@@ -5,9 +5,10 @@ require_once dirname(__DIR__, 2) . '/helpers.php';
 require_once dirname(__DIR__, 2) . '/lib/price_import.php';
 
 // GET  /vendors/pending-imports              — next pending row (single-card queue)
-// POST /vendors/pending-imports/{id}/approve — body: { product_id?, canonical_name?, spec_label?,
+// POST /vendors/pending-imports/{id}/approve — body: { product_id?, create_new?, canonical_name?, spec_label?,
 //   numeric_value?, unit?, price_usd?, kit_vial_count?, tier_kit_size?, vendor_sku?, non_standard_kit?, is_raw_material?, is_tablet? }
 //   — product_id: existing product to map onto, omit to create/match by canonical_name.
+//   — create_new: true forces a brand-new product even if a candidate_product_id was suggested.
 //   — everything else: admin edits from the review card; omit a key to keep the extracted value.
 // POST /vendors/pending-imports/{id}/reject
 // POST /vendors/pending-imports/{id}/skip — defers the decision: row stays
@@ -90,7 +91,8 @@ $vendorSku    = trim((string)$field('vendor_sku', ''));
 $nonStandard  = !empty($field('non_standard_kit', false));
 $isRawMaterial = !empty($field('is_raw_material', false));
 $isTablet      = !empty($field('is_tablet', false));
-$mappedProduct = (int)($body['product_id'] ?? 0) ?: null;
+$mappedProduct   = (int)($body['product_id'] ?? 0) ?: null;
+$forceNewProduct = !empty($body['create_new']);
 
 if (!$name || !$label || $value <= 0 || $price <= 0) {
     jsonResponse(['error' => 'This pending row no longer has valid data to commit.'], 422);
@@ -98,7 +100,7 @@ if (!$name || !$label || $value <= 0 || $price <= 0) {
 
 $pdo->beginTransaction();
 try {
-    $productId = $mappedProduct ?: (int)($row['candidate_product_id'] ?? 0) ?: null;
+    $productId = $forceNewProduct ? null : ($mappedProduct ?: (int)($row['candidate_product_id'] ?? 0) ?: null);
     // candidate_product_id was computed at file-processing time, before this
     // review session started — it can't know about a product an earlier
     // approval in the same batch just created (e.g. NAD+ 100mg approved,
