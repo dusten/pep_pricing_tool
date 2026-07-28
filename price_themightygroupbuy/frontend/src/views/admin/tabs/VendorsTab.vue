@@ -347,7 +347,11 @@ async function save() {
     toast.error('Vendor name is required — click "Parse reply" first, or fill in Vendor Name manually.')
     return
   }
-  const body = { ...form }
+  // WhatsApp Web renders emoji as image sprites; copying text containing them
+  // can leave behind U+FFFC (object replacement character) instead of the
+  // real emoji, which just displays as a broken "obj" box everywhere else.
+  const stripObjectChar = (s) => s.replace(/￼/g, '')
+  const body = { ...form, shipping_note: stripObjectChar(form.shipping_note), notes: stripObjectChar(form.notes) }
   if (selectedVendorId.value) {
     await put(`/api/vendors/${selectedVendorId.value}`, body)
   } else {
