@@ -6,7 +6,7 @@ require_once dirname(__DIR__, 2) . '/lib/price_import.php';
 
 // GET  /vendors/pending-imports              — next pending row (single-card queue)
 // POST /vendors/pending-imports/{id}/approve — body: { product_id?, canonical_name?, spec_label?,
-//   numeric_value?, unit?, price_usd?, kit_vial_count?, tier_kit_size?, vendor_sku?, non_standard_kit?, is_raw_material? }
+//   numeric_value?, unit?, price_usd?, kit_vial_count?, tier_kit_size?, vendor_sku?, non_standard_kit?, is_raw_material?, is_tablet? }
 //   — product_id: existing product to map onto, omit to create/match by canonical_name.
 //   — everything else: admin edits from the review card; omit a key to keep the extracted value.
 // POST /vendors/pending-imports/{id}/reject
@@ -89,6 +89,7 @@ $tierSize     = min(65535, max(1, (int)$field('tier_kit_size', 1)));
 $vendorSku    = trim((string)$field('vendor_sku', ''));
 $nonStandard  = !empty($field('non_standard_kit', false));
 $isRawMaterial = !empty($field('is_raw_material', false));
+$isTablet      = !empty($field('is_tablet', false));
 $mappedProduct = (int)($body['product_id'] ?? 0) ?: null;
 
 if (!$name || !$label || $value <= 0 || $price <= 0) {
@@ -112,7 +113,7 @@ try {
     }
     if (!$productId) $productId = findExactProductMatch($pdo, $name) ?? createProduct($pdo, $name);
 
-    $specId = findOrCreateSpec($pdo, $productId, $label, $value, $unit, $isRawMaterial);
+    $specId = findOrCreateSpec($pdo, $productId, $label, $value, $unit, $isRawMaterial, $isTablet);
     commitPriceRow($pdo, (int)$row['vendor_id'], $productId, $specId, $price, $value, $kitCount, $tierSize, $nonStandard, (int)$row['vendor_file_id'], $vendorSku);
 
     $pdo->prepare('UPDATE pc_pending_imports SET status = ?, reviewed_by = ?, reviewed_at = NOW() WHERE id = ?')
@@ -136,17 +137,21 @@ try {
 $autoApproved = 0;
 $others = $pdo->prepare("SELECT * FROM pc_pending_imports WHERE status = 'pending' AND vendor_id != ? AND id != ?");
 $others->execute([(int)$row['vendor_id'], $id]);
-$specCheck = $pdo->prepare('SELECT id FROM pc_specifications WHERE product_id = ? AND spec_label = ?');
+$specCheck = $pdo->prepare('SELECT id FROM pc_specifications WHERE product_id = ? AND spec_label = ? AND is_tablet = ?');
 foreach ($others->fetchAll() as $other) {
-    $o      = json_decode($other['raw_json'], true);
-    $oName  = trim((string)($o['canonical_name'] ?? ''));
-    $oLabel = trim((string)($o['spec_label'] ?? ''));
-    $oValue = (float)($o['numeric_value'] ?? 0);
-    $oPrice = (float)($o['price_usd'] ?? 0);
+    $o        = json_decode($other['raw_json'], true);
+    $oName    = trim((string)($o['canonical_name'] ?? ''));
+    $oLabel   = trim((string)($o['spec_label'] ?? ''));
+    $oValue   = (float)($o['numeric_value'] ?? 0);
+    $oPrice   = (float)($o['price_usd'] ?? 0);
+    $oIsTablet = !empty($o['is_tablet'] ?? false);
     if (!$oName || !$oLabel || $oValue <= 0 || $oPrice <= 0) continue;
     if (findExactProductMatch($pdo, $oName) !== $productId) continue;
 
-    $specCheck->execute([$productId, $oLabel]);
+    // Must match on is_tablet too, same reason findOrCreateSpec's own lookup
+    // does — otherwise a different vendor's tablet listing could auto-approve
+    // onto a non-tablet spec row (or vice versa) just because the label matched.
+    $specCheck->execute([$productId, $oLabel, $oIsTablet ? 1 : 0]);
     if ((int)$specCheck->fetchColumn() !== $specId) continue;
 
     $pdo->beginTransaction();

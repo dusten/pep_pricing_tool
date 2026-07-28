@@ -31,6 +31,7 @@ export const useComparisonStore = defineStore('comparison', () => {
     if (filters.multiOnly)       params.set('multi_only', '1')
     if (filters.verifiedOnly)    params.set('verified_only', '1')
     if (filters.rawMaterialOnly) params.set('raw_material_only', '1')
+    if (filters.tabletOnly)      params.set('tablet_only', '1')
     if (filters.tier)            params.set('tier', filters.tier)
     return params
   }

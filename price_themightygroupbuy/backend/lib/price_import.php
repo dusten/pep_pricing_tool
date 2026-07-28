@@ -60,15 +60,15 @@ function createProduct(PDO $pdo, string $name): int {
     return (int)$pdo->lastInsertId();
 }
 
-function findOrCreateSpec(PDO $pdo, int $productId, string $label, float $value, string $unit, bool $isRawMaterial = false): int {
-    $find = $pdo->prepare('SELECT id FROM pc_specifications WHERE product_id = ? AND spec_label = ?');
-    $find->execute([$productId, $label]);
+function findOrCreateSpec(PDO $pdo, int $productId, string $label, float $value, string $unit, bool $isRawMaterial = false, bool $isTablet = false): int {
+    $find = $pdo->prepare('SELECT id FROM pc_specifications WHERE product_id = ? AND spec_label = ? AND is_tablet = ?');
+    $find->execute([$productId, $label, $isTablet ? 1 : 0]);
     $specId = $find->fetchColumn();
     if ($specId) return (int)$specId;
 
     $unit = in_array($unit, ['mg', 'iu', 'ml'], true) ? $unit : 'other';
-    $pdo->prepare('INSERT INTO pc_specifications (product_id, spec_label, numeric_value, unit, is_raw_material) VALUES (?,?,?,?,?)')
-        ->execute([$productId, $label, $value, $unit, $isRawMaterial ? 1 : 0]);
+    $pdo->prepare('INSERT INTO pc_specifications (product_id, spec_label, numeric_value, unit, is_raw_material, is_tablet) VALUES (?,?,?,?,?,?)')
+        ->execute([$productId, $label, $value, $unit, $isRawMaterial ? 1 : 0, $isTablet ? 1 : 0]);
     return (int)$pdo->lastInsertId();
 }
 

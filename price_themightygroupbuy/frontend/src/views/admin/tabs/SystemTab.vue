@@ -246,6 +246,7 @@ function openQuery(q) {
   if (p.multiOnly)       params.set('multi_only', '1')
   if (p.verifiedOnly)    params.set('verified_only', '1')
   if (p.rawMaterialOnly) params.set('raw_material_only', '1')
+  if (p.tabletOnly) params.set('tablet_only', '1')
   window.open(`/comparison?${params.toString()}`, '_blank')
 }
 

@@ -39,6 +39,7 @@
         <div class="review-row">
           <label class="toggle-label"><input type="checkbox" v-model="importRow.raw_json.non_standard_kit" /> Non-standard kit size</label>
           <label class="toggle-label"><input type="checkbox" v-model="importRow.raw_json.is_raw_material" /> Raw/bulk powder (priced by weight, not a finished vial)</label>
+          <label class="toggle-label"><input type="checkbox" v-model="importRow.raw_json.is_tablet" /> Oral tablet (not an injectable vial)</label>
         </div>
 
         <div class="review-actions pending-actions">
@@ -171,6 +172,7 @@ async function approveImport() {
     canonical_name: r.canonical_name, spec_label: r.spec_label, numeric_value: r.numeric_value,
     unit: r.unit, price_usd: r.price_usd, tier_kit_size: r.tier_kit_size,
     vendor_sku: r.vendor_sku, non_standard_kit: r.non_standard_kit, is_raw_material: r.is_raw_material,
+    is_tablet: r.is_tablet,
   }
   if (productId) body.product_id = productId
   try {

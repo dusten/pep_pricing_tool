@@ -30,7 +30,8 @@ $rows = runComparisonQuery(
     (bool)($p['multiOnly']   ?? false),
     (bool)($p['verifiedOnly'] ?? false),
     (int)($p['tierKitSize'] ?? 1),
-    (bool)($p['rawMaterialOnly'] ?? false)
+    (bool)($p['rawMaterialOnly'] ?? false),
+    (bool)($p['tabletOnly'] ?? false)
 );
 $newDurationMs = (int)round((microtime(true) - $startedAt) * 1000);
 

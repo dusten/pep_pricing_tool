@@ -222,7 +222,9 @@ CREATE TABLE IF NOT EXISTS pc_specifications (
   numeric_value   DECIMAL(10,4) NOT NULL,       -- normalized value (mcg→mg, g→mg)
   unit            ENUM('mg','iu','ml','other') NOT NULL,
   is_raw_material BOOLEAN NOT NULL DEFAULT FALSE, -- true for bulk/raw powder specs (e.g. "1g") vs a finished vial dose — lives on the spec, not a product-level classification, since one product can have both forms
-  UNIQUE KEY (product_id, spec_label),
+  is_tablet       BOOLEAN NOT NULL DEFAULT FALSE, -- true for oral tablet/capsule specs — same reasoning as is_raw_material; a product can have both a tablet and an injectable spec, so it lives on the spec, not the product
+  UNIQUE KEY (product_id, spec_label, is_tablet), -- widened: a tablet dose can share the exact same label as an injectable dose of the same product (both "5mg"), so is_tablet must be part of the uniqueness key, not just an attribute
+
   FOREIGN KEY (product_id) REFERENCES pc_products(id) ON DELETE CASCADE,
   INDEX (product_id, numeric_value)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

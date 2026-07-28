@@ -75,7 +75,7 @@
         </div>
         <div class="view-body manual-body">
           <p class="text-muted text-sm">Paste an extraction result from another tool (Grok, hand-corrected JSON, etc.) — same shape as Claude's own output: an object with a <code>prices</code> array. This commits through the exact same logic a real "Process" click uses, without calling Claude.</p>
-          <textarea v-model="manualJson" class="manual-textarea" placeholder='{"contact": {}, "warnings": [], "prices": [{"canonical_name":"","spec_label":"","numeric_value":0,"unit":"mg","price_usd":0,"kit_vial_count":10,"tier_kit_size":1,"vendor_sku":"","non_standard_kit":false,"is_raw_material":false}]}'></textarea>
+          <textarea v-model="manualJson" class="manual-textarea" placeholder='{"contact": {}, "warnings": [], "prices": [{"canonical_name":"","spec_label":"","numeric_value":0,"unit":"mg","price_usd":0,"kit_vial_count":10,"tier_kit_size":1,"vendor_sku":"","non_standard_kit":false,"is_raw_material":false,"is_tablet":false}]}'></textarea>
           <div class="manual-actions">
             <button class="btn btn-primary btn-sm" :disabled="!manualJson.trim() || manualSubmitting" @click="submitManual">
               {{ manualSubmitting ? 'Submitting…' : 'Submit' }}

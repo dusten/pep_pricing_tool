@@ -35,6 +35,10 @@
           Raw/bulk powder only
         </label>
         <label class="toggle-label">
+          <input type="checkbox" v-model="tabletOnly" />
+          Tablets only
+        </label>
+        <label class="toggle-label">
           <input type="checkbox" v-model="showUnitPricing" />
           Show $/unit
         </label>
@@ -115,6 +119,7 @@
               </td>
               <td class="sticky-col col-spec">
                 {{ row.spec }} <span v-if="row.is_raw_material" class="badge badge-free" title="Raw/bulk powder, not a finished vial">Raw</span>
+                <span v-if="row.is_tablet" class="badge badge-advanced" title="Oral tablet, not an injectable vial">Tablet</span>
                 <button v-if="qualifiesForDistribution(row)" class="dist-trigger" title="Price distribution across vendors" @click="openDistribution(row)">📊</button>
               </td>
               <template v-for="v in vendorColumns" :key="v.id">
@@ -165,6 +170,7 @@
               <span>
                 {{ row.spec }}
                 <span v-if="row.is_raw_material" class="badge badge-free" title="Raw/bulk powder, not a finished vial">Raw</span>
+                <span v-if="row.is_tablet" class="badge badge-advanced" title="Oral tablet, not an injectable vial">Tablet</span>
                 <button v-if="qualifiesForDistribution(row)" class="dist-trigger" title="Price distribution across vendors" @click.stop="openDistribution(row)">📊</button>
                 &nbsp;·&nbsp; Avg <strong>${{ row.stats.avg.toFixed(2) }}</strong>
                 &nbsp;·&nbsp; Median <strong>{{ row.stats.median === null ? '—' : '$' + row.stats.median.toFixed(2) }}</strong>
@@ -270,7 +276,7 @@ async function exportComparison(format) {
   try {
     const params = comparison.buildParams({
       vendors: selectedVendors.value, products: [], classificationIds: selectedClassifications.value,
-      multiOnly: multiOnly.value, verifiedOnly: verifiedOnly.value, rawMaterialOnly: rawMaterialOnly.value,
+      multiOnly: multiOnly.value, verifiedOnly: verifiedOnly.value, rawMaterialOnly: rawMaterialOnly.value, tabletOnly: tabletOnly.value,
       tier: selectedTier.value,
     })
     const res = await fetch(`/api/comparison/export/${format}?${params.toString()}`, {
@@ -290,6 +296,7 @@ async function exportComparison(format) {
 }
 
 const selectedClassifications = ref([])
+const tabletOnly          = ref(false)
 const selectedTier       = ref(1)
 const search            = ref('')
 const multiOnly          = ref(false)
@@ -371,7 +378,7 @@ const queryProducts = ref([])
 function runSearch() {
   comparison.search({
     classificationIds: selectedClassifications.value, vendors: selectedVendors.value,
-    multiOnly: multiOnly.value, verifiedOnly: verifiedOnly.value, rawMaterialOnly: rawMaterialOnly.value,
+    multiOnly: multiOnly.value, verifiedOnly: verifiedOnly.value, rawMaterialOnly: rawMaterialOnly.value, tabletOnly: tabletOnly.value,
     tier: selectedTier.value, products: queryProducts.value,
   })
 }
@@ -396,6 +403,7 @@ function initFromQuery() {
   multiOnly.value       = q.multi_only === '1'
   verifiedOnly.value    = q.verified_only === '1'
   rawMaterialOnly.value = q.raw_material_only === '1'
+  tabletOnly.value       = q.tablet_only === '1'
 }
 
 onMounted(async () => {
@@ -404,7 +412,7 @@ onMounted(async () => {
   initFromQuery()
   runSearch()
 })
-watch([selectedClassifications, multiOnly, verifiedOnly, rawMaterialOnly, selectedVendors, selectedTier], runSearch, { deep: true })
+watch([selectedClassifications, multiOnly, verifiedOnly, rawMaterialOnly, tabletOnly, selectedVendors, selectedTier], runSearch, { deep: true })
 
 const filteredRows = computed(() => {
   const q = search.value.trim().toLowerCase()

@@ -16,6 +16,7 @@ function parseComparisonFiltersFromGet(): array {
         in_array($_GET['verified_only'] ?? '', ['1', 'true'], true),
         max(1, (int)($_GET['tier'] ?? 1)),
         in_array($_GET['raw_material_only'] ?? '', ['1', 'true'], true),
+        in_array($_GET['tablet_only'] ?? '', ['1', 'true'], true),
     ];
 }
 
@@ -35,7 +36,7 @@ function getActiveVendorCount(): int {
  * Shared by the comparison endpoint and the admin query-log "re-run" tool —
  * one place for the query shape so the two never drift out of sync.
  */
-function runComparisonQuery(array $productIds, array $vendorIds, array $specIds, array $classificationIds, bool $multiOnly, bool $verifiedOnly = false, int $tierKitSize = 1, bool $rawMaterialOnly = false): array {
+function runComparisonQuery(array $productIds, array $vendorIds, array $specIds, array $classificationIds, bool $multiOnly, bool $verifiedOnly = false, int $tierKitSize = 1, bool $rawMaterialOnly = false, bool $tabletOnly = false): array {
     $where  = ['pr.is_active = 1', 'v.is_active = 1', 'pr.tier_kit_size = ?'];
     $params = [$tierKitSize];
 
@@ -53,10 +54,14 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
     // product can have both a finished-vial spec and a raw-powder spec, so
     // this must filter individual rows, not just narrow which products show.
     if ($rawMaterialOnly) { $where[] = 's.is_raw_material = 1'; }
+    // Same reasoning as raw-material above — tablet-ness lives on the spec,
+    // not a product-level tag, since one product can have both a finished-vial
+    // spec and a tablet spec.
+    if ($tabletOnly) { $where[] = 's.is_tablet = 1'; }
 
     $sql = "SELECT pr.vendor_id, v.display_name AS vendor_name, v.is_verified,
                    pr.product_id, p.canonical_name, p.cas_number, p.molecular_weight,
-                   pr.specification_id, s.spec_label, s.numeric_value, s.unit, s.is_raw_material,
+                   pr.specification_id, s.spec_label, s.numeric_value, s.unit, s.is_raw_material, s.is_tablet,
                    pr.price_usd, pr.price_per_unit, pr.kit_vial_count, pr.non_standard_kit, pr.source_file_id, pr.vendor_sku
             FROM pc_prices pr
             JOIN pc_products p       ON p.id = pr.product_id
@@ -103,6 +108,7 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
                 'unit'             => $r['unit'],
                 'numeric_value'    => (float)$r['numeric_value'],
                 'is_raw_material'  => (bool)$r['is_raw_material'],
+                'is_tablet'        => (bool)$r['is_tablet'],
                 'vendors'          => [],
             ];
         }

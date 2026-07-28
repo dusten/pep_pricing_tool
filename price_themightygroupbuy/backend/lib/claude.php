@@ -86,6 +86,15 @@ Rules:
     ceil(MOQ / kit_vial_count) — the number of kits needed to meet the MOQ, rounding up since
     a fractional kit can't be ordered — and price_usd = the given per-vial price × kit_vial_count
     (the price for one whole kit, matching how every other vendor's price_usd is recorded).
+13. Oral tablets (column/text says "tablet(s)", "capsule(s)", "oral" — not an injectable
+    vial or raw powder): same spec_label/numeric_value/unit rules as any other dose
+    (rule 5) — a "5mg" tablet is spec_label="5mg", numeric_value=5, unit="mg", exactly
+    like a 5mg vial would be. Set is_tablet=true. kit_vial_count is the tablet count per
+    bottle/kit (e.g. "bottle of 30 tablets" -> kit_vial_count=30), same convention as vial
+    count. If the source doesn't state a per-tablet mg dose at all (just "bottle of 30
+    tablets" with no dose), still extract the row with numeric_value=1, unit="other",
+    spec_label="1 tablet", is_tablet=true, and add a warning noting the dose is unstated —
+    a human should review since $/unit won't be a real per-mg comparison for that row.
 
 Return exactly this shape:
 {
@@ -93,7 +102,7 @@ Return exactly this shape:
   "warnings": ["..."],
   "prices": [{"canonical_name":"","spec_label":"","numeric_value":0,"unit":"mg",
               "price_usd":0,"kit_vial_count":10,"tier_kit_size":1,"vendor_sku":"","non_standard_kit":false,
-              "is_raw_material":false,"warning":null}]
+              "is_raw_material":false,"is_tablet":false,"warning":null}]
 }
 Per-price "warning" is a single string or null — never fold it into canonical_name (rules
 4, 8, 10 above are the only cases that set it). Omit only if there's truly nothing to flag.

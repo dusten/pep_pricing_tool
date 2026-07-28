@@ -11,8 +11,8 @@ require_once dirname(__DIR__, 2) . '/lib/xlsxwriter.class.php';
 method('GET');
 $user = requireTier('pro');
 
-[$productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly] = parseComparisonFiltersFromGet();
-$rows = runComparisonQuery($productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly);
+[$productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly, $tabletOnly] = parseComparisonFiltersFromGet();
+$rows = runComparisonQuery($productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly, $tabletOnly);
 logUserAction((int)$user['id'], 'export_comparison_xlsx', ['rows' => count($rows), 'tier' => $tierKitSize, 'multi_only' => $multiOnly, 'verified_only' => $verifiedOnly]);
 cacheBust('admin_activity_trend'); // so the admin Activity dashboard reflects this export immediately
 
