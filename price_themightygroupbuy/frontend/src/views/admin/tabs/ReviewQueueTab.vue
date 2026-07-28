@@ -150,7 +150,7 @@ const selectedProductId = ref('')
 const filteredProducts = computed(() => {
   const q = productFilter.value.trim().toLowerCase()
   const matches = q ? allProducts.value.filter(p => p.canonical_name.toLowerCase().includes(q)) : allProducts.value
-  return matches.slice().sort((a, b) => a.canonical_name.localeCompare(b.canonical_name)).slice(0, 40)
+  return matches.slice().sort((a, b) => a.canonical_name.localeCompare(b.canonical_name))
 })
 async function loadProducts() {
   const res = await get('/api/products')
