@@ -333,7 +333,13 @@ function togglePaymentMethod(key) {
 // mechanism, so deep-linked vendor ids from the admin query-log/Calendar pages
 // keep working until the admin actually types something here.
 const vendorNameSearch = ref('')
+// Set right before a deep link (e.g. VendorCard's "View catalog" link) fills
+// this box with the target vendor's real name, so the watcher below doesn't
+// immediately re-derive selectedVendors from a substring match (which could
+// pick up more than the one deep-linked vendor if names happen to overlap).
+let skipVendorSearchWatch = false
 watch(vendorNameSearch, (q) => {
+  if (skipVendorSearchWatch) { skipVendorSearchWatch = false; return }
   const needle = q.trim().toLowerCase()
   selectedVendors.value = needle
     ? comparison.vendors.filter(v => v.display_name.toLowerCase().includes(needle)).map(v => v.id)
@@ -436,7 +442,16 @@ function initFromQuery() {
   const ven = arr(q.vendors)
   const prod = arr(q.products)
   if (cls.length) selectedClassifications.value = cls
-  if (ven.length) selectedVendors.value = ven
+  if (ven.length) {
+    selectedVendors.value = ven
+    // Single-vendor deep link (VendorCard's "View catalog" link) — mirror the
+    // vendor's real name into the search box so it's visibly obvious why the
+    // list is filtered, instead of a blank box with hidden active filtering.
+    if (ven.length === 1) {
+      const v = comparison.vendors.find(x => x.id === ven[0])
+      if (v) { skipVendorSearchWatch = true; vendorNameSearch.value = v.display_name }
+    }
+  }
   if (prod.length) { queryProducts.value = prod; viewMode.value = 'list' }
   if (q.tier) selectedTier.value = Number(q.tier)
   multiOnly.value       = q.multi_only === '1'
@@ -456,6 +471,10 @@ onMounted(async () => {
   initFromQuery()
   runSearch()
 })
+// Vue Router doesn't remount this component for a same-route navigation
+// (e.g. clicking VendorCard's "View catalog" link while already on
+// /comparison) — only the query changes, so re-apply it explicitly.
+watch(() => route.query, () => { initFromQuery(); runSearch() })
 watch([selectedClassifications, multiOnly, verifiedOnly, rawMaterialOnly, tabletOnly, selectedVendors, selectedPaymentMethods, selectedTier], runSearch, { deep: true })
 
 const filteredRows = computed(() => {

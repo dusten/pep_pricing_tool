@@ -47,6 +47,9 @@
           <a v-if="vendor.website" class="vc-row vc-link" :href="vendor.website" target="_blank" rel="noopener" @click="trackLinkClick('website')">
             <span class="vc-label">Website</span><span>{{ vendor.website }}</span>
           </a>
+          <RouterLink :to="`/comparison?vendors=${props.vendorId}`" class="vc-row vc-link" @click="$emit('close')">
+            <span class="vc-label">Catalog</span><span>View full price list →</span>
+          </RouterLink>
         </div>
 
         <p v-if="vendor.shipping_note" class="text-muted text-sm vc-shipping">{{ vendor.shipping_note }}</p>
@@ -60,6 +63,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { RouterLink } from 'vue-router'
 import { get, post } from '@/utils/api.js'
 import { useCartStore } from '@/stores/cart.js'
 
