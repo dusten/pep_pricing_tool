@@ -53,12 +53,14 @@
         <RouterLink v-else to="/pricing" class="feedback-pill">Export (Pro+)</RouterLink>
         <RouterLink to="/settings?feedback_type=product" class="feedback-pill">Product feedback</RouterLink>
       </div>
-      <div v-if="comparison.vendors.length" class="vendor-checks">
-        <label v-for="v in comparison.vendors" :key="v.id" class="vendor-check">
-          <input type="checkbox" :value="v.id" v-model="selectedVendors" />
-          <span v-if="v.is_verified" class="badge badge-verified">✓ {{ v.display_name }}</span>
-          <template v-else>{{ v.display_name }}</template>
-        </label>
+      <div class="vendor-filter-row">
+        <span class="tier-label">Payment:</span>
+        <button :class="['cat-tab', { active: !selectedPaymentMethods.length }]"
+                @click="selectedPaymentMethods = []">All</button>
+        <button v-for="pm in PAYMENT_METHOD_FILTERS" :key="pm.key"
+                :class="['cat-tab', { active: selectedPaymentMethods.includes(pm.key) }]"
+                @click="togglePaymentMethod(pm.key)">{{ pm.label }}</button>
+        <input v-model="vendorNameSearch" type="text" placeholder="Filter by vendor name…" class="search-input vendor-name-search" />
       </div>
     </div>
 
@@ -277,6 +279,7 @@ async function exportComparison(format) {
     const params = comparison.buildParams({
       vendors: selectedVendors.value, products: [], classificationIds: selectedClassifications.value,
       multiOnly: multiOnly.value, verifiedOnly: verifiedOnly.value, rawMaterialOnly: rawMaterialOnly.value, tabletOnly: tabletOnly.value,
+      paymentMethods: selectedPaymentMethods.value,
       tier: selectedTier.value,
     })
     const res = await fetch(`/api/comparison/export/${format}?${params.toString()}`, {
@@ -303,6 +306,40 @@ const multiOnly          = ref(false)
 const verifiedOnly       = ref(false)
 const rawMaterialOnly    = ref(false)
 const selectedVendors    = ref([])
+
+// Payment-method filter — mirrors the 6 named tiers + combined "Other/Crypto"
+// bucket already used on the Dashboard's vendor-ranking pop-up
+// (vendors/ranked.php's PAYMENT_TIERS), rather than exposing all 20 raw enum
+// values (most of which are just crypto network variants) as separate pills.
+const PAYMENT_METHOD_FILTERS = [
+  { key: 'paypal',      label: 'PayPal' },
+  { key: 'zelle',       label: 'Zelle' },
+  { key: 'alibaba',     label: 'Alibaba' },
+  { key: 'wise',        label: 'Wise' },
+  { key: 'alipay',      label: 'Alipay' },
+  { key: 'credit_card', label: 'Credit Card' },
+  { key: 'other',       label: 'Other/Crypto' },
+]
+const selectedPaymentMethods = ref([])
+function togglePaymentMethod(key) {
+  const i = selectedPaymentMethods.value.indexOf(key)
+  if (i === -1) selectedPaymentMethods.value.push(key)
+  else selectedPaymentMethods.value.splice(i, 1)
+}
+
+// Vendor name search replaces the old full-vendor-list checkbox picker —
+// typing a name computes matching vendor ids client-side (comparison.vendors
+// is already loaded for the filter bar) and reuses the existing selectedVendors
+// mechanism, so deep-linked vendor ids from the admin query-log/Calendar pages
+// keep working until the admin actually types something here.
+const vendorNameSearch = ref('')
+watch(vendorNameSearch, (q) => {
+  const needle = q.trim().toLowerCase()
+  selectedVendors.value = needle
+    ? comparison.vendors.filter(v => v.display_name.toLowerCase().includes(needle)).map(v => v.id)
+    : []
+})
+
 // Hide the $/unit columns for a narrower, small-screen-friendly table.
 // Persisted so a mobile user sets it once. Pure display — no re-query.
 const showUnitPricing    = ref(localStorage.getItem('cmp_show_unit') !== '0')
@@ -379,6 +416,7 @@ function runSearch() {
   comparison.search({
     classificationIds: selectedClassifications.value, vendors: selectedVendors.value,
     multiOnly: multiOnly.value, verifiedOnly: verifiedOnly.value, rawMaterialOnly: rawMaterialOnly.value, tabletOnly: tabletOnly.value,
+    paymentMethods: selectedPaymentMethods.value,
     tier: selectedTier.value, products: queryProducts.value,
   })
 }
@@ -393,6 +431,7 @@ const route = useRoute()
 function initFromQuery() {
   const q = route.query
   const arr = v => v == null ? [] : (Array.isArray(v) ? v : [v]).map(Number)
+  const strArr = v => v == null ? [] : (Array.isArray(v) ? v : [v])
   const cls = arr(q.classification_ids)
   const ven = arr(q.vendors)
   const prod = arr(q.products)
@@ -404,6 +443,11 @@ function initFromQuery() {
   verifiedOnly.value    = q.verified_only === '1'
   rawMaterialOnly.value = q.raw_material_only === '1'
   tabletOnly.value       = q.tablet_only === '1'
+  // Matches the classification_ids/vendors deep-link convention above
+  // (repeated unbracketed key — vue-router's own query parser, distinct from
+  // buildParams()'s `foo[]` syntax used for the actual backend API request).
+  const pm = strArr(q.payment_methods)
+  if (pm.length) selectedPaymentMethods.value = pm
 }
 
 onMounted(async () => {
@@ -412,7 +456,7 @@ onMounted(async () => {
   initFromQuery()
   runSearch()
 })
-watch([selectedClassifications, multiOnly, verifiedOnly, rawMaterialOnly, tabletOnly, selectedVendors, selectedTier], runSearch, { deep: true })
+watch([selectedClassifications, multiOnly, verifiedOnly, rawMaterialOnly, tabletOnly, selectedVendors, selectedPaymentMethods, selectedTier], runSearch, { deep: true })
 
 const filteredRows = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -462,9 +506,8 @@ const vendorColumns = computed(() => {
 }
 .feedback-pill:hover { border-color: var(--accent); color: var(--accent); }
 
-.vendor-checks { display: flex; gap: 14px; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid var(--border); }
-.vendor-check { display: flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--text-secondary); }
-.vendor-check input { width: auto; }
+.vendor-filter-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding-top: 10px; border-top: 1px solid var(--border); }
+.vendor-name-search { margin-left: auto; }
 
 .table-card { padding: 0; overflow: hidden; }
 /* Bounded to the viewport with its own scroll (both axes) so the horizontal

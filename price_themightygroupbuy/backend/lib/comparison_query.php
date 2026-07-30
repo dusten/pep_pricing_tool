@@ -17,8 +17,17 @@ function parseComparisonFiltersFromGet(): array {
         max(1, (int)($_GET['tier'] ?? 1)),
         in_array($_GET['raw_material_only'] ?? '', ['1', 'true'], true),
         in_array($_GET['tablet_only'] ?? '', ['1', 'true'], true),
+        array_map('strval', (array)($_GET['payment_methods'] ?? [])),
     ];
 }
+
+// Payment-method filter buckets — mirrors the ranked-vendor payment tiers in
+// vendors/ranked.php (same 6 named methods + one combined "other" bucket for
+// every crypto/network variant plus wire/western_union/cashapp/remitly).
+// Kept as its own list here (not shared with ranked.php's PAYMENT_TIERS,
+// which also carries rank/bonus/label data this filter doesn't need) to
+// avoid coupling two independently-evolving features to one constant.
+const PAYMENT_FILTER_NAMED_METHODS = ['paypal', 'zelle', 'alibaba', 'wise', 'alipay', 'credit_card'];
 
 /**
  * Active-vendor count, cached — used both to expose "how many vendors
@@ -36,7 +45,7 @@ function getActiveVendorCount(): int {
  * Shared by the comparison endpoint and the admin query-log "re-run" tool —
  * one place for the query shape so the two never drift out of sync.
  */
-function runComparisonQuery(array $productIds, array $vendorIds, array $specIds, array $classificationIds, bool $multiOnly, bool $verifiedOnly = false, int $tierKitSize = 1, bool $rawMaterialOnly = false, bool $tabletOnly = false): array {
+function runComparisonQuery(array $productIds, array $vendorIds, array $specIds, array $classificationIds, bool $multiOnly, bool $verifiedOnly = false, int $tierKitSize = 1, bool $rawMaterialOnly = false, bool $tabletOnly = false, array $paymentMethods = []): array {
     $where  = ['pr.is_active = 1', 'v.is_active = 1', 'pr.tier_kit_size = ?'];
     $params = [$tierKitSize];
 
@@ -58,6 +67,26 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
     // not a product-level tag, since one product can have both a finished-vial
     // spec and a tablet spec.
     if ($tabletOnly) { $where[] = 's.is_tablet = 1'; }
+    if ($paymentMethods) {
+        // Inclusive (OR) match — a vendor accepting ANY of the selected
+        // payment buckets qualifies, same semantics as the classification
+        // filter above. 'other' is every enum value not in the 6 named
+        // buckets (all crypto/network variants plus wire/western_union/
+        // cashapp/remitly) — mirrors vendors/ranked.php's payment-tier split.
+        $namedMethods = array_values(array_intersect($paymentMethods, PAYMENT_FILTER_NAMED_METHODS));
+        $includeOther = in_array('other', $paymentMethods, true);
+        $conds = [];
+        if ($namedMethods) {
+            $conds[] = 'pm.method IN (' . implode(',', array_fill(0, count($namedMethods), '?')) . ')';
+            array_push($params, ...$namedMethods);
+        }
+        if ($includeOther) {
+            $conds[] = "pm.method NOT IN ('" . implode("','", PAYMENT_FILTER_NAMED_METHODS) . "')";
+        }
+        if ($conds) {
+            $where[] = 'EXISTS (SELECT 1 FROM pc_vendor_payment_methods pm WHERE pm.vendor_id = pr.vendor_id AND (' . implode(' OR ', $conds) . '))';
+        }
+    }
 
     $sql = "SELECT pr.vendor_id, v.display_name AS vendor_name, v.is_verified,
                    pr.product_id, p.canonical_name, p.cas_number, p.molecular_weight,

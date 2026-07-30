@@ -31,7 +31,8 @@ $rows = runComparisonQuery(
     (bool)($p['verifiedOnly'] ?? false),
     (int)($p['tierKitSize'] ?? 1),
     (bool)($p['rawMaterialOnly'] ?? false),
-    (bool)($p['tabletOnly'] ?? false)
+    (bool)($p['tabletOnly'] ?? false),
+    (array)($p['paymentMethods'] ?? [])
 );
 $newDurationMs = (int)round((microtime(true) - $startedAt) * 1000);
 
