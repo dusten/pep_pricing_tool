@@ -50,6 +50,9 @@
           <RouterLink :to="`/comparison?vendors=${props.vendorId}`" class="vc-row vc-link" @click="$emit('close')">
             <span class="vc-label">Catalog</span><span>View full price list →</span>
           </RouterLink>
+          <RouterLink :to="`/comparison?cheapest_vendor_id=${props.vendorId}`" class="vc-row vc-link" @click="$emit('close')">
+            <span class="vc-label">Best prices</span><span>Where they're cheapest →</span>
+          </RouterLink>
         </div>
 
         <div class="vc-payment">

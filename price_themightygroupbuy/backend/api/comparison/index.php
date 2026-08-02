@@ -10,7 +10,7 @@ $startedAt = microtime(true);
 
 // No fixed tier list — whatever's actually in pc_prices is valid, so a new
 // tier a vendor introduces later doesn't need a code change here.
-[$productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly, $tabletOnly, $paymentMethods] = parseComparisonFiltersFromGet();
+[$productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly, $tabletOnly, $paymentMethods, $cheapestVendorId] = parseComparisonFiltersFromGet();
 
 // Unconditional per-request search log for the admin Activity dashboard —
 // every viewing of the comparison page counts, regardless of tier/admin
@@ -24,7 +24,7 @@ $isAdmin = !empty($user['is_admin']);
 $isFree  = !$isAdmin && ($user['tier'] === 'free' || !in_array($user['tier_status'], ['active', 'trialing'], true));
 
 sort($productIds); sort($vendorIds); sort($specIds); sort($classificationIds); sort($paymentMethods); // normalize before hashing so param order doesn't matter
-$filterHash = sha1(json_encode(compact('productIds', 'vendorIds', 'specIds', 'classificationIds', 'multiOnly', 'verifiedOnly', 'tierKitSize', 'rawMaterialOnly', 'tabletOnly', 'paymentMethods')));
+$filterHash = sha1(json_encode(compact('productIds', 'vendorIds', 'specIds', 'classificationIds', 'multiOnly', 'verifiedOnly', 'tierKitSize', 'rawMaterialOnly', 'tabletOnly', 'paymentMethods', 'cheapestVendorId')));
 
 if ($isFree) {
     $limit = (int)getAppSetting('free_tier_query_limit', '3');
@@ -58,7 +58,7 @@ if ($isFree) {
 // vendors/products change. duration_ms below still reflects real
 // user-perceived latency (a cache hit just makes it fast, which is correct).
 $rows = cacheGet('comparison_data', $filterHash, 600, fn() =>
-    runComparisonQuery($productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly, $tabletOnly, $paymentMethods));
+    runComparisonQuery($productIds, $vendorIds, $specIds, $classificationIds, $multiOnly, $verifiedOnly, $tierKitSize, $rawMaterialOnly, $tabletOnly, $paymentMethods, $cheapestVendorId));
 
 // ── Query performance logging (for the admin replay/debug tool) ────────
 // Budget: ~1-2s p95. duration_ms over that is flagged slow so admins can
@@ -68,7 +68,7 @@ db()->prepare(
     'INSERT INTO pc_comparison_log (user_id, selection_params, duration_ms, result_count, slow_flag) VALUES (?,?,?,?,?)'
 )->execute([
     $user['id'],
-    json_encode(compact('productIds', 'vendorIds', 'specIds', 'classificationIds', 'multiOnly', 'verifiedOnly', 'tierKitSize', 'rawMaterialOnly', 'tabletOnly', 'paymentMethods')),
+    json_encode(compact('productIds', 'vendorIds', 'specIds', 'classificationIds', 'multiOnly', 'verifiedOnly', 'tierKitSize', 'rawMaterialOnly', 'tabletOnly', 'paymentMethods', 'cheapestVendorId')),
     $durationMs,
     count($rows),
     $durationMs > 1500 ? 1 : 0,

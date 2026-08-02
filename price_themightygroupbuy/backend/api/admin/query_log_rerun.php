@@ -32,7 +32,8 @@ $rows = runComparisonQuery(
     (int)($p['tierKitSize'] ?? 1),
     (bool)($p['rawMaterialOnly'] ?? false),
     (bool)($p['tabletOnly'] ?? false),
-    (array)($p['paymentMethods'] ?? [])
+    (array)($p['paymentMethods'] ?? []),
+    isset($p['cheapestVendorId']) ? (int)$p['cheapestVendorId'] : null
 );
 $newDurationMs = (int)round((microtime(true) - $startedAt) * 1000);
 

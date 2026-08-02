@@ -5,6 +5,11 @@
       <h1 class="comparison-title">Every vendor, side by side.</h1>
     </div>
 
+    <div v-if="cheapestVendorId" class="card cheapest-banner">
+      Showing only products where <strong>{{ cheapestVendorName || 'this vendor' }}</strong> has the lowest price.
+      <button class="btn btn-ghost btn-sm" @click="cheapestVendorId = null">Clear</button>
+    </div>
+
     <!-- Filter bar -->
     <div class="card filter-bar">
       <div v-if="comparison.tiers.length > 1" class="tier-tabs">
@@ -279,7 +284,7 @@ async function exportComparison(format) {
     const params = comparison.buildParams({
       vendors: selectedVendors.value, products: [], classificationIds: selectedClassifications.value,
       multiOnly: multiOnly.value, verifiedOnly: verifiedOnly.value, rawMaterialOnly: rawMaterialOnly.value, tabletOnly: tabletOnly.value,
-      paymentMethods: selectedPaymentMethods.value,
+      paymentMethods: selectedPaymentMethods.value, cheapestVendorId: cheapestVendorId.value,
       tier: selectedTier.value,
     })
     const res = await fetch(`/api/comparison/export/${format}?${params.toString()}`, {
@@ -333,13 +338,35 @@ function togglePaymentMethod(key) {
 // mechanism, so deep-linked vendor ids from the admin query-log/Calendar pages
 // keep working until the admin actually types something here.
 const vendorNameSearch = ref('')
+// "Best prices" (VendorCard's "Where they're cheapest" link) — filters rows
+// to only where the target vendor has the lowest price, computed server-side
+// across ALL vendors (never combined with selectedVendors/vendorNameSearch,
+// which would narrow the SQL rows to just this vendor and make "cheapest"
+// trivially true for every row).
+const cheapestVendorId   = ref(null)
+const cheapestVendorName = ref('')
+
 // Set right before a deep link (e.g. VendorCard's "View catalog" link) fills
 // this box with the target vendor's real name, so the watcher below doesn't
 // immediately re-derive selectedVendors from a substring match (which could
 // pick up more than the one deep-linked vendor if names happen to overlap).
 let skipVendorSearchWatch = false
+// A plain `vendorNameSearch.value = x` when x equals the current value never
+// fires the watcher (Vue only reacts to actual changes) — guarding with
+// `skipVendorSearchWatch = true` in that no-op case would leave the flag
+// stuck true, silently swallowing the *next* real keystroke. Only set the
+// guard when a change is actually about to happen.
+function setVendorNameSearchSilently(name) {
+  if (vendorNameSearch.value === name) return
+  skipVendorSearchWatch = true
+  vendorNameSearch.value = name
+}
 watch(vendorNameSearch, (q) => {
   if (skipVendorSearchWatch) { skipVendorSearchWatch = false; return }
+  // Typing a name here means "narrow to just this vendor's own columns" —
+  // contradicts "Best prices" mode above, which needs ALL vendors present to
+  // compute who's cheapest, so an actual keystroke here cancels that filter.
+  cheapestVendorId.value = null
   const needle = q.trim().toLowerCase()
   selectedVendors.value = needle
     ? comparison.vendors.filter(v => v.display_name.toLowerCase().includes(needle)).map(v => v.id)
@@ -422,7 +449,7 @@ function runSearch() {
   comparison.search({
     classificationIds: selectedClassifications.value, vendors: selectedVendors.value,
     multiOnly: multiOnly.value, verifiedOnly: verifiedOnly.value, rawMaterialOnly: rawMaterialOnly.value, tabletOnly: tabletOnly.value,
-    paymentMethods: selectedPaymentMethods.value,
+    paymentMethods: selectedPaymentMethods.value, cheapestVendorId: cheapestVendorId.value,
     tier: selectedTier.value, products: queryProducts.value,
   })
 }
@@ -449,7 +476,7 @@ function initFromQuery() {
     // list is filtered, instead of a blank box with hidden active filtering.
     if (ven.length === 1) {
       const v = comparison.vendors.find(x => x.id === ven[0])
-      if (v) { skipVendorSearchWatch = true; vendorNameSearch.value = v.display_name }
+      if (v) setVendorNameSearchSilently(v.display_name)
     }
   }
   if (prod.length) { queryProducts.value = prod; viewMode.value = 'list' }
@@ -463,6 +490,22 @@ function initFromQuery() {
   // buildParams()'s `foo[]` syntax used for the actual backend API request).
   const pm = strArr(q.payment_methods)
   if (pm.length) selectedPaymentMethods.value = pm
+
+  // Unconditional (like the boolean toggles above), not `if (...)` like
+  // classification/vendor ids — a same-route re-navigation (route.query
+  // watcher below) from a Catalog-style link to a Best-prices link, or vice
+  // versa, must actually clear the previous one rather than leave it stuck.
+  const cvid = q.cheapest_vendor_id ? Number(q.cheapest_vendor_id) : null
+  cheapestVendorId.value = cvid
+  if (cvid) {
+    // Needs ALL vendors in the query to compute "cheapest" correctly — clear
+    // any stale vendor-name-search/selectedVendors state a prior Catalog-link
+    // visit may have left active.
+    setVendorNameSearchSilently('')
+    selectedVendors.value = []
+    const v = comparison.vendors.find(x => x.id === cvid)
+    cheapestVendorName.value = v ? v.display_name : ''
+  }
 }
 
 onMounted(async () => {
@@ -475,7 +518,7 @@ onMounted(async () => {
 // (e.g. clicking VendorCard's "View catalog" link while already on
 // /comparison) — only the query changes, so re-apply it explicitly.
 watch(() => route.query, () => { initFromQuery(); runSearch() })
-watch([selectedClassifications, multiOnly, verifiedOnly, rawMaterialOnly, tabletOnly, selectedVendors, selectedPaymentMethods, selectedTier], runSearch, { deep: true })
+watch([selectedClassifications, multiOnly, verifiedOnly, rawMaterialOnly, tabletOnly, selectedVendors, selectedPaymentMethods, selectedTier, cheapestVendorId], runSearch, { deep: true })
 
 const filteredRows = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -500,6 +543,11 @@ const vendorColumns = computed(() => {
 .comparison-title {
   font-family: var(--font-display); font-weight: 600; letter-spacing: -0.3px;
   font-size: 21px; color: var(--text); margin: 0;
+}
+.cheapest-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 14px; padding: 10px 16px; background: var(--accent-subtle); border-color: var(--accent);
+  font-size: 13.5px;
 }
 .filter-bar { margin-bottom: 20px; }
 .tier-tabs { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }

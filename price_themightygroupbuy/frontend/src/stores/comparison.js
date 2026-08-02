@@ -33,6 +33,7 @@ export const useComparisonStore = defineStore('comparison', () => {
     if (filters.rawMaterialOnly) params.set('raw_material_only', '1')
     if (filters.tabletOnly)      params.set('tablet_only', '1')
     ;(filters.paymentMethods || []).forEach(m => params.append('payment_methods[]', m))
+    if (filters.cheapestVendorId) params.set('cheapest_vendor_id', filters.cheapestVendorId)
     if (filters.tier)            params.set('tier', filters.tier)
     return params
   }

@@ -18,6 +18,7 @@ function parseComparisonFiltersFromGet(): array {
         in_array($_GET['raw_material_only'] ?? '', ['1', 'true'], true),
         in_array($_GET['tablet_only'] ?? '', ['1', 'true'], true),
         array_map('strval', (array)($_GET['payment_methods'] ?? [])),
+        isset($_GET['cheapest_vendor_id']) ? (int)$_GET['cheapest_vendor_id'] : null,
     ];
 }
 
@@ -45,7 +46,7 @@ function getActiveVendorCount(): int {
  * Shared by the comparison endpoint and the admin query-log "re-run" tool —
  * one place for the query shape so the two never drift out of sync.
  */
-function runComparisonQuery(array $productIds, array $vendorIds, array $specIds, array $classificationIds, bool $multiOnly, bool $verifiedOnly = false, int $tierKitSize = 1, bool $rawMaterialOnly = false, bool $tabletOnly = false, array $paymentMethods = []): array {
+function runComparisonQuery(array $productIds, array $vendorIds, array $specIds, array $classificationIds, bool $multiOnly, bool $verifiedOnly = false, int $tierKitSize = 1, bool $rawMaterialOnly = false, bool $tabletOnly = false, array $paymentMethods = [], ?int $cheapestVendorId = null): array {
     $where  = ['pr.is_active = 1', 'v.is_active = 1', 'pr.tier_kit_size = ?'];
     $params = [$tierKitSize];
 
@@ -170,6 +171,22 @@ function runComparisonQuery(array $productIds, array $vendorIds, array $specIds,
         $min = min($ppus);
         foreach ($row['vendors'] as &$v) {
             $v['is_lowest'] = abs($v['price_per_unit'] - $min) < 0.000001;
+        }
+        unset($v); // avoid a dangling by-reference alias leaking into a later loop over $row['vendors']
+
+        // "Where is this vendor cheapest" (VendorCard's "Best prices" link) —
+        // keep only rows where the target vendor is present AND is the (tied-)
+        // lowest $/unit among ALL vendors carrying this spec. Deliberately a
+        // post-filter here, not a `pr.vendor_id = ?` WHERE clause: narrowing
+        // the SQL rows to just this vendor would make is_lowest trivially
+        // true for every row (nothing left to compare against), defeating
+        // the entire point.
+        if ($cheapestVendorId !== null) {
+            $isCheapestHere = false;
+            foreach ($row['vendors'] as $vendorEntry) {
+                if ($vendorEntry['vendor_id'] === $cheapestVendorId && $vendorEntry['is_lowest']) { $isCheapestHere = true; break; }
+            }
+            if (!$isCheapestHere) continue;
         }
 
         $prices = array_column($row['vendors'], 'price');
