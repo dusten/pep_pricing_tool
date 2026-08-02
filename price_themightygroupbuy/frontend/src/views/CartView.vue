@@ -14,7 +14,7 @@
             <button class="btn btn-ghost btn-sm" @click="cart.clear()">Clear cart</button>
           </div>
           <div v-for="it in cart.items" :key="it.id" class="cart-item">
-            <span>{{ it.product }} — {{ it.spec }}</span>
+            <span>{{ it.product }} — {{ it.spec || 'any size' }}</span>
             <button class="btn btn-ghost btn-sm" @click="cart.remove(it.id)">Remove</button>
           </div>
         </div>
@@ -46,9 +46,11 @@
           <p class="text-muted text-sm" style="margin:-6px 0 14px">
             The lowest price for each item, buying each from whichever vendor is cheapest.
           </p>
-          <div v-for="c in cart.cheapestByItem" :key="c.product_id + ':' + c.specification_id" class="split-row">
+          <div v-for="c in cart.cheapestByItem" :key="c.product_id + ':' + (c.specification_id ?? 'any')" class="split-row">
             <div>
-              <div class="split-item">{{ c.product }} — {{ c.spec }}</div>
+              <div class="split-item">
+                {{ c.product }} — {{ c.spec || (c.resolved_spec ? `any size (picked ${c.resolved_spec})` : 'any size') }}
+              </div>
               <button v-if="c.vendor_id" class="vendor-name-btn text-sm" @click="openVendorId = c.vendor_id">{{ c.vendor_name }}</button>
               <span v-else class="text-muted text-sm">No vendor carries this</span>
             </div>

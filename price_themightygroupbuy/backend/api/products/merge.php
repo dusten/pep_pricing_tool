@@ -77,6 +77,31 @@ try {
             ->execute([$winnerId, $rows[$loserId]]);
     }
 
+    // "Any size" cart rows (specification_id IS NULL — cart size-optional
+    // feature) aren't tied to any one spec, so the per-spec
+    // repointCartAndStackItems() loop above never touches them — without this,
+    // the cascade delete below would silently wipe them the same way exact-spec
+    // rows used to before that helper existed. Dedup first (MariaDB treats
+    // every NULL as distinct in the UNIQUE key, so a plain UPDATE could collide
+    // with a winner row the user already has) — two statements, not one
+    // self-referencing DELETE, since MySQL/MariaDB rejects a multi-table
+    // DELETE that also uses the same table as a subquery source ("Table 'ci'
+    // is specified twice").
+    $dupUsers = $pdo->prepare(
+        'SELECT ci.user_id FROM pc_cart_items ci
+         WHERE ci.product_id = ? AND ci.specification_id IS NULL
+           AND EXISTS (SELECT 1 FROM pc_cart_items w WHERE w.user_id = ci.user_id AND w.product_id = ? AND w.specification_id IS NULL)'
+    );
+    $dupUsers->execute([$loserId, $winnerId]);
+    $dupUserIds = $dupUsers->fetchAll(PDO::FETCH_COLUMN);
+    if ($dupUserIds) {
+        $placeholders = implode(',', array_fill(0, count($dupUserIds), '?'));
+        $pdo->prepare("DELETE FROM pc_cart_items WHERE product_id = ? AND specification_id IS NULL AND user_id IN ($placeholders)")
+            ->execute([$loserId, ...$dupUserIds]);
+    }
+    $pdo->prepare('UPDATE pc_cart_items SET product_id = ? WHERE product_id = ? AND specification_id IS NULL')
+        ->execute([$winnerId, $loserId]);
+
     $pdo->prepare('DELETE FROM pc_products WHERE id = ?')->execute([$loserId]);
     $pdo->commit();
 } catch (Throwable $e) {

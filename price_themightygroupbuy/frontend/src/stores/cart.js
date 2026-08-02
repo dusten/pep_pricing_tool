@@ -28,7 +28,12 @@ export const useCartStore = defineStore('cart', () => {
   }
 
   async function add(productId, specificationId) {
-    _apply(await post('/api/cart', { product_id: productId, specification_id: specificationId }))
+    // specificationId omitted/null = "any size of this product" (cart
+    // size-optional feature) — backend treats a missing specification_id as
+    // that, never send a null/0 explicitly.
+    const body = { product_id: productId }
+    if (specificationId) body.specification_id = specificationId
+    _apply(await post('/api/cart', body))
   }
 
   async function remove(itemId) {

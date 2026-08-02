@@ -168,7 +168,14 @@
               <span v-if="p.molecular_weight">{{ p.molecular_weight }} g/mol</span>
             </div>
           </div>
-          <span class="expand-arrow">{{ expandedProducts.has(p.product_id) ? '▲' : '▼' }}</span>
+          <div class="product-head-actions">
+            <button class="btn btn-ghost btn-sm" :disabled="cartKeys.has(p.product_id + ':any')"
+                    title="Add this product without picking a size — priced by whichever size/vendor is cheapest per unit"
+                    @click.stop="addProductToCart(p.product_id)">
+              {{ cartKeys.has(p.product_id + ':any') ? 'Added' : '+ Cart (any size)' }}
+            </button>
+            <span class="expand-arrow">{{ expandedProducts.has(p.product_id) ? '▲' : '▼' }}</span>
+          </div>
         </div>
 
         <div v-if="expandedProducts.has(p.product_id)" class="spec-list">
@@ -238,7 +245,7 @@ const comparison = useComparisonStore()
 const cart       = useCartStore()
 const auth       = useAuthStore()
 const toast      = useToastStore()
-const cartKeys   = computed(() => new Set(cart.items.map(it => it.product_id + ':' + it.specification_id)))
+const cartKeys   = computed(() => new Set(cart.items.map(it => it.product_id + ':' + (it.specification_id ?? 'any'))))
 
 const openVendorId = ref(null)
 function openVendorCard(id) { openVendorId.value = id }
@@ -264,6 +271,13 @@ function openDistribution(row) { distributionRow.value = row }
 
 function addToCart(row) {
   cart.add(row.product_id, row.specification_id)
+}
+
+// "Just the product, any size" — cart size-optional feature. Priced by
+// cheapest $/unit across every vendor/spec (see getCartSnapshot()), not tied
+// to one spec_label the way addToCart() above is.
+function addProductToCart(productId) {
+  cart.add(productId, null)
 }
 
 function pubchemUrl(cas) {
@@ -646,6 +660,7 @@ tr.odd td.col-avg, tr.odd td.col-median { background: var(--surface-alt); }
 .list-title { font-size: 14.5px; font-weight: 600; }
 .list-spec { color: var(--text-secondary); font-weight: 500; margin-left: 4px; }
 .expand-arrow { color: var(--text-muted); font-size: 11px; margin-left: 8px; flex-shrink: 0; }
+.product-head-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .spec-list { display: flex; flex-direction: column; margin-top: 10px; padding-top: 4px; border-top: 1px solid var(--border); }
 .spec-row + .spec-row { border-top: 1px solid var(--border); }
 .spec-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; padding: 8px 0; font-size: 12.5px; color: var(--text-secondary); }

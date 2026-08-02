@@ -235,9 +235,9 @@ CREATE TABLE IF NOT EXISTS pc_cart_items (
   id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id           INT UNSIGNED NOT NULL,
   product_id        INT UNSIGNED NOT NULL,
-  specification_id  INT UNSIGNED NOT NULL,
+  specification_id  INT UNSIGNED NULL, -- NULL = "any size of this product" (migration 042); priced by cheapest $/unit, not raw kit price, since kit prices aren't comparable across different doses
   added_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_cart_item (user_id, product_id, specification_id),
+  UNIQUE KEY uq_cart_item (user_id, product_id, specification_id), -- doesn't catch duplicate NULL-spec rows (MariaDB treats every NULL as distinct) — the API layer dedupes those itself
   FOREIGN KEY (user_id)          REFERENCES pc_users(id)          ON DELETE CASCADE,
   FOREIGN KEY (product_id)       REFERENCES pc_products(id)       ON DELETE CASCADE,
   FOREIGN KEY (specification_id) REFERENCES pc_specifications(id) ON DELETE CASCADE
