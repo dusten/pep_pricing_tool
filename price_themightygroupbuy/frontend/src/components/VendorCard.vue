@@ -52,6 +52,14 @@
           </RouterLink>
         </div>
 
+        <div class="vc-payment">
+          <span class="vc-label">Payment methods</span>
+          <div v-if="vendor.payment_methods?.length" class="vc-payment-pills">
+            <span v-for="m in vendor.payment_methods" :key="m" class="badge vc-payment-pill">{{ paymentMethodLabel(m) }}</span>
+          </div>
+          <span v-else class="text-muted text-sm">None on file</span>
+        </div>
+
         <p v-if="vendor.shipping_note" class="text-muted text-sm vc-shipping">{{ vendor.shipping_note }}</p>
         <p v-if="!hasAnyContact" class="text-muted text-sm">No contact details on file for this vendor.</p>
       </template>
@@ -66,6 +74,7 @@ import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { get, post } from '@/utils/api.js'
 import { useCartStore } from '@/stores/cart.js'
+import { paymentMethodLabel } from '@/utils/paymentMethods.js'
 
 const props = defineProps({ vendorId: { type: Number, required: true } })
 defineEmits(['close'])
@@ -144,4 +153,7 @@ const whatsappUrl = computed(() => {
 .vc-link { text-decoration: none; }
 .vc-link:hover .vc-label { color: var(--accent); }
 .vc-shipping { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.vc-payment { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+.vc-payment-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.vc-payment-pill { background: var(--surface-alt); border: 1px solid var(--border); color: var(--text-secondary); }
 </style>

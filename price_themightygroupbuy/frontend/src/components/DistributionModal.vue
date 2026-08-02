@@ -39,7 +39,7 @@
             <thead><tr><th>Vendor</th><th>{{ showUnitPrice ? `$/${data.unit}` : 'Kit price' }}</th></tr></thead>
             <tbody>
               <tr v-for="v in sortedVendors" :key="v.vendor_id" :class="{ lowest: v.is_lowest }">
-                <td>{{ v.name }}</td>
+                <td><button class="vendor-name-btn" @click="openVendorId = v.vendor_id">{{ v.name }}</button></td>
                 <td>${{ (showUnitPrice ? v.price_per_unit : v.price).toFixed(2) }}</td>
               </tr>
             </tbody>
@@ -49,6 +49,7 @@
         <p v-else-if="error" class="text-muted text-sm">{{ error }}</p>
       </div>
     </div>
+    <VendorCard v-if="openVendorId" :vendor-id="openVendorId" @close="openVendorId = null" />
   </div>
 </template>
 
@@ -57,6 +58,7 @@ import { ref, computed, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { get } from '@/utils/api.js'
 import BellCurveChart from '@/components/BellCurveChart.vue'
+import VendorCard from '@/components/VendorCard.vue'
 
 const props = defineProps({
   productId: { type: Number, required: true },
@@ -68,6 +70,7 @@ const loading = ref(true)
 const data    = ref(null)
 const upsell  = ref('')
 const error   = ref('')
+const openVendorId = ref(null)
 
 onMounted(async () => {
   try {
@@ -105,4 +108,9 @@ const chartPoints = computed(() => sortedVendors.value.map(v => ({
 .dist-body { display: block; }
 .dist-table { margin-top: 16px; }
 .dist-table tr.lowest td { color: var(--success); font-weight: 600; }
+.vendor-name-btn {
+  background: none; border: none; padding: 0; font: inherit; font-weight: 700; color: inherit;
+  cursor: pointer; text-decoration: underline; text-decoration-color: transparent;
+}
+.vendor-name-btn:hover { text-decoration-color: currentColor; }
 </style>
