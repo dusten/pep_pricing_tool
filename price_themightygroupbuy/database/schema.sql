@@ -386,7 +386,8 @@ CREATE TABLE IF NOT EXISTS pc_price_history (
   changed_by         INT UNSIGNED NULL,             -- admin id for manual_edit, NULL for import
   changed_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX (vendor_id, product_id, specification_id, changed_at),
-  INDEX (changed_at)
+  INDEX (changed_at),
+  INDEX idx_product_spec_tier (product_id, specification_id, tier_kit_size, changed_at) -- history-across-all-vendors lookups (Calendar milestones/featured-product delta) have no vendor_id to filter on, so the leading index above can't help them
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Admin-picked featured product for the public price calendar (backlog #18).

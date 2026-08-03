@@ -65,43 +65,69 @@ function getCalendarFeatured(string $month): array {
 
 function getCalendarMilestones(string $month): array {
     return cacheGet('calendar_data', "calendar_milestones:$month", 600, function () use ($month) {
+        // Sargable range instead of DATE_FORMAT(changed_at, '%Y-%m') = ? --
+        // wrapping the indexed column in a function defeats the index outright,
+        // forcing a full-table scan just to find this month's pairs.
+        $monthStart = $month . '-01 00:00:00';
+        $nextMonth  = date('Y-m-01 00:00:00', strtotime("$monthStart +1 month"));
+
         // Every (product, spec) pair that changed this month, tier 1 only --
         // otherwise a bulk-tier price (trivially lower than a 1-kit price)
         // would register as a fake "all-time low" milestone.
         $pairsStmt = db()->prepare(
             "SELECT DISTINCT product_id, specification_id FROM pc_price_history
-             WHERE DATE_FORMAT(changed_at, '%Y-%m') = ? AND tier_kit_size = 1"
+             WHERE changed_at >= ? AND changed_at < ? AND tier_kit_size = 1"
         );
-        $pairsStmt->execute([$month]);
+        $pairsStmt->execute([$monthStart, $nextMonth]);
         $pairs = $pairsStmt->fetchAll();
         if (!$pairs) return [];
 
-        $byDay   = [];
-        $histAll = db()->prepare(
-            "SELECT new_price_usd, changed_at FROM pc_price_history
-             WHERE product_id = ? AND specification_id = ? AND tier_kit_size = 1 ORDER BY changed_at ASC"
+        // One batched query for every pair's full ALL-TIME history (needed to
+        // correctly detect an ALL-TIME low, not just a low within the month) --
+        // was previously a per-pair loop, N separate near-full-table scans
+        // (pc_price_history had no index usable without a vendor_id in the
+        // WHERE clause; see migration 043). Ordered so each pair's rows land
+        // contiguously and chronologically, letting one pass below track a
+        // running min per pair instead of a query per pair.
+        $tuples = implode(',', array_fill(0, count($pairs), '(?,?)'));
+        $params = [];
+        foreach ($pairs as $p) { $params[] = (int)$p['product_id']; $params[] = (int)$p['specification_id']; }
+        $histStmt = db()->prepare(
+            "SELECT product_id, specification_id, new_price_usd, changed_at FROM pc_price_history
+             WHERE (product_id, specification_id) IN ($tuples) AND tier_kit_size = 1
+             ORDER BY product_id, specification_id, changed_at ASC"
         );
+        $histStmt->execute($params);
+        $rows   = $histStmt->fetchAll();
+        $rows[] = null; // sentinel so the loop below flushes the final pair's group
+
         $nameStmt = db()->prepare(
             "SELECT p.canonical_name AS product, s.spec_label AS spec
              FROM pc_products p JOIN pc_specifications s ON s.id = ?
              WHERE p.id = ?"
         );
-        foreach ($pairs as $pair) {
-            $histAll->execute([(int)$pair['product_id'], (int)$pair['specification_id']]);
-            $rows = $histAll->fetchAll();
-            $min  = null; $hadHigher = false; $lowDay = null;
-            foreach ($rows as $r) {
-                $price = (float)$r['new_price_usd'];
-                if ($min === null || $price < $min) { $min = $price; $lowDay = substr($r['changed_at'], 0, 10); }
-                elseif ($price > $min) { $hadHigher = true; }
+
+        $byDay = [];
+        $curKey = null; $min = null; $hadHigher = false; $lowDay = null;
+        foreach ($rows as $r) {
+            $key = $r ? $r['product_id'] . ':' . $r['specification_id'] : null;
+            if ($key !== $curKey) {
+                // Milestone only if the record low was first set this month AND
+                // some earlier price was higher (a genuine new low, not the
+                // only data point) -- same rule as before, now evaluated once
+                // per pair-group boundary instead of once per query.
+                if ($curKey !== null && $lowDay !== null && str_starts_with($lowDay, $month) && $hadHigher) {
+                    [$pid, $sid] = explode(':', $curKey);
+                    $nameStmt->execute([(int)$sid, (int)$pid]);
+                    $n = $nameStmt->fetch();
+                    if ($n) $byDay[$lowDay][] = ['product' => $n['product'], 'spec' => $n['spec']];
+                }
+                if ($r === null) break;
+                $curKey = $key; $min = null; $hadHigher = false; $lowDay = null;
             }
-            // Milestone only if the record low was first set this month AND some
-            // earlier price was higher (a genuine new low, not the only data point).
-            if ($lowDay !== null && str_starts_with($lowDay, $month) && $hadHigher) {
-                $nameStmt->execute([(int)$pair['specification_id'], (int)$pair['product_id']]);
-                $n = $nameStmt->fetch();
-                if ($n) $byDay[$lowDay][] = ['product' => $n['product'], 'spec' => $n['spec']];
-            }
+            $price = (float)$r['new_price_usd'];
+            if ($min === null || $price < $min) { $min = $price; $lowDay = substr($r['changed_at'], 0, 10); }
+            elseif ($price > $min) { $hadHigher = true; }
         }
         return $byDay;
     });
