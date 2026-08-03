@@ -1269,3 +1269,8 @@ Presented findings to the user before touching anything (per this project's own 
 **Verified correctness, not just speed**: extracted the exact pre-change algorithm from git history under a renamed function, ran both old and new implementations directly against the two real months with actual price-history data (July: 8,002 rows/18 milestone days/333 total milestones; August: 732 rows/1 day/16 milestones) bypassing the cache layer entirely, and confirmed byte-identical JSON output for both months before trusting the rewrite. Timed the new implementation directly: 81.8ms for July's full computation (previously many dozens of individual 16-70ms per-pair queries). Live-checked the real Calendar page in both months — milestone markers render identically to before. Zero console errors. `bash deploy.sh --sync-schema` then `bash deploy.sh` both smoke-checked clean, `php -l` clean, new index confirmed live via `SHOW INDEX`.
 
 Marked 1,762 of the 1,933 "new" `pc_slow_query_cache` rows as `resolved` with a status note pointing at this fix (all were instances of the now-fixed `pc_price_history` query shapes) — the remaining ~176 are the already-cached/already-indexed queries deliberately left untouched per the scoping discussion above.
+
+## [2026-08-03] scan | Weekly clipping scan — no new files
+
+- Scanned `raw/clippings/`: 5 files found, all previously ingested on 2026-06-30
+- No new source pages, entity pages, or variant sightings this week
