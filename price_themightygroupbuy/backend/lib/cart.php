@@ -10,7 +10,11 @@ declare(strict_types=1);
  * means "vendor carries ANY size of this product", and the price that
  * counts is the vendor's (or, for the mix-and-match panel, the market's)
  * CHEAPEST $/unit listing for that product — not raw kit price, which
- * isn't a fair comparison across different doses.
+ * isn't a fair comparison across different doses. "Any size" only
+ * considers regular finished-vial specs — raw/bulk powder and tablets are
+ * excluded unless the buyer explicitly added that exact spec via the
+ * per-spec "+Cart" button, since a bulk-powder $/mg rate isn't a fair
+ * stand-in for "any size" of the normal product.
  */
 function getCartSnapshot(PDO $pdo, int $userId): array {
     $items = $pdo->prepare(
@@ -66,9 +70,10 @@ function getCartSnapshot(PDO $pdo, int $userId): array {
         // either an exact pair or an any-product id.
         $stmt = $pdo->prepare(
             "SELECT pr.vendor_id, v.display_name AS vendor_name, pr.product_id, pr.specification_id,
-                    pr.price_usd, pr.price_per_unit, pr.vendor_sku
+                    pr.price_usd, pr.price_per_unit, pr.vendor_sku, s.is_raw_material, s.is_tablet
              FROM pc_prices pr
-             JOIN pc_vendors v ON v.id = pr.vendor_id AND v.is_active = 1
+             JOIN pc_vendors v        ON v.id = pr.vendor_id AND v.is_active = 1
+             JOIN pc_specifications s ON s.id = pr.specification_id
              WHERE pr.is_active = 1 AND pr.tier_kit_size = 1 AND (" . implode(' OR ', $where) . ")"
         );
         $stmt->execute($params);
@@ -111,7 +116,15 @@ function getCartSnapshot(PDO $pdo, int $userId): array {
                 }
             }
 
-            if (isset($anyProductSet[$pid])) {
+            // "Any size" resolves to a regular finished-vial spec — raw/bulk
+            // powder and tablets are different product forms a buyer hasn't
+            // opted into just by skipping the size picker (same reasoning as
+            // the Comparison page's separate Raw/Tablet filters), and a 1g
+            // bulk listing's $/mg will almost always out-"cheapest" a normal
+            // vial regardless of real value. Excluded here only — an exact
+            // spec picked deliberately via the per-spec "+Cart" button (the
+            // $exactKeySet branch above) is untouched, raw/tablet or not.
+            if (isset($anyProductSet[$pid]) && !$r['is_raw_material'] && !$r['is_tablet']) {
                 $vpKey = $vid . ':' . $pid;
                 if (!isset($anyBestPerVendor[$vpKey]) || $ppu < $anyBestPerVendor[$vpKey]['ppu']) {
                     $anyBestPerVendor[$vpKey] = [
