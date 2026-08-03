@@ -102,7 +102,7 @@ function logPriceHistory(
 function commitPriceRow(
     PDO $pdo, int $vendorId, int $productId, int $specId,
     float $price, float $numericValue, int $kitCount, int $tierKitSize, bool $nonStandard, ?int $sourceFileId,
-    string $vendorSku = ''
+    string $vendorSku = '', string $historySource = 'import', ?int $changedBy = null
 ): bool {
     // Snapshot the pre-overwrite state before the upsert destroys it — this
     // is the exact match the UNIQUE key (vendor, product, spec, tier, sku)
@@ -144,7 +144,7 @@ function commitPriceRow(
             $prior ? (float)$prior['price_usd'] : null,
             $prior ? (float)$prior['price_per_unit'] : null,
             $prior ? (int)$prior['kit_vial_count'] : null,
-            $price, $newPricePerUnit, $kitCount, 'import'
+            $price, $newPricePerUnit, $kitCount, $historySource, $changedBy
         );
     }
 

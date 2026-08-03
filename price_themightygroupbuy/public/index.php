@@ -179,6 +179,7 @@ $DYNAMIC = [
     'vendors/(\d+)/merge'                => ['vendors/merge.php',      'id'],
     'vendors/(\d+)/recalc-prices'        => ['vendors/recalc_prices.php', 'id'],
     'vendors/(\d+)/contact'               => ['vendors/contact.php',    'id'],
+    'vendors/(\d+)/prices'                => ['vendors/add_price.php',  'id'],
     'vendors/pending-imports/(\d+)/(approve|reject|skip)' => ['vendors/pending_imports.php', 'id', 'action'],
     'admin/coa-queue/(\d+)/(approve|reject|revoke)'  => ['admin/coa_queue.php', 'id', 'action'],
     'admin/vendor-suggestions/(\d+)/(accept|reject|queue)' => ['admin/vendor_suggestions.php', 'id', 'action'],
