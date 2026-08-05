@@ -1,5 +1,22 @@
 # price.themightygroupbuy.com — Project Context
 
+## Session start (read once, then look up on demand)
+
+This runs once at session start and again after a compaction — **not** before every command.
+Once loaded, this context persists through the rest of the session; don't re-read it on every turn.
+
+1. **Read the memory index once**: `Obsidian_pep_pricing_tool/memory/MEMORY.md`. It's a short
+   pointer list, not the memories themselves — open an individual `memory/*.md` file only when
+   a task makes that specific note relevant.
+2. **Read the index layer for structure**: start at `Obsidian_pep_pricing_tool/index.md` (the
+   root catalog) and follow its links to the per-folder `*-index.md` notes (`wiki/wiki-index.md`,
+   `wiki/sources/sources-index.md`, `sessions/sessions-index.md`, etc.) and `raw-overview.md`.
+   These are compact, cross-linked summaries — reading them tells you the file structure without
+   scanning file content.
+
+Caveat: a mid-session write to memory or the wiki is in context immediately for you, but it only
+reaches the *next* session once it's committed (e.g. via a flush/checkpoint routine).
+
 ## What This Is
 
 Peptide vendor price comparison web app. Separate from `grp.themightygroupbuy.com`.

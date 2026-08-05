@@ -1296,3 +1296,24 @@ Frontend: the Spec column in `InventoryTab.vue` changed from plain read-only tex
 **Verified against a throwaway vendor+row before touching real data**: confirmed a relabel from 10mg→15mg correctly repointed onto the existing sibling spec (not a duplicate), recomputed `price_per_unit` correctly, and logged zero `pc_price_history` rows (pure relabel, no price change). Separately confirmed the collision-safety path: attempted a relabel that would collide with another existing row for the same vendor at the target spec/tier/SKU — got a clean 409 error instead of a raw SQL crash, and confirmed the row was left completely untouched (atomic UPDATE, no partial state). All throwaway data deleted and confirmed gone before proceeding.
 
 **Applied the fix to the real row** (price_id 5113) via the newly-verified endpoint: Premipeptides' "Tesamorelin + Ipamorelin combo" now correctly shows 15mg / $60.00 / $0.36 per unit, repointed onto the same spec other vendors already use for the real 15mg dose. No price-history event was logged (correct — not a real price change). Confirmed live in the actual Inventory tab in the browser. `bash deploy.sh` smoke-checked clean, `php -l` clean on both touched backend files, zero console errors.
+
+## [2026-08-05] checkpoint | auto-flush — folder-index system + CLAUDE.md session-start section
+
+Same day, after the spec-relabel feature shipped (`a413262`): set up a folder-index system across
+this vault (`/create-index`) — copied `gen_folder_index.py` into a new `tools/` dir, ran it to
+generate `*-index.md` notes in every subfolder (`wiki/`, `wiki/sources/`, `wiki/entities/`,
+`wiki/concepts/`, `wiki/analyses/`, `wiki/_templates/`, `sessions/`, `plans/`, `memory/`, `tools/`)
+plus a `raw-overview.md` for the immutable clippings tree, wrote real curated one-line summaries for
+each (replacing the generator's placeholder text), and linked them all from a new "Folder Indexes"
+section at the bottom of `index.md`. No existing lint/link-checker in this project to teach about
+`type: folder-index` pages. Pushed as `75ad974`.
+
+Then added a `## Session start (read once, then look up on demand)` section to the repo-root
+`CLAUDE.md`, right after the title — tells a future assistant to read the memory index
+(`Obsidian_pep_pricing_tool/memory/MEMORY.md`) once and the structure index (`index.md` + the
+new `*-index.md` files) once, rather than re-scanning the repo or re-reading memory every turn,
+with the standard caveat that mid-session writes only reach the *next* session once committed.
+This edit is what this checkpoint commits.
+
+No loose ends: spec-relabel feature, folder-index setup, and this CLAUDE.md addition are the full
+scope of today's session and are now all committed.
