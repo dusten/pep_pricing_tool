@@ -113,3 +113,16 @@ Catalog of all [[llm-wiki-pattern]] pages. Updated on every ingest. LLM reads th
 | Page | Summary |
 |------|---------|
 | [[plans/calm-fluttering-nygaard\|Vendor Suggestions Implementation Plan]] | Plan-mode file for backlog #69, moved from `~/.claude/plans` 2026-07-15. |
+
+## Folder Indexes
+
+Live stats + file lists per folder (regenerate via `python tools/gen_folder_index.py .`). This
+page above is still the curated catalog to read first — the folder indexes are for browsing a
+subtree directly (e.g. finding a session file by date) without re-scanning it.
+
+- [[raw-overview]] — immutable source clippings map
+- [[wiki/wiki-index]] — [[wiki/sources/sources-index|sources]], [[wiki/entities/entities-index|entities]], [[wiki/concepts/concepts-index|concepts]], [[wiki/analyses/analyses-index|analyses]], [[wiki/_templates/_templates-index|_templates]]
+- [[sessions/sessions-index]]
+- [[plans/plans-index]]
+- [[memory/memory-index]]
+- [[tools/tools-index]]
