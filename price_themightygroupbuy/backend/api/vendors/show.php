@@ -24,8 +24,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // Deliberately NOT filtering is_active here (unlike every calculation
     // query, which does) — a hidden line still needs to show up so an admin
     // can find and un-hide it later.
+    // numeric_value/unit/is_raw_material/is_tablet added alongside spec_label
+    // so the Inventory tab can pre-fill an accurate "relabel this dose" form
+    // (mislabeled-spec correction) without a second round trip, and so
+    // resubmitting preserves the raw/tablet flags instead of silently
+    // resetting them if the admin doesn't touch those checkboxes.
     $prices = db()->prepare(
-        'SELECT pr.id, p.canonical_name, s.spec_label, pr.tier_kit_size, pr.price_usd, pr.price_per_unit, pr.vendor_sku,
+        'SELECT pr.id, p.canonical_name, s.spec_label, s.numeric_value, s.unit, s.is_raw_material, s.is_tablet,
+                pr.tier_kit_size, pr.price_usd, pr.price_per_unit, pr.vendor_sku,
                 pr.kit_vial_count, pr.non_standard_kit, pr.is_active
          FROM pc_prices pr
          JOIN pc_products p ON p.id = pr.product_id
@@ -39,8 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // by accident (v-model.number coerces it), but price_per_unit is rendered
     // read-only with .toFixed(), which throws on a string.
     foreach ($prices as &$p) {
-        $p['is_active']      = (bool)$p['is_active'];
-        $p['price_per_unit'] = (float)$p['price_per_unit'];
+        $p['is_active']       = (bool)$p['is_active'];
+        $p['price_per_unit']  = (float)$p['price_per_unit'];
+        $p['numeric_value']   = (float)$p['numeric_value'];
+        $p['is_raw_material'] = (bool)$p['is_raw_material'];
+        $p['is_tablet']       = (bool)$p['is_tablet'];
     }
     unset($p);
     $vendor['prices']       = $prices;

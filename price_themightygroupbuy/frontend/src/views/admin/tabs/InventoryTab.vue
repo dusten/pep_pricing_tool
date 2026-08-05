@@ -59,7 +59,11 @@
       <tbody>
         <tr v-for="pr in prices" :key="pr.id" :class="{ 'hidden-row': !pr.is_active }">
           <td>{{ pr.canonical_name }}</td>
-          <td>{{ pr.spec_label }}</td>
+          <td class="spec-cell">
+            <input v-model.number="pr.numeric_value" type="number" step="any" min="0.01" style="width:55px" @change="save(pr)" title="Dose value — correcting this repoints the whole row onto the matching spec (existing or new)" />
+            <input v-model="pr.unit" style="width:45px" @change="save(pr)" />
+            <input v-model="pr.spec_label" style="width:75px" @change="save(pr)" title="Display label, e.g. 15mg" />
+          </td>
           <td><input v-model.number="pr.tier_kit_size" type="number" min="1" max="255" style="width:55px" @change="save(pr)" /></td>
           <td>$<input v-model.number="pr.price_usd" type="number" step="any" min="0.01" style="width:75px" @change="save(pr)" /></td>
           <td class="text-muted text-sm">${{ pr.price_per_unit.toFixed(2) }}</td>
@@ -95,12 +99,24 @@ async function loadVendor() {
 }
 async function save(pr) {
   try {
+    // spec_label/numeric_value/unit ride along on every save (not just a
+    // dedicated "relabel" action) — the common case is a no-op re-resolution
+    // onto the same existing spec; only actually repoints the row if the
+    // admin edited the Spec cell's inputs (mislabeled-dose correction).
     const res = await put(`/api/prices/${pr.id}`, {
       price_usd: pr.price_usd, kit_vial_count: pr.kit_vial_count,
       vendor_sku: pr.vendor_sku, tier_kit_size: pr.tier_kit_size, non_standard_kit: pr.non_standard_kit,
       is_active: pr.is_active,
+      spec_label: pr.spec_label, numeric_value: pr.numeric_value, unit: pr.unit,
+      is_raw_material: pr.is_raw_material, is_tablet: pr.is_tablet,
     })
-    pr.price_per_unit = res.price_per_unit // price/kit-count edits recompute this server-side
+    pr.price_per_unit = res.price_per_unit // price/kit-count/spec edits recompute this server-side
+    // Trust the server's resolution over whatever was typed (e.g. it repoints
+    // onto an existing sibling spec's exact label/value even if the admin's
+    // typed unit/casing differed slightly).
+    if (res.spec_label !== null) pr.spec_label = res.spec_label
+    if (res.numeric_value !== null) pr.numeric_value = res.numeric_value
+    if (res.unit !== null) pr.unit = res.unit
   } catch (err) {
     toast.error(err.message)
     await loadVendor() // revert the edited field back to server state on failure
@@ -168,6 +184,8 @@ onMounted(() => { loadVendors(); loadProducts() })
 
 <style scoped>
 .hidden-row { opacity: 0.5; }
+.spec-cell { display: flex; gap: 4px; }
+.spec-cell input { min-width: 0; }
 .add-form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
 .add-form .field-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .label-sm { min-width: 90px; color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
