@@ -61,6 +61,15 @@
             Total shown once every item has at least one vendor. Available items so far: <strong>${{ cart.cheapestTotal.toFixed(2) }}</strong>.
           </div>
         </div>
+
+        <div v-if="quoteText" class="card">
+          <h3 style="margin-bottom:14px">Ask for a quote</h3>
+          <p class="text-muted text-sm" style="margin:-6px 0 14px">
+            Quantity – SKU – Name for each item, using the cheapest $/unit listing for any-size items. Copy and send to a vendor.
+          </p>
+          <textarea readonly class="quote-box" rows="8" :value="quoteText" @click="$event.target.select()"></textarea>
+          <button class="btn btn-ghost btn-sm" style="margin-top:10px" @click="copyQuote">{{ copyNote || 'Copy to clipboard' }}</button>
+        </div>
       </template>
     </template>
 
@@ -77,9 +86,24 @@ import { useCartStore } from '@/stores/cart.js'
 
 const cart = useCartStore()
 const openVendorId = ref(null)
+const copyNote = ref('')
 const allItemsAvailable = computed(() =>
   cart.cheapestByItem.length > 0 && cart.cheapestByItem.every(c => c.vendor_id !== null))
 onMounted(() => cart.load())
+
+// Quantity is always 1 — the cart is presence-only (1 kit per line), matching
+// pc_cart_items' current design (see migration 018). "any size" lines use
+// resolved_spec/vendor_sku, already the cheapest-$/unit vendor's pick.
+const quoteText = computed(() => cart.cheapestByItem
+  .filter(c => c.vendor_id !== null)
+  .map(c => `1 - ${c.vendor_sku || 'N/A'} - ${c.product}${c.spec || c.resolved_spec ? ' ' + (c.spec || c.resolved_spec) : ''}`)
+  .join('\n'))
+
+async function copyQuote() {
+  await navigator.clipboard.writeText(quoteText.value)
+  copyNote.value = 'Copied!'
+  setTimeout(() => { copyNote.value = '' }, 2000)
+}
 </script>
 
 <style scoped>
@@ -107,4 +131,10 @@ onMounted(() => cart.load())
 .split-row:last-child { border-bottom: none; }
 .split-item { font-size: 13.5px; margin-bottom: 2px; }
 .split-price { font-weight: 700; font-size: 14px; white-space: nowrap; }
+
+.quote-box {
+  width: 100%; font-family: inherit; font-size: 13.5px; resize: vertical;
+  background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--radius-sm);
+  color: var(--text); padding: 10px 12px;
+}
 </style>
