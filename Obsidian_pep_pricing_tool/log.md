@@ -1317,3 +1317,17 @@ This edit is what this checkpoint commits.
 
 No loose ends: spec-relabel feature, folder-index setup, and this CLAUDE.md addition are the full
 scope of today's session and are now all committed.
+
+## [2026-08-05] chore | Code map (feature → key files) added to the wiki
+
+New `wiki/concepts/code-map.md` — a feature-area → key-file lookup table for
+`price_themightygroupbuy`, so a future session can find the file(s) behind a feature without
+grepping/find-ing the filesystem first. Feature areas and their primary files (entry-point
+API/handler, main frontend view, background job where one exists) were derived by walking the
+actual directory structure (`backend/api/`, `backend/lib/`, `backend/cron/`,
+`frontend/src/views/`, `frontend/src/stores/`) — not from memory or assumption — and every path
+was verified to exist with `ls` before being written into the table. Ends with three meta rows:
+route registration (`public/index.php`), schema source of truth (`database/schema.sql` +
+`migrations/`), and the deploy script (`deploy.sh`). Carries an explicit caveat that this is a
+starting point, not ground truth, since code moves and the table won't auto-update.
+

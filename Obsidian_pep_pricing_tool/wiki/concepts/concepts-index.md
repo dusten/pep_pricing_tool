@@ -8,15 +8,16 @@ tags: [folder-index, nav]
 [[index]] / [[wiki-index]] / **concepts/**
 
 ## Summary
-**7** pages · top tags: knowledge-management, deployment, devops, server, apache, methodology
+**8** pages · top tags: knowledge-management, code-map, navigation, backend, frontend, deployment
 
 <!-- curated:start -->
 concepts/ — domain ideas and workflows (deployment pattern, subscription tiers, variant-compound watchlist, slow-query capture pattern).
 <!-- curated:end -->
 
-## Files (7)
+## Files (8)
 | File | Description |
 |---|---|
+| [[code-map]] | Code Map (Feature → Key Files) |
 | [[deployment]] | Deployment Pattern |
 | [[llm-wiki-pattern]] | LLM Wiki Pattern |
 | [[query-quota]] | Query Quota System |

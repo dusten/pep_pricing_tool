@@ -30,6 +30,7 @@ Catalog of all [[llm-wiki-pattern]] pages. Updated on every ingest. LLM reads th
 | [[wiki/concepts/deployment\|Deployment Pattern]] | deploy.sh flow, add-price-site.sh rules, server gotchas, credential convention |
 | [[wiki/concepts/variant-compounds\|Variant Compounds Watchlist]] | Compounds with same-name variants (Epithalon, TB-500 family) — weekly scan reference |
 | [[wiki/concepts/slow-query-log-capture-pattern\|Slow-Query Log Capture Pattern]] | Portable build/triage/re-audit prompt for per-app slow-query capture on a shared MySQL server — reusable for grp |
+| [[wiki/concepts/code-map\|Code Map (Feature → Key Files)]] | Feature-area → key-file lookup table for price_themightygroupbuy, verified against the live codebase |
 
 ## Entities
 
