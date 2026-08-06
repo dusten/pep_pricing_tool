@@ -8,6 +8,11 @@
         </circle>
       </g>
     </svg>
+    <div v-if="hasSpread" class="curve-stats">
+      <span>Min <strong>${{ min.toFixed(2) }}</strong></span>
+      <span>Peak <strong>${{ mean.toFixed(2) }}</strong></span>
+      <span>Max <strong>${{ max.toFixed(2) }}</strong></span>
+    </div>
     <!-- Degenerate case: every vendor at (or near) the same price — no real
          spread to draw a curve over, so show a single marker line instead
          of a division-by-zero curve. -->
@@ -33,6 +38,9 @@ const height = computed(() => props.compact ? 100 : 160)
 const topPad = 10
 
 const hasSpread = computed(() => props.stdev > 0.0001 && Number.isFinite(props.stdev))
+
+const min = computed(() => Math.min(...props.points.map(p => p.value)))
+const max = computed(() => Math.max(...props.points.map(p => p.value)))
 
 const domainMin = computed(() => props.mean - 3 * props.stdev)
 const domainMax = computed(() => props.mean + 3 * props.stdev)
@@ -82,4 +90,9 @@ const plottedPoints = computed(() => {
 .point { fill: var(--primary); stroke: var(--surface); stroke-width: 1.5; cursor: help; }
 .point.lowest { fill: var(--success); }
 .no-spread { padding: 20px; text-align: center; color: var(--text-secondary); font-size: 13px; }
+.curve-stats {
+  display: flex; justify-content: space-between;
+  font-size: 12px; color: var(--text-secondary); padding: 4px 6px 0;
+}
+.curve-stats strong { color: var(--text-primary); }
 </style>
