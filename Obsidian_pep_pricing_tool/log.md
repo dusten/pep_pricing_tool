@@ -1375,3 +1375,27 @@ Scripts archived: `diagnostic_scripts/2026-08-06-protidexbio-ground-truth.py`,
 partly-wrong first-pass triage, kept for the record with its mistakes annotated),
 `migration_scripts/2026-08-06-protidexbio-dedupe-and-price-fix.php`.
 
+## [2026-08-06] feature | Pre-extract PDF text before the Claude call (cost + the same bug class)
+
+Follow-up to the same day's protidexbio incident — asked whether pre-processing vendor files
+before sending them to Claude could reduce cost and speed. Downloaded and checked all 29 PDF
+vendor files on file with `pdftotext`/`pdfinfo`: 27/29 (93%) have a real, clean extractable text
+layer; the only 2 with zero extractable text (genuinely scanned/flattened images) turned out to
+be the exact two files from the vendor that caused the IGF-1/MOTS-c bug earlier today.
+
+Built `backend/lib/pdf_reader.php` (`pdfToText()`, wraps `pdftotext` via `exec()`, same pattern
+already used by `malware_scan.php`'s `clamdscan` call) — returns null (never throws) for
+anything at or below `PDF_MIN_TEXT_CHARS` (150; real files ranged 0 vs 451+, wide margin either
+side), so a genuinely scanned PDF falls through unchanged to the original full-document path.
+Wired into `buildExtractionUserContent()` in `vendor_file_processor.php`: a text-native PDF now
+goes to Claude as plain text (same `type: text` block already used for xlsx) instead of the full
+base64 PDF document, skipping Claude's own page-image rendering — cheaper, and reads a gridded
+table more reliably than vision does, which is the same root cause as today's earlier bug.
+
+`poppler-utils` (provides `pdftotext`) added to both `setup.sh` (fresh server) and
+`add-price-site.sh` (add-on vhost, alongside the existing per-app ClamAV install — this app's
+own dependency, not part of the sibling grp app's base provisioning) and installed on the live
+server. Verified end-to-end on real files post-deploy: text-native PDF returns a `text` content
+block (12,480 chars for one test file), the known-scanned PDF still correctly falls back to a
+`document` block — before spending any real Claude API calls on it.
+

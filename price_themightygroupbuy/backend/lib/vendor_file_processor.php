@@ -47,11 +47,26 @@ function processVendorFile(array $file, string $model): array {
  */
 function buildExtractionUserContent(string $fullPath, string $fileType, ?string &$sheetNote): array {
     if ($fileType === 'pdf') {
-        $pdfBase64   = base64_encode((string)file_get_contents($fullPath));
-        $userContent = [
-            ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => $pdfBase64]],
-            ['type' => 'text', 'text' => 'Please extract all pricing data from this vendor price list.'],
-        ];
+        // Most vendor PDFs are text-native (a 2026-08-06 audit found 27/29 on
+        // file extracted 400+ characters cleanly) — sending plain text instead
+        // of the full document skips Claude's own page-image rendering
+        // (cheaper) and reads a gridded table more reliably than vision does
+        // (see the 2026-08-06 IGF-1/MOTS-c row-misalignment incident).
+        // pdfToText() returns null for genuinely scanned/image-only PDFs
+        // (below PDF_MIN_TEXT_CHARS), which falls through to the original
+        // full-document path unchanged.
+        $plainText = pdfToText($fullPath);
+        if ($plainText !== null) {
+            $userContent = [
+                ['type' => 'text', 'text' => "Vendor price list (extracted text):\n\n{$plainText}\n\nPlease extract all pricing data from this vendor price list."],
+            ];
+        } else {
+            $pdfBase64   = base64_encode((string)file_get_contents($fullPath));
+            $userContent = [
+                ['type' => 'document', 'source' => ['type' => 'base64', 'media_type' => 'application/pdf', 'data' => $pdfBase64]],
+                ['type' => 'text', 'text' => 'Please extract all pricing data from this vendor price list.'],
+            ];
+        }
     } elseif ($fileType === 'xlsx') {
         $plainText   = xlsxToText($fullPath, $sheetNote);
         $userContent = [

@@ -31,7 +31,8 @@ sudo dnf install -y \
   memcached \
   nodejs npm \
   certbot python3-certbot-apache \
-  git unzip
+  git unzip \
+  poppler-utils   # pdftotext — pre-extracts text from vendor PDFs before the Claude call
 
 # php8.2-memcached may need EPEL on some AL2023 AMIs
 sudo dnf install -y php8.2-memcached 2>/dev/null || \

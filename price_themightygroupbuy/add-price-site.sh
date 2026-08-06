@@ -112,6 +112,11 @@ systemctl enable --now clamd@scan 2>/dev/null || \
   echo "  ⚠  clamd@scan won't start without signatures yet — will come up once deploy.sh pushes clamav-db/ over."
 echo "  ✓ ClamAV installed — signatures/clamd@scan pending clamav-db/ push via deploy.sh"
 
+# ── poppler-utils (pdftotext — pre-extracts text from vendor PDFs before the
+# Claude call) — also not part of the sibling grp app's base provisioning.
+dnf install -y poppler-utils
+echo "  ✓ poppler-utils installed"
+
 # ── [3/5] Storage directory ───────────────────────────────────
 echo "=== [3/5] Storage directory ==="
 mkdir -p "${APP_DIR}/backend/storage/vendor_files"
