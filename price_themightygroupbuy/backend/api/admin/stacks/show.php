@@ -26,8 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $items = db()->prepare(
         'SELECT si.id, si.product_id, si.specification_id, p.canonical_name AS product, s.spec_label AS spec
          FROM pc_stack_items si
-         JOIN pc_products p       ON p.id = si.product_id
-         JOIN pc_specifications s ON s.id = si.specification_id
+         JOIN pc_products p            ON p.id = si.product_id
+         LEFT JOIN pc_specifications s ON s.id = si.specification_id
          WHERE si.stack_id = ? ORDER BY p.canonical_name, s.numeric_value'
     );
     $items->execute([$id]);
@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     foreach ($items as &$it) {
         $it['id']               = (int)$it['id'];
         $it['product_id']       = (int)$it['product_id'];
-        $it['specification_id'] = (int)$it['specification_id'];
+        $it['specification_id'] = $it['specification_id'] !== null ? (int)$it['specification_id'] : null;
     }
     $stack['id']        = (int)$stack['id'];
     $stack['is_active'] = (bool)$stack['is_active'];

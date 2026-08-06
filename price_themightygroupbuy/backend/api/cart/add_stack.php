@@ -19,8 +19,20 @@ $stackItems = db()->prepare('SELECT product_id, specification_id FROM pc_stack_i
 $stackItems->execute([$stackId]);
 
 $ins = db()->prepare('INSERT IGNORE INTO pc_cart_items (user_id, product_id, specification_id) VALUES (?,?,?)');
+// MariaDB's UNIQUE key treats every NULL as distinct, so INSERT IGNORE won't
+// dedupe an "any size" component (specification_id NULL) against a
+// pre-existing "any size" cart row for the same product — check first, same
+// pattern as cart/index.php's own POST handler.
+$existsAny = db()->prepare('SELECT id FROM pc_cart_items WHERE user_id = ? AND product_id = ? AND specification_id IS NULL');
 foreach ($stackItems->fetchAll() as $item) {
-    $ins->execute([$user['id'], $item['product_id'], $item['specification_id']]);
+    if ($item['specification_id'] === null) {
+        $existsAny->execute([$user['id'], $item['product_id']]);
+        if ($existsAny->fetchColumn()) continue;
+        db()->prepare('INSERT INTO pc_cart_items (user_id, product_id, specification_id) VALUES (?, ?, NULL)')
+            ->execute([$user['id'], $item['product_id']]);
+    } else {
+        $ins->execute([$user['id'], $item['product_id'], $item['specification_id']]);
+    }
 }
 
 jsonResponse(getCartSnapshot(db(), (int)$user['id']));

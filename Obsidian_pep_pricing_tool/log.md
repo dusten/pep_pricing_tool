@@ -1399,3 +1399,22 @@ server. Verified end-to-end on real files post-deploy: text-native PDF returns a
 block (12,480 chars for one test file), the known-scanned PDF still correctly falls back to a
 `document` block — before spending any real Claude API calls on it.
 
+## [2026-08-06] feature | Stacks: any-size components (cheapest $/unit, excludes raw/tablet)
+
+Same "any size" pattern already built for the cart (migration 042) — a stack component can now
+skip picking a specific dose, resolved at add-to-cart time by the cart's existing cheapest-$/unit
+logic (excludes raw material and tablet specs unless that exact spec was explicitly picked).
+Migration `044_stack_item_optional_spec.sql` makes `pc_stack_items.specification_id` nullable,
+mirroring `pc_cart_items`. `admin/stacks/items.php` and `cart/add_stack.php` both needed the same
+"check for an existing NULL-spec row before inserting" guard `cart/index.php` already uses, since
+MariaDB's UNIQUE key treats every NULL as distinct and won't dedupe on its own — `add_stack.php`
+didn't have this before, since every stack item was previously guaranteed a real spec_id.
+`admin/stacks/show.php`'s item query switched to a LEFT JOIN on specifications for the same reason.
+Admin UI (`StacksTab.vue`): added an "Any size (cheapest $/unit)" option to the spec picker.
+
+Verified end-to-end live: added BPC-157 as an any-size component to the real "KLOW" stack via the
+deployed admin UI, added the stack to a cart from the Dashboard card, confirmed it resolved to a
+real 20mg spec at the cheapest vendor ($75, Anna Yiwu) rather than the product's raw-material 1g
+listing, and confirmed the dedup guard correctly skipped re-inserting when an any-size BPC-157 row
+already existed in that same cart from earlier testing.
+

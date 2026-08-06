@@ -46,7 +46,7 @@
             <div class="label-sm">Components — the (product, spec) pairs this stack bulk-adds to a user's cart.</div>
             <div v-if="!itemsFor(s).length" class="text-muted text-sm">No components yet.</div>
             <div v-for="it in itemsFor(s)" :key="it.id" class="chip">
-              {{ it.product }} — {{ it.spec }} <button class="chip-x" @click="removeItem(s, it)">×</button>
+              {{ it.product }} — {{ it.spec || 'any size' }} <button class="chip-x" @click="removeItem(s, it)">×</button>
             </div>
             <div class="field-row" style="margin-top:10px">
               <select v-model="picker.productId" @change="onPickProduct(s)">
@@ -55,6 +55,7 @@
               </select>
               <select v-model="picker.specId">
                 <option value="">Spec…</option>
+                <option value="any">Any size (cheapest $/unit)</option>
                 <option v-for="sp in picker.specs" :key="sp.id" :value="sp.id">{{ sp.spec_label }}</option>
               </select>
               <button class="btn btn-ghost btn-sm" @click="addItem(s)">+ Add component</button>
@@ -133,7 +134,9 @@ async function onPickProduct(s) {
 }
 async function addItem(s) {
   if (!picker.productId || !picker.specId) return
-  await post(`/api/admin/stacks/${s.id}/items`, { product_id: picker.productId, specification_id: picker.specId })
+  const body = { product_id: picker.productId }
+  if (picker.specId !== 'any') body.specification_id = picker.specId
+  await post(`/api/admin/stacks/${s.id}/items`, body)
   picker.productId = ''; picker.specId = ''; picker.specs = []
   await load()
 }
