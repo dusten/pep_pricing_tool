@@ -47,7 +47,15 @@ Rules:
 7. canonical_name = the product name exactly as this vendor writes it (trim whitespace,
    fix obvious casing) — do not rename, merge, or annotate it with other names/aliases
    you may know. Matching this name to existing products/aliases is handled entirely by
-   the software after extraction, not by you.
+   the software after extraction, not by you. If the source has MULTIPLE columns that
+   could plausibly be "the name" — e.g. a short internal code column (often leftmost,
+   sometimes with no header at all) alongside a separate column of real compound/product
+   names (header like "Name", "Product", "Description", or simply recognizable
+   pharmaceutical names rather than short alphanumeric codes) — canonical_name is ALWAYS
+   the real product-name column, never the code column, regardless of which one is
+   positioned first or which one (if either) has a header. Put the code column's value in
+   vendor_sku instead (see rule 9) — do not skip capturing it, and do not blend the two
+   into one field.
 8. Variant-compound watchlist — these common names cover multiple, meaningfully different
    molecules, and which one a given vendor means is NOT predictable from the name alone (e.g.
    "TB-500"/"TB500" is used across this market for both the full 43aa Thymosin Beta-4 AND the
@@ -63,9 +71,12 @@ Rules:
    "TB-500(Frag)"/"...17-23" line), extract both exactly as written — that vendor is
    distinguishing two real SKUs, don't collapse them.
    {$watchNames}
-9. If the source has its own catalog code for this row (column header like "Cat No.",
-   "Abbreviation", "SKU", "Model#", e.g. "TR5", "NJ100"), capture it verbatim as
-   vendor_sku. Leave it "" if the source has no such column.
+9. If the source has its own catalog code for this row, capture it verbatim as vendor_sku.
+   This includes columns with a recognizable header ("Cat No.", "Abbreviation", "SKU",
+   "Model#") AND columns with no header text at all that clearly hold a short internal
+   code rather than a real product name (e.g. "TR5", "NJ100" — a handful of letters
+   followed by digits, distinct from the prose-like product name elsewhere in the row).
+   Leave vendor_sku "" only if the source truly has no such column anywhere in the row.
 10. Raw/bulk powder priced by weight, not a finished vial (column header like "$/G",
     "price per gram", "bulk", "raw powder" — no kit/vial count given at all): emit one row
     with spec_label="1g", numeric_value=1000, unit="mg", kit_vial_count=1, tier_kit_size=1,
@@ -97,6 +108,19 @@ Rules:
     tablets" with no dose), still extract the row with numeric_value=1, unit="other",
     spec_label="1 tablet", is_tablet=true, and add a warning noting the dose is unstated —
     a human should review since $/unit won't be a real per-mg comparison for that row.
+14. If the source has its own row-number column (a plain sequential "#"/"No."/"number"
+    column identifying each line), use it as a self-check before finalizing output: each
+    numbered row's name, spec, and price must all come from that SAME physical row — not
+    borrowed from the row above or below it. This matters most in tables where one product
+    name is visually merged/spanned across several consecutive numbered rows (one name,
+    several dose sub-rows) — re-verify each sub-row's own number lines up with its own
+    price before moving to the next block; it's easy to duplicate or skip one row inside a
+    merged block and shift every price after it by one row. The vendor's own numbering may
+    legitimately skip values (a row they deleted) — that's fine, don't invent a row to fill
+    a gap — but your own extracted row count for a numbered block must never exceed or fall
+    short of the numbers actually printed there. If you find a mismatch you can't resolve
+    confidently, emit the rows as best determined and add a warning naming the row-number
+    range affected, rather than silently guessing.
 
 Return exactly this shape:
 {

@@ -1331,3 +1331,47 @@ route registration (`public/index.php`), schema source of truth (`database/schem
 `migrations/`), and the deploy script (`deploy.sh`). Carries an explicit caveat that this is a
 starting point, not ground truth, since code moves and the table won't auto-update.
 
+## [2026-08-06] bugfix | Vendor extraction bug — SKU-as-name + row-shift (protidexbio "Faye's latest price list.pdf")
+
+User caught the review queue showing "IGF-1" at $64 when the source file has $64 for MOTS-c
+and IGF-1 at $220. Downloaded the actual vendor PDF and hand-transcribed all ~135 rows
+(`diagnostic_scripts/2026-08-06-protidexbio-ground-truth.py`) to get real ground truth rather
+than re-trusting the extraction JSON. Found two distinct bugs in the same extraction: (1) the
+vendor's table has an unlabeled SKU-code column and a separate "name" column — extraction used
+the code column as `canonical_name` for most rows (e.g. "SM5" instead of "Semaglutide"),
+including 5 rows I'd already approved onto the wrong existing product (Sermorelin Acetate,
+via a stale automated name_mismatch suggestion); (2) a real row-alignment slip in one dense
+merged-cell block (source rows 47-64) duplicated a phantom "CD10" row and dropped a real
+"PT-141" row, net-shifting ~18 rows' prices onto the wrong name — the exact IGF-1/MOTS-c case.
+
+While verifying, also found this vendor's new file re-created ~74 duplicate active price rows
+for items it already sold from an earlier file (2026-07-05, reprocessed 2026-07-14) — the same
+`vendor_sku`-is-part-of-the-uniqueness-key failure mode already documented in
+`wiki/analyses/2026-07-14-incomplete-spec-drop-bug.md`'s "third wave", just a fresh occurrence,
+not a repeat. Fixed all of it live via the real endpoints (`PUT /api/prices/{id}`,
+`POST /vendors/18/prices`, `POST /vendors/pending-imports/{id}/approve`) so price history/cache
+busting/audit logging fired normally — 10 price corrections, 9+74 deactivations, 6 new correct
+rows, 17 pending items approved with corrected data. Left one item (IGF-1, id 4052) pending on
+purpose — real price is $220 but the catalog only has IGF-1 LR3/DES variants, not a bare one,
+and that's a product-identity call for the user, not a price bug.
+
+Ran a read-only scan across all 109 stored extraction calls for the same signature
+(`canonical_name` matching a short-code pattern) before considering any reprocessing of past
+files — per the explicit lesson from the July 14 incident, reprocessing is a much blunter
+instrument than a read-only scan. Came back clean: this file is a 93%-code-like outlier: next
+highest is 50%, and manual spot-checks of those confirmed real short compound names (TB-500,
+NAD+), not the SKU-substitution bug. No other files affected, no reprocessing needed.
+
+Fixed the root cause in `backend/lib/claude.php`'s `buildExtractionSystemPrompt()`: rule 7 now
+explicitly says canonical_name must come from an actual product-name column, never a
+positionally-first or unlabeled short-code column, regardless of which one has a header; rule 9
+broadened to capture unlabeled short-code columns as `vendor_sku` too; new rule 14 instructs
+Claude to use the vendor's own row-number column (when present, like this file had) as a
+self-check that extracted row count/order matches the numbered rows, warning rather than
+guessing on a mismatch. Deployed.
+
+Scripts archived: `diagnostic_scripts/2026-08-06-protidexbio-ground-truth.py`,
+`diagnostic_scripts/2026-08-06-protidexbio-review-queue-decisions.py` (the original,
+partly-wrong first-pass triage, kept for the record with its mistakes annotated),
+`migration_scripts/2026-08-06-protidexbio-dedupe-and-price-fix.php`.
+
