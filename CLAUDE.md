@@ -2,17 +2,24 @@
 
 ## Session start (read once, then look up on demand)
 
-This runs once at session start and again after a compaction — **not** before every command.
-Once loaded, this context persists through the rest of the session; don't re-read it on every turn.
+Step 1 runs once at session start and again after a compaction — **not** before every command;
+once loaded, the memory index persists through the rest of the session. Step 2 is different:
+re-run it every time you go to look up a memory/wiki file on demand, not just once at session start.
 
 1. **Read the memory index once**: `Obsidian_pep_pricing_tool/memory/MEMORY.md`. It's a short
    pointer list, not the memories themselves — open an individual `memory/*.md` file only when
-   a task makes that specific note relevant.
-2. **Read the index layer for structure**: start at `Obsidian_pep_pricing_tool/index.md` (the
-   root catalog) and follow its links to the per-folder `*-index.md` notes (`wiki/wiki-index.md`,
-   `wiki/sources/sources-index.md`, `sessions/sessions-index.md`, etc.) and `raw-overview.md`.
-   These are compact, cross-linked summaries — reading them tells you the file structure without
-   scanning file content.
+   a task makes that specific note relevant. At the same time, read
+   `Obsidian_pep_pricing_tool/wiki/concepts/code-map.md` — a feature-area → key-file lookup
+   table for this codebase, so you don't need to grep/find the filesystem just to locate the
+   file(s) behind a feature. It's a starting point, not ground truth — verify a file still
+   exists before trusting it.
+2. **Re-read the index layer on every memory/wiki lookup, not just at session start**: start at
+   `Obsidian_pep_pricing_tool/index.md` (the root catalog) and follow its links to the relevant
+   per-folder `*-index.md` note (`wiki/wiki-index.md`, `wiki/sources/sources-index.md`,
+   `sessions/sessions-index.md`, etc.) or `raw-overview.md`. These are compact, cross-linked
+   summaries — reading them tells you the file structure without scanning file content. Re-read
+   because they can change mid-session (e.g. a checkpoint/flush adds a new file) or since your
+   last session — a stale one-time read can point you at files that no longer reflect what's there.
 
 Caveat: a mid-session write to memory or the wiki is in context immediately for you, but it only
 reaches the *next* session once it's committed (e.g. via a flush/checkpoint routine).
